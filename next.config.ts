@@ -1,5 +1,12 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+import { resolveAgentApiRewrites } from "./src/config/proxy";
+
+const nextConfig: NextConfig = {
+  output: "standalone",
+  async rewrites() {
+    return resolveAgentApiRewrites(process.env);
+  },
+};
 
 export default nextConfig;

@@ -8,7 +8,9 @@ export interface PublicRuntimeConfig {
 export function resolvePublicRuntimeConfig(
   env: NodeJS.ProcessEnv,
 ): PublicRuntimeConfig {
-  const transport = env.NEXT_PUBLIC_CHAT_TRANSPORT ?? "mock";
+  const transport =
+    env.NEXT_PUBLIC_CHAT_TRANSPORT ??
+    (env.NODE_ENV === "production" ? "projects-new" : "mock");
   if (transport !== "mock" && transport !== "projects-new") {
     throw new Error(`未知 chat transport: ${transport}`);
   }
