@@ -1,1 +1,13 @@
 .worktrees/
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.local
+.env.*.local
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+pnpm-debug.log*
