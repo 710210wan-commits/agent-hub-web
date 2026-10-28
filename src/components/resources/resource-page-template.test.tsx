@@ -57,4 +57,50 @@ describe("ResourcePageTemplate", () => {
     );
     expect(screen.getByText("详情能力待接入")).toBeInTheDocument();
   });
+
+  it("allows owners to replace loading, error and empty lifecycle slots", () => {
+    const view = render(
+      <ModeProvider>
+        <ResourcePageTemplate
+          createLabel="新建知识库"
+          description="说明"
+          detailBasePath="/knowledge"
+          items={items}
+          loadingSlot={<div>自定义加载</div>}
+          state="loading"
+          title="知识库"
+        />
+      </ModeProvider>,
+    );
+    expect(screen.getByText("自定义加载")).toBeInTheDocument();
+
+    view.rerender(
+      <ModeProvider>
+        <ResourcePageTemplate
+          createLabel="新建知识库"
+          description="说明"
+          detailBasePath="/knowledge"
+          errorSlot={<div>自定义错误</div>}
+          items={items}
+          state="error"
+          title="知识库"
+        />
+      </ModeProvider>,
+    );
+    expect(screen.getByText("自定义错误")).toBeInTheDocument();
+
+    view.rerender(
+      <ModeProvider>
+        <ResourcePageTemplate
+          createLabel="新建知识库"
+          description="说明"
+          detailBasePath="/knowledge"
+          emptySlot={<div>自定义空状态</div>}
+          items={[]}
+          title="知识库"
+        />
+      </ModeProvider>,
+    );
+    expect(screen.getByText("自定义空状态")).toBeInTheDocument();
+  });
 });

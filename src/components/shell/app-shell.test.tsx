@@ -47,6 +47,8 @@ describe("AppShell", () => {
 
     for (const link of within(navigation).getAllByRole("link")) {
       expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
+      expect(link).toHaveAccessibleName(link.textContent?.trim());
+      expect(link).toHaveAttribute("aria-label", link.textContent?.trim());
     }
   });
 

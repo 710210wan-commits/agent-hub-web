@@ -174,6 +174,56 @@ describe("projects-new transport", () => {
     );
   });
 
+  it("emits disconnect immediately without waiting for a hanging abort", async () => {
+    const source = new FakeEventSource();
+    const fetchFn = vi.fn<typeof fetch>(() => new Promise(() => undefined));
+    const transport = createProjectsNewTransport({
+      apiBaseUrl: "/agent-api",
+      fetchFn,
+      eventSourceFactory: () => source,
+    });
+
+    const pending = nextEvent(transport.streamRun("task-hangs"));
+    await Promise.resolve();
+    source.fail();
+
+    await expect(
+      Promise.race([
+        pending,
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 30)),
+      ]),
+    ).resolves.toEqual({
+      done: false,
+      value: {
+        type: "run.disconnected",
+        warning: "连接已断开，服务端任务可能仍在运行",
+      },
+    });
+  });
+
+  it("closes the SSE iterator immediately after a terminal loop_stop", async () => {
+    const source = new FakeEventSource();
+    const transport = createProjectsNewTransport({
+      apiBaseUrl: "/agent-api",
+      fetchFn: vi.fn<typeof fetch>(),
+      eventSourceFactory: () => source,
+    });
+    const iterator = transport.streamRun("task-terminal")[Symbol.asyncIterator]();
+    const first = iterator.next();
+    await Promise.resolve();
+    source.emit({
+      type: "loop_stop",
+      result: { finalAnswer: "最终正文", stoppedBy: "final_answer" },
+    });
+
+    await expect(first).resolves.toEqual({
+      done: false,
+      value: { type: "answer.done", content: "最终正文" },
+    });
+    await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined });
+    expect(source.closed).toBe(true);
+  });
+
   it("sends an explicit abort request", async () => {
     const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ ok: true }));
     const transport = createProjectsNewTransport({

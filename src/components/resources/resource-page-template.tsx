@@ -4,6 +4,8 @@ import { Search } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { EmptyState } from "@/components/states/empty-state";
+import { ErrorState } from "@/components/states/error-state";
+import { LoadingState } from "@/components/states/loading-state";
 import { withMode } from "@/config/modes";
 import { useAppMode } from "@/providers/mode-provider";
 
@@ -23,6 +25,10 @@ export function ResourcePageTemplate<T extends ResourceListItem>({
   detailBasePath,
   items,
   renderItem,
+  state = "ready",
+  loadingSlot,
+  errorSlot,
+  emptySlot,
 }: {
   title: string;
   description: string;
@@ -30,6 +36,10 @@ export function ResourcePageTemplate<T extends ResourceListItem>({
   detailBasePath: string;
   items: T[];
   renderItem?: (item: T, href: string) => ReactNode;
+  state?: "ready" | "loading" | "error";
+  loadingSlot?: ReactNode;
+  errorSlot?: ReactNode;
+  emptySlot?: ReactNode;
 }) {
   const { mode } = useAppMode();
   const [query, setQuery] = useState("");
@@ -58,7 +68,11 @@ export function ResourcePageTemplate<T extends ResourceListItem>({
           value={query}
         />
       </label>
-      {visibleItems.length > 0 ? (
+      {state === "loading" ? (
+        loadingSlot ?? <LoadingState />
+      ) : state === "error" ? (
+        errorSlot ?? <ErrorState message="加载失败，请稍后重试" />
+      ) : visibleItems.length > 0 ? (
         <div className="resource-grid">
           {visibleItems.map((item) => {
             const href = withMode(`${detailBasePath}/${item.id}`, mode);
@@ -66,7 +80,7 @@ export function ResourcePageTemplate<T extends ResourceListItem>({
           })}
         </div>
       ) : (
-        <EmptyState description="尝试使用其他关键词" title="没有匹配的内容" />
+        emptySlot ?? <EmptyState description="尝试使用其他关键词" title="没有匹配的内容" />
       )}
     </section>
   );

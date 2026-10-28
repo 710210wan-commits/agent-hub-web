@@ -11,7 +11,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import type { MouseEvent } from "react";
 
 import { copy } from "@/config/copy";
 import {
@@ -39,12 +40,13 @@ function NavigationLink({
 }: {
   item: NavigationItem;
   active: boolean;
-  onNavigate: () => void;
+  onNavigate: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const Icon = icons[item.icon];
   return (
     <Link
       aria-current={active ? "page" : undefined}
+      aria-label={item.label}
       className={`sidebar-link${active ? " is-active" : ""}`}
       href={item.href}
       onClick={onNavigate}
@@ -63,6 +65,7 @@ export function Sidebar({
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { mode } = useAppMode();
   const { user } = useAuth();
   const items = getNavigation(mode);
@@ -75,7 +78,17 @@ export function Sidebar({
       active={pathname === item.href.split("?")[0]}
       item={item}
       key={item.id}
-      onNavigate={onNavigate}
+      onNavigate={(event) => {
+        if (item.id === "chat") {
+          event.preventDefault();
+          const conversationId =
+            typeof crypto.randomUUID === "function"
+              ? crypto.randomUUID()
+              : `${Date.now()}`;
+          router.push(`/chat?mode=${mode}&conversation=${conversationId}`);
+        }
+        onNavigate();
+      }}
     />
   );
 

@@ -6,7 +6,7 @@ export interface PublicRuntimeConfig {
 }
 
 export function resolvePublicRuntimeConfig(
-  env: NodeJS.ProcessEnv,
+  env: Readonly<Record<string, string | undefined>>,
 ): PublicRuntimeConfig {
   const transport =
     env.NEXT_PUBLIC_CHAT_TRANSPORT ??
@@ -20,9 +20,29 @@ export function resolvePublicRuntimeConfig(
   }
 
   const apiBaseUrl = env.NEXT_PUBLIC_AGENT_API_BASE ?? "/agent-api";
-  if (!apiBaseUrl.startsWith("/") || apiBaseUrl.startsWith("//")) {
+  const unsafePath =
+    apiBaseUrl !== apiBaseUrl.trim() ||
+    !apiBaseUrl.startsWith("/") ||
+    apiBaseUrl.startsWith("//") ||
+    /[\\?#\u0000-\u001f\u007f]/.test(apiBaseUrl);
+  const parsed = unsafePath
+    ? null
+    : new URL(apiBaseUrl, "https://agent-hub.local");
+  if (
+    !parsed ||
+    parsed.origin !== "https://agent-hub.local" ||
+    parsed.pathname !== apiBaseUrl
+  ) {
     throw new Error("API 地址必须是同源路径");
   }
 
   return { transport, apiBaseUrl };
+}
+
+export function readPublicRuntimeConfig(): PublicRuntimeConfig {
+  return resolvePublicRuntimeConfig({
+    NODE_ENV: process.env.NODE_ENV,
+    NEXT_PUBLIC_CHAT_TRANSPORT: process.env.NEXT_PUBLIC_CHAT_TRANSPORT,
+    NEXT_PUBLIC_AGENT_API_BASE: process.env.NEXT_PUBLIC_AGENT_API_BASE,
+  });
 }

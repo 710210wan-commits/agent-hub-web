@@ -28,6 +28,9 @@ test("manual stop preserves partial text and offers mock continuation", async ({
   await expect(page.getByText("综合现有资料，")).toBeVisible();
   await expect(page.getByText("生成已停止")).toBeVisible();
   await expect(page.getByRole("button", { name: "继续生成" })).toBeVisible();
+  await page.getByRole("button", { name: "继续生成" }).click();
+  await expect(page.getByText("综合现有资料，本周需重点关注三类风险。")).toBeVisible();
+  await expect(page.getByText("综合现有资料，综合现有资料，")).toHaveCount(0);
 });
 
 test("mock disconnected scenario keeps text and shows truthful warning", async ({ page }) => {

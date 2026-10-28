@@ -35,3 +35,21 @@ test("resource details and settings remain explicit placeholders", async ({ page
   await page.getByRole("tab", { name: "API" }).click();
   await expect(page.getByText("API 配置待接入")).toBeVisible();
 });
+
+test("daily, work and explicit new chats keep independent local contexts", async ({ page }) => {
+  await page.goto("/chat?mode=daily&scenario=completed&delay=50");
+  await page.getByRole("textbox", { name: "消息" }).fill("日常上下文");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByText("综合现有资料，本周需重点关注三类风险。")).toBeVisible();
+
+  await page.getByRole("button", { name: "办公" }).click();
+  await expect(page.getByRole("heading", { name: "今天要处理什么工作？" })).toBeVisible();
+  await expect(page.getByText("日常上下文")).toHaveCount(0);
+
+  await page.getByRole("textbox", { name: "消息" }).fill("办公上下文");
+  await page.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByText("办公上下文")).toBeVisible();
+  await page.getByRole("link", { name: "新对话" }).click();
+  await expect(page.getByRole("heading", { name: "今天要处理什么工作？" })).toBeVisible();
+  await expect(page.getByText("办公上下文")).toHaveCount(0);
+});

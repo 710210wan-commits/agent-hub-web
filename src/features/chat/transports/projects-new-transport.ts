@@ -92,10 +92,28 @@ export function createProjectsNewTransport(
   const apiBaseUrl = options.apiBaseUrl.replace(/\/+$/, "");
 
   async function abortRun(runId: string): Promise<void> {
-    const response = await fetchFn(
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const fetchRequest = fetchFn(
       `${apiBaseUrl}/tasks/${encodeURIComponent(runId)}/abort`,
-      { method: "POST", headers: { "Content-Type": "application/json" } },
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+      },
     );
+    const response = await Promise.race([
+      fetchRequest,
+      new Promise<null>((resolve) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          resolve(null);
+        }, 2_000);
+      }),
+    ]).finally(() => {
+      if (timeout) clearTimeout(timeout);
+    });
+    if (!response) return;
     if (!response.ok) throw new Error(`停止任务失败: HTTP ${response.status}`);
   }
 
@@ -132,7 +150,7 @@ export function createProjectsNewTransport(
         signal,
       )) {
         if (item.type === "error") {
-          await abortRun(runId).catch(() => undefined);
+          void abortRun(runId).catch(() => undefined);
           yield {
             type: "run.disconnected",
             warning: "连接已断开，服务端任务可能仍在运行",
@@ -142,7 +160,16 @@ export function createProjectsNewTransport(
 
         try {
           const payload = asRecord(JSON.parse(item.data));
-          for (const event of mapProjectsNewEvent(payload)) yield event;
+          for (const event of mapProjectsNewEvent(payload)) {
+            yield event;
+            if (
+              event.type === "answer.done" ||
+              event.type === "run.stopped" ||
+              event.type === "run.failed"
+            ) {
+              return;
+            }
+          }
         } catch {
           // Ignore malformed third-party events; the connection may still recover.
         }

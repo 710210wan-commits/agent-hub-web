@@ -20,8 +20,7 @@ export function ChatPage({ transport }: { transport: ChatTransport }) {
   const send = () => {
     const content = input.trim();
     if (!content) return;
-    setInput("");
-    void controller.submit(content);
+    if (controller.submit(content)) setInput("");
   };
 
   return (

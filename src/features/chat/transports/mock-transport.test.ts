@@ -25,8 +25,38 @@ describe("mock transport", () => {
       selection: emptySelection,
     });
 
-    expect(run.runId).toBe("mock-run-completed");
+    expect(run.runId).toMatch(/^mock-run-completed-/);
     await expect(collect(transport.streamRun(run.runId))).resolves.toEqual(
+      mockRunFixtures.completed,
+    );
+  });
+
+  it("creates unique runs and resumes after the previous cursor", async () => {
+    const transport = createMockTransport({ delayMs: 0, scenario: "completed" });
+    const first = await transport.createRun({
+      mode: "daily",
+      content: "测试问题",
+      selection: emptySelection,
+    });
+    const iterator = transport.streamRun(first.runId)[Symbol.asyncIterator]();
+
+    await iterator.next();
+    await iterator.next();
+    await transport.abortRun(first.runId);
+
+    expect(transport.resumeRun).toBeTypeOf("function");
+    const resumed = await transport.resumeRun!(first.runId);
+    const next = await transport.createRun({
+      mode: "daily",
+      content: "下一条消息",
+      selection: emptySelection,
+    });
+
+    expect(new Set([first.runId, resumed.runId, next.runId]).size).toBe(3);
+    await expect(collect(transport.streamRun(resumed.runId))).resolves.toEqual(
+      mockRunFixtures.completed.slice(2),
+    );
+    await expect(collect(transport.streamRun(next.runId))).resolves.toEqual(
       mockRunFixtures.completed,
     );
   });

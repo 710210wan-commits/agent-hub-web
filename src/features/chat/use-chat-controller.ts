@@ -33,23 +33,26 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
   const [state, dispatch] = useReducer(chatReducer, undefined, createInitialChatState);
   const abortControllerRef = useRef<AbortController | null>(null);
   const runIdRef = useRef<string | null>(null);
+  const generationRef = useRef(0);
+  const batchGenerationRef = useRef(0);
   const lastInputRef = useRef<CreateChatRunInput | null>(null);
-  const batchedDeltas = useBatchedDeltas((delta) =>
-    dispatch({ type: "stream.event", event: { type: "answer.delta", delta } }),
-  );
+  const batchedDeltas = useBatchedDeltas((delta) => {
+    if (batchGenerationRef.current === generationRef.current) {
+      dispatch({ type: "stream.event", event: { type: "answer.delta", delta } });
+    }
+  });
 
   const execute = useCallback(
-    async (input: CreateChatRunInput, appendMessages: boolean) => {
-      if (!transport.capabilities.selections && hasSelections(input.selection)) {
-        dispatch({
-          type: "stream.event",
-          event: { type: "run.failed", message: "当前后端尚未接入所选能力" },
-        });
-        return;
-      }
-
+    async (
+      input: CreateChatRunInput,
+      behavior: "append" | "retry" | "continue",
+      resumeFromRunId?: string,
+    ) => {
+      const generation = generationRef.current + 1;
+      generationRef.current = generation;
+      batchedDeltas.reset();
       lastInputRef.current = input;
-      if (appendMessages) {
+      if (behavior === "append") {
         dispatch({
           type: "message.submit",
           userMessage: {
@@ -60,8 +63,10 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
           },
           assistantMessageId: createId("assistant"),
         });
-      } else {
+      } else if (behavior === "retry") {
         dispatch({ type: "run.retry" });
+      } else {
+        dispatch({ type: "run.continue" });
       }
 
       const abortController = new AbortController();
@@ -69,7 +74,11 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
       abortControllerRef.current = abortController;
 
       try {
-        const created = await transport.createRun(input, abortController.signal);
+        const created =
+          behavior === "continue" && resumeFromRunId && transport.resumeRun
+            ? await transport.resumeRun(resumeFromRunId, abortController.signal)
+            : await transport.createRun(input, abortController.signal);
+        if (generation !== generationRef.current) return;
         runIdRef.current = created.runId;
         dispatch({
           type: "stream.event",
@@ -79,15 +88,19 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
           created.runId,
           abortController.signal,
         )) {
+          if (generation !== generationRef.current) return;
           if (event.type === "answer.delta") {
+            batchGenerationRef.current = generation;
             batchedDeltas.push(event.delta);
           } else {
             batchedDeltas.flush();
+            if (generation !== generationRef.current) return;
             dispatch({ type: "stream.event", event });
           }
         }
-        batchedDeltas.flush();
+        if (generation === generationRef.current) batchedDeltas.flush();
       } catch (error) {
+        if (generation !== generationRef.current) return;
         batchedDeltas.flush();
         if (abortController.signal.aborted) return;
         dispatch({
@@ -103,38 +116,43 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
   );
 
   const submit = useCallback(
-    (content: string) =>
-      execute(
-        {
-          mode,
-          content,
-          selection: state.draftSelection,
-        },
-        true,
-      ),
-    [execute, mode, state.draftSelection],
+    (content: string) => {
+      const input = { mode, content, selection: state.draftSelection };
+      if (!transport.capabilities.selections && hasSelections(input.selection)) {
+        dispatch({
+          type: "stream.event",
+          event: { type: "run.failed", message: "当前后端尚未接入所选能力" },
+        });
+        return false;
+      }
+      void execute(input, "append");
+      return true;
+    },
+    [execute, mode, state.draftSelection, transport.capabilities.selections],
   );
 
-  const stop = useCallback(async () => {
+  const stop = useCallback(() => {
+    batchedDeltas.flush();
+    generationRef.current += 1;
     abortControllerRef.current?.abort();
     const runId = runIdRef.current;
-    if (runId) await transport.abortRun(runId).catch(() => undefined);
-    batchedDeltas.flush();
     dispatch({
       type: "stream.event",
       event: { type: "run.stopped", reason: "生成已停止" },
     });
+    if (runId) void transport.abortRun(runId).catch(() => undefined);
   }, [batchedDeltas, transport]);
 
   const regenerate = useCallback(async () => {
-    if (lastInputRef.current) await execute(lastInputRef.current, false);
+    if (lastInputRef.current) await execute(lastInputRef.current, "retry");
   }, [execute]);
 
   const continueRun = useCallback(async () => {
-    if (transport.capabilities.resume && lastInputRef.current) {
-      await execute(lastInputRef.current, false);
+    const runId = runIdRef.current;
+    if (transport.capabilities.resume && transport.resumeRun && lastInputRef.current && runId) {
+      await execute(lastInputRef.current, "continue", runId);
     }
-  }, [execute, transport.capabilities.resume]);
+  }, [execute, transport]);
 
   const changeSelection = useCallback((selection: ChatSelectionSnapshot) => {
     dispatch({ type: "selection.change", selection });

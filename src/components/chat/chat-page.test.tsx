@@ -75,6 +75,18 @@ describe("ChatPage", () => {
 
     expect(await screen.findByText("当前后端尚未接入所选能力")).toBeInTheDocument();
     expect(transport.createRun).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "消息" })).toHaveValue("分析本周风险");
+  });
+
+  it("does not submit while a Chinese IME composition is being confirmed", () => {
+    const transport = makeTransport("mock", []);
+    renderChat(transport);
+    const input = screen.getByRole("textbox", { name: "消息" });
+    fireEvent.change(input, { target: { value: "中文输入" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter", keyCode: 229, isComposing: true });
+
+    expect(transport.createRun).not.toHaveBeenCalled();
+    expect(input).toHaveValue("中文输入");
   });
 
   it("streams final Markdown and collapses completed activity steps", async () => {

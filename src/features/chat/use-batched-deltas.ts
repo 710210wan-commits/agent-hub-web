@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 export interface BatchedDeltaController {
   push: (delta: string) => void;
   flush: () => void;
+  reset: () => void;
 }
 
 export function useBatchedDeltas(
@@ -34,6 +35,12 @@ export function useBatchedDeltas(
     [delay, flush],
   );
 
+  const reset = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    bufferRef.current = "";
+  }, []);
+
   useEffect(
     () => () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -41,5 +48,5 @@ export function useBatchedDeltas(
     [],
   );
 
-  return useMemo(() => ({ push, flush }), [flush, push]);
+  return useMemo(() => ({ push, flush, reset }), [flush, push, reset]);
 }

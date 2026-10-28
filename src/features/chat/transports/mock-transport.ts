@@ -29,24 +29,39 @@ export function createMockTransport(_options?: {
     delayMs: _options?.delayMs ?? 180,
     scenario: _options?.scenario ?? "completed",
   };
-  const abortedRuns = new Set<string>();
+  let sequence = 0;
+  const runs = new Map<string, { cursor: number; aborted: boolean }>();
+
+  const createRunAt = (cursor: number) => {
+    sequence += 1;
+    const runId = `mock-run-${options.scenario}-${sequence}`;
+    runs.set(runId, { cursor, aborted: false });
+    return { runId };
+  };
 
   return {
     kind: "mock",
     capabilities: { selections: true, answerDeltas: true, resume: true },
     async createRun() {
-      return { runId: `mock-run-${options.scenario}` };
+      return createRunAt(0);
+    },
+    async resumeRun(runId) {
+      return createRunAt(runs.get(runId)?.cursor ?? 0);
     },
     async *streamRun(runId, signal) {
-      for (const event of mockRunFixtures[options.scenario]) {
-        if (signal?.aborted || abortedRuns.has(runId)) return;
+      const state = runs.get(runId);
+      if (!state) return;
+      for (let index = state.cursor; index < mockRunFixtures[options.scenario].length; index += 1) {
+        if (signal?.aborted || state.aborted) return;
         if (!(await wait(options.delayMs, signal))) return;
-        if (signal?.aborted || abortedRuns.has(runId)) return;
-        yield event;
+        if (signal?.aborted || state.aborted) return;
+        state.cursor = index + 1;
+        yield mockRunFixtures[options.scenario][index];
       }
     },
     async abortRun(runId) {
-      abortedRuns.add(runId);
+      const state = runs.get(runId);
+      if (state) state.aborted = true;
     },
   };
 }

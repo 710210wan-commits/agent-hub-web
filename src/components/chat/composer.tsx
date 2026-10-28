@@ -50,6 +50,7 @@ export function Composer({
           aria-label="消息"
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing || event.keyCode === 229) return;
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
               if (!running) onSend();

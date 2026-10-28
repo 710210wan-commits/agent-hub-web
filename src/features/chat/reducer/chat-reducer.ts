@@ -13,7 +13,8 @@ export type ChatAction =
     }
   | { type: "selection.change"; selection: ChatSelectionSnapshot }
   | { type: "stream.event"; event: ChatStreamEvent }
-  | { type: "run.retry" };
+  | { type: "run.retry" }
+  | { type: "run.continue" };
 
 function cloneSelection(
   selection: ChatSelectionSnapshot,
@@ -150,6 +151,17 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           activity: null,
           notice: null,
           completedStepCount: 0,
+        },
+      };
+    case "run.continue":
+      return {
+        ...state,
+        run: {
+          ...state.run,
+          status: "submitting",
+          runId: null,
+          activity: null,
+          notice: null,
         },
       };
   }
