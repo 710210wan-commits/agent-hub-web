@@ -20,6 +20,10 @@ class FakeEventSource implements EventSourceLike {
     this.onmessage?.({ data: JSON.stringify(data) } as MessageEvent<string>);
   }
 
+  emitRaw(data: string) {
+    this.onmessage?.({ data } as MessageEvent<string>);
+  }
+
   fail() {
     this.onerror?.(new Event("error"));
   }
@@ -98,6 +102,15 @@ describe("projects-new transport", () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
+  it("shows a safe generic activity as soon as SSE connects", () => {
+    expect(
+      mapProjectsNewEvent({ type: "connected", taskId: "task-connected" }),
+    ).toEqual([
+      { type: "run.connected", runId: "task-connected" },
+      { type: "activity.update", label: "正在处理请求" },
+    ]);
+  });
+
   it("maps only safe lifecycle summaries and the final answer", () => {
     expect(
       mapProjectsNewEvent({
@@ -146,6 +159,56 @@ describe("projects-new transport", () => {
       ),
     ).not.toContain("internal secret reasoning");
   });
+
+  it.each([
+    [
+      "final_answer",
+      { finalAnswer: "最终可见正文", stoppedBy: "final_answer" },
+      [{ type: "answer.done", content: "最终可见正文" }],
+    ],
+    [
+      "max_turns",
+      { finalAnswer: "达到轮次上限后的最终正文", stoppedBy: "max_turns" },
+      [{ type: "answer.done", content: "达到轮次上限后的最终正文" }],
+    ],
+    [
+      "model_error",
+      { finalAnswer: "internal model error", stoppedBy: "model_error" },
+      [{ type: "run.failed", message: "任务执行失败，请稍后重试" }],
+    ],
+    [
+      "aborted",
+      { finalAnswer: "partial internal answer", stoppedBy: "aborted" },
+      [{ type: "run.stopped", reason: "生成已停止" }],
+    ],
+  ])("maps %s to one safe terminal event", (_name, result, expected) => {
+    const mapped = mapProjectsNewEvent({
+      type: "loop_stop",
+      result: {
+        ...result,
+        reasoning: "internal secret reasoning",
+        toolInput: "raw tool input",
+      },
+    });
+
+    expect(mapped).toEqual(expected);
+    expect(JSON.stringify(mapped)).not.toContain("internal secret reasoning");
+    expect(JSON.stringify(mapped)).not.toContain("raw tool input");
+  });
+
+  it.each(["", "   "])(
+    "fails safely when a successful terminal event has no visible answer (%j)",
+    (finalAnswer) => {
+      expect(
+        mapProjectsNewEvent({
+          type: "loop_stop",
+          result: { finalAnswer, stoppedBy: "final_answer" },
+        }),
+      ).toEqual([
+        { type: "run.failed", message: "任务未返回可显示内容，请重试" },
+      ]);
+    },
+  );
 
   it("attempts abort and emits a truthful warning on EventSource failure", async () => {
     const source = new FakeEventSource();
@@ -201,6 +264,28 @@ describe("projects-new transport", () => {
     });
   });
 
+  it("ignores malformed SSE data and continues with the next valid event", async () => {
+    const source = new FakeEventSource();
+    const transport = createProjectsNewTransport({
+      apiBaseUrl: "/agent-api",
+      fetchFn: vi.fn<typeof fetch>(),
+      eventSourceFactory: () => source,
+    });
+    const iterator = transport.streamRun("task-malformed")[Symbol.asyncIterator]();
+    const next = iterator.next();
+    await Promise.resolve();
+
+    source.emitRaw("{not-json");
+    source.emit({ type: "agent_turn" });
+
+    await expect(next).resolves.toEqual({
+      done: false,
+      value: { type: "activity.update", label: "正在处理请求" },
+    });
+    await iterator.return?.();
+    expect(source.closed).toBe(true);
+  });
+
   it("closes the SSE iterator immediately after a terminal loop_stop", async () => {
     const source = new FakeEventSource();
     const transport = createProjectsNewTransport({
@@ -219,6 +304,10 @@ describe("projects-new transport", () => {
     await expect(first).resolves.toEqual({
       done: false,
       value: { type: "answer.done", content: "最终正文" },
+    });
+    source.emit({
+      type: "loop_stop",
+      result: { finalAnswer: "晚到正文", stoppedBy: "final_answer" },
     });
     await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined });
     expect(source.closed).toBe(true);
