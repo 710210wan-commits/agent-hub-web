@@ -26,14 +26,14 @@ corepack pnpm@9.0.0 dev
 连接 `projects_new`：
 
 ```bash
-NEXT_PUBLIC_CHAT_TRANSPORT=projects-new AGENT_API_ORIGIN=http://127.0.0.1:8000 corepack pnpm@9.0.0 dev
+NEXT_PUBLIC_CHAT_TRANSPORT=projects-new AGENT_API_ORIGIN=http://127.0.0.1:3001 corepack pnpm@9.0.0 dev
 ```
 
 Windows PowerShell：
 
 ```powershell
 $env:NEXT_PUBLIC_CHAT_TRANSPORT='projects-new'
-$env:AGENT_API_ORIGIN='http://127.0.0.1:8000'
+$env:AGENT_API_ORIGIN='http://127.0.0.1:3001'
 corepack pnpm@9.0.0 dev
 ```
 
