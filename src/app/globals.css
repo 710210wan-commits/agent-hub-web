@@ -1432,3 +1432,63 @@ a {
     justify-content: space-between;
   }
 }
+
+/* ========== 知识库过渡登录（DSI 会话） ========== */
+.kb-login-gate {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.kb-login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.kb-login-card h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.kb-login-card .kb-detail-description {
+  margin: 0;
+}
+
+.kb-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.kb-login-field input {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.kb-login-field input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(49, 94, 234, 0.12);
+}
+
+.kb-login-card .kb-primary-button {
+  width: 100%;
+  height: 38px;
+}
+
+.kb-login-hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}

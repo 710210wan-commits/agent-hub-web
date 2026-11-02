@@ -158,6 +158,52 @@ interface KbDeleteResponse {
   message?: string;
 }
 
+// ========== 过渡登录（DSI 会话） ==========
+//
+// 统一登录方案尚未与同事确定（计划 T2.3）。在确定前，知识库页面用 DSI 自己的
+// 会话登录：POST /auth/login 成功后由 DSI 下发 HttpOnly cookie，后续 /api/kb/*
+// 请求自动携带。统一单点登录接入后，只需替换本函数的实现。
+
+export interface KbSessionUser {
+  id: string;
+  name?: string;
+}
+
+interface KbLoginResponse {
+  success?: boolean;
+  user?: KbSessionUser;
+  error?: string;
+}
+
+export async function loginKbSession(
+  username: string,
+  password: string,
+): Promise<KbSessionUser> {
+  let response: Response;
+  try {
+    response = await fetch(`${resolveBase()}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+  } catch {
+    throw new KbApiError("network", 0, "无法连接登录服务，请确认后端已启动");
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as KbLoginResponse;
+
+  if (response.status === 401) {
+    throw new KbApiError("unauthorized", 401, payload.error ?? "用户名或密码错误");
+  }
+  if (!response.ok) {
+    throw classifyFailure(response.status, payload);
+  }
+  if (!payload.success || !payload.user?.id) {
+    throw new KbApiError("unknown", 200, payload.error ?? "登录失败，请稍后重试");
+  }
+  return payload.user;
+}
+
 // ========== 内部实现 ==========
 
 function resolveBase(): string {

@@ -8,7 +8,9 @@ import { AppShell } from "@/components/shell/app-shell";
 
 import { knowledgeFixtures } from "@/config/resource-fixtures";
 
-import { kbErrorMessage, listKbDatabases, type KbDatabase } from "@/lib/kb-api";
+import { KbLoginGate } from "@/components/knowledge/kb-login-gate";
+
+import { KbApiError, kbErrorMessage, listKbDatabases, type KbDatabase } from "@/lib/kb-api";
 
 interface KnowledgeListItem {
   id: string;
@@ -33,6 +35,7 @@ export default function KnowledgePage() {
   const [state, setState] = useState<PageState>("loading");
   const [isDemo, setIsDemo] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("加载失败，请稍后重试");
+  const [needLogin, setNeedLogin] = useState(false);
 
   useEffect(() => {
     // 演示模式：URL 带 ?demo=1 时用本地演示数据渲染页面（不请求后端），
@@ -54,6 +57,7 @@ export default function KnowledgePage() {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        setNeedLogin(error instanceof KbApiError && error.kind === "unauthorized");
         setErrorMessage(kbErrorMessage(error));
         setState("error");
       });
@@ -71,7 +75,15 @@ export default function KnowledgePage() {
         detailBasePath="/knowledge"
         items={items}
         state={state}
-        errorSlot={state === "error" ? <ErrorState message={errorMessage} /> : undefined}
+        errorSlot={
+          state === "error" ? (
+            needLogin ? (
+              <KbLoginGate />
+            ) : (
+              <ErrorState message={errorMessage} />
+            )
+          ) : undefined
+        }
       />
     </AppShell>
   );

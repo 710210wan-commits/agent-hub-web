@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { KbDialog } from "@/components/knowledge/kb-dialog";
 import { KbDocumentTable } from "@/components/knowledge/kb-document-table";
+import { KbLoginGate } from "@/components/knowledge/kb-login-gate";
 import { AppShell } from "@/components/shell/app-shell";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
@@ -14,6 +15,7 @@ import { LoadingState } from "@/components/states/loading-state";
 import { withMode } from "@/config/modes";
 import { useAppMode } from "@/providers/mode-provider";
 import {
+  KbApiError,
   deleteKbDocument,
   getKbDatabase,
   getKbDocumentStatus,
@@ -71,6 +73,7 @@ export default function KnowledgeDetailPage() {
   const [documents, setDocuments] = useState<KbDocument[]>([]);
   const [documentTotal, setDocumentTotal] = useState(0);
   const [loadError, setLoadError] = useState("");
+  const [needLogin, setNeedLogin] = useState(false);
   const [pollError, setPollError] = useState("");
   const [notice, setNotice] = useState<ActionNotice | null>(null);
 
@@ -102,6 +105,7 @@ export default function KnowledgeDetailPage() {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        setNeedLogin(error instanceof KbApiError && error.kind === "unauthorized");
         setLoadError(kbErrorMessage(error));
         setPhase("error");
       });
@@ -303,7 +307,9 @@ export default function KnowledgeDetailPage() {
           <LoadingState label="正在加载知识库…" />
         ) : null}
 
-        {kbId && phase === "error" ? <ErrorState message={loadError} /> : null}
+        {kbId && phase === "error" ? (
+          needLogin ? <KbLoginGate /> : <ErrorState message={loadError} />
+        ) : null}
 
         {phase === "ready" && detail ? (
           <>
