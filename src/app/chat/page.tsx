@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { ChatPage } from "@/components/chat/chat-page";
+import { OfficeLoopUnavailable } from "@/components/chat/office-loop-unavailable";
 import { readPublicRuntimeConfig } from "@/config/env";
 import { parseMode } from "@/config/modes";
 import type { MockRunScenario } from "@/features/chat/fixtures/default-run";
@@ -20,16 +21,18 @@ const mockScenarios = new Set<MockRunScenario>([
 
 export default function ChatRoute() {
   const searchParams = useSearchParams();
+  const mode = parseMode(searchParams.get("mode"));
   const e2eScenariosEnabled =
     process.env.NODE_ENV !== "production" &&
     process.env.NEXT_PUBLIC_E2E_SCENARIOS === "1";
-  const instanceKey = `${parseMode(searchParams.get("mode"))}:${searchParams.get("conversation") ?? "default"}`;
+  const instanceKey = `${mode}:${searchParams.get("conversation") ?? "default"}`;
   const backendOverride = e2eScenariosEnabled ? searchParams.get("backend") : null;
   const requestedScenario = e2eScenariosEnabled ? searchParams.get("scenario") : null;
   const requestedDelay = e2eScenariosEnabled ? Number(searchParams.get("delay")) : NaN;
   const transport = useMemo(
     () => {
       void instanceKey;
+      if (mode === "work") return null;
       const config = readPublicRuntimeConfig();
       if (backendOverride === "real") {
         return createProjectsNewTransport({ apiBaseUrl: config.apiBaseUrl });
@@ -45,7 +48,9 @@ export default function ChatRoute() {
       }
       return createChatTransport(config);
     },
-    [backendOverride, instanceKey, requestedDelay, requestedScenario],
+    [backendOverride, instanceKey, mode, requestedDelay, requestedScenario],
   );
+  if (mode === "work") return <OfficeLoopUnavailable />;
+  if (!transport) return null;
   return <ChatPage key={instanceKey} transport={transport} />;
 }

@@ -73,12 +73,31 @@ describe("projects-new transport", () => {
         method: "POST",
         body: JSON.stringify({
           query: "分析风险",
+          scenarioId: "daily",
           userId: "agent-hub-web",
           sessionId: "fixed-id",
           clientRequestId: "fixed-id",
         }),
       }),
     );
+  });
+
+  it("rejects work mode before calling the daily Agent Loop backend", async () => {
+    const fetchFn = vi.fn<typeof fetch>();
+    const transport = createProjectsNewTransport({
+      apiBaseUrl: "/agent-api",
+      fetchFn,
+      eventSourceFactory: () => new FakeEventSource(),
+    });
+
+    await expect(
+      transport.createRun({
+        mode: "work",
+        content: "生成办公报告",
+        selection: emptySelection,
+      }),
+    ).rejects.toThrow("办公场景 Loop 尚未接入");
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it("rejects selected capabilities before issuing a request", async () => {

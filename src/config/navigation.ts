@@ -31,6 +31,6 @@ const navigationItems: NavigationItem[] = [
 export function getNavigation(mode: AppMode): NavigationItem[] {
   return navigationItems.map((item) => ({
     ...item,
-    href: withMode(item.href, mode),
+    href: item.id === "gis" ? "/gis?profile=standard" : withMode(item.href, mode),
   }));
 }

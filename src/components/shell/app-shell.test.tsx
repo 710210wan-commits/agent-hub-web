@@ -46,7 +46,11 @@ describe("AppShell", () => {
     ]);
 
     for (const link of within(navigation).getAllByRole("link")) {
-      expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
+      if (link.textContent?.trim() === "GIS 工作台") {
+        expect(link).toHaveAttribute("href", "/gis?profile=standard");
+      } else {
+        expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
+      }
       expect(link).toHaveAccessibleName(link.textContent?.trim());
       expect(link).toHaveAttribute("aria-label", link.textContent?.trim());
     }

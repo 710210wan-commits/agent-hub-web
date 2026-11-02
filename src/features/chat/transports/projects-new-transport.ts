@@ -134,12 +134,16 @@ export function createProjectsNewTransport(
       if (hasSelections(input)) {
         throw new Error("当前后端尚未接入所选能力");
       }
+      if (input.mode === "work") {
+        throw new Error("办公场景 Loop 尚未接入");
+      }
 
       const response = await fetchFn(`${apiBaseUrl}/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({
           query: input.content,
+          scenarioId: "daily",
           userId: "agent-hub-web",
           sessionId,
           clientRequestId: idFactory(),
