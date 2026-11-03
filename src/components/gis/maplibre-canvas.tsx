@@ -1,6 +1,6 @@
 "use client";
 
-import { Map as MapLibreMap } from "maplibre-gl";
+import { Map as MapLibreMap, setWorkerUrl } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -13,6 +13,9 @@ import type {
 } from "@/features/gis/map/map-renderer";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+
+const MAPLIBRE_WORKER_URL =
+  "/vendor/maplibre-gl-6.16.0/maplibre-gl-worker.mjs";
 
 interface MapLibreCanvasProps {
   onRendererReady?: (renderer: MapRenderer | null) => void;
@@ -91,6 +94,7 @@ export function MapLibreCanvas({ onRendererReady }: MapLibreCanvasProps) {
     };
 
     try {
+      setWorkerUrl(MAPLIBRE_WORKER_URL);
       map = new MapLibreMap({
         container,
         style: "https://demotiles.maplibre.org/style.json",

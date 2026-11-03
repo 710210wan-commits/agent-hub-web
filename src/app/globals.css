@@ -966,7 +966,7 @@ a {
   background: #eef1eb;
 }
 
-.maplibre-canvas {
+.map-canvas-slot > .maplibre-canvas {
   position: absolute;
   inset: 0;
 }
