@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 
 import type { MapRenderer } from "@/features/gis/map/map-renderer";
 
@@ -19,6 +19,7 @@ const LazyMapLibreCanvas = dynamic(
 
 interface MapCanvasSlotProps {
   onRendererReady?: (renderer: MapRenderer | null) => void;
+  children?: ReactNode;
 }
 
 const desktopQuery = "(min-width: 768px)";
@@ -37,7 +38,7 @@ function readServerDesktop(): boolean {
   return false;
 }
 
-export function MapCanvasSlot({ onRendererReady }: MapCanvasSlotProps) {
+export function MapCanvasSlot({ onRendererReady, children }: MapCanvasSlotProps) {
   const isDesktop = useSyncExternalStore(
     subscribeToDesktop,
     readDesktop,
@@ -46,7 +47,12 @@ export function MapCanvasSlot({ onRendererReady }: MapCanvasSlotProps) {
 
   return (
     <section aria-label="地图画布" className="map-canvas-slot">
-      {isDesktop ? <LazyMapLibreCanvas onRendererReady={onRendererReady} /> : null}
+      {isDesktop ? (
+        <>
+          <LazyMapLibreCanvas onRendererReady={onRendererReady} />
+          {children}
+        </>
+      ) : null}
     </section>
   );
 }

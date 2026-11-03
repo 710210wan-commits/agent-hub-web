@@ -1067,6 +1067,132 @@ a {
   background: #c6a96d;
 }
 
+.gis-standard-shell {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-rows: 1fr;
+}
+
+.gis-standard-shell .map-canvas-slot {
+  grid-row: 1;
+  min-height: 0;
+}
+
+.gis-standard-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  padding: 18px;
+}
+
+.gis-standard-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.gis-standard-heading strong {
+  font-size: 14px;
+}
+
+.gis-standard-heading small {
+  color: var(--color-muted);
+  font-size: 10px;
+}
+
+.gis-standard-form {
+  display: grid;
+  gap: 9px;
+}
+
+.gis-standard-form label {
+  color: #4b4b50;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.gis-standard-form textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.gis-standard-form textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.gis-standard-actions,
+.gis-standard-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gis-standard-actions button,
+.gis-standard-result-actions button {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: white;
+  padding: 7px 11px;
+  color: #4b4b50;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.gis-standard-actions button[type="submit"] {
+  border-color: #25262a;
+  background: #25262a;
+  color: white;
+}
+
+.gis-standard-actions button:disabled,
+.gis-standard-result-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.gis-layer-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  padding-top: 14px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.gis-layer-status small {
+  color: #56a477;
+}
+
+.gis-standard-notice {
+  margin: 0;
+  border-radius: 8px;
+  background: #f7f3eb;
+  padding: 10px;
+  color: #8a6735;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.gis-standard-answer {
+  color: #34363a;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.gis-standard-result-actions {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
 .gis-mobile-notice {
   display: none;
   min-height: 46vh;
