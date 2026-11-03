@@ -1,7 +1,29 @@
-export function MapCanvasSlot() {
+"use client";
+
+import dynamic from "next/dynamic";
+
+import type { MapRenderer } from "@/features/gis/map/map-renderer";
+
+const LazyMapLibreCanvas = dynamic(
+  () => import("./maplibre-canvas").then((module) => module.MapLibreCanvas),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="map-center-marker" role="status">
+        <span>正在加载地图</span>
+      </div>
+    ),
+  },
+);
+
+interface MapCanvasSlotProps {
+  onRendererReady?: (renderer: MapRenderer | null) => void;
+}
+
+export function MapCanvasSlot({ onRendererReady }: MapCanvasSlotProps) {
   return (
     <section aria-label="地图画布" className="map-canvas-slot">
-      <div className="map-center-marker"><span>地图引擎待接入</span><small>MAP CANVAS SLOT</small></div>
+      <LazyMapLibreCanvas onRendererReady={onRendererReady} />
     </section>
   );
 }

@@ -960,32 +960,21 @@ a {
 
 .map-canvas-slot {
   position: relative;
-  display: grid;
+  display: block;
   grid-row: 1 / 3;
-  place-items: center;
-  background-color: #eef1eb;
-  background-image: linear-gradient(rgb(112 128 106 / 8%) 1px, transparent 1px), linear-gradient(90deg, rgb(112 128 106 / 8%) 1px, transparent 1px);
-  background-size: 34px 34px;
+  overflow: hidden;
+  background: #eef1eb;
 }
 
-.map-canvas-slot::before,
-.map-canvas-slot::after {
+.maplibre-canvas {
   position: absolute;
-  border: 1px solid rgb(100 124 96 / 16%);
-  border-radius: 48% 52% 55% 45%;
-  content: "";
+  inset: 0;
 }
 
-.map-canvas-slot::before {
-  width: 42%;
-  height: 34%;
-  transform: rotate(-8deg);
-}
-
-.map-canvas-slot::after {
-  width: 26%;
-  height: 58%;
-  transform: translate(66%, 5%) rotate(18deg);
+.map-canvas-slot > .map-center-marker {
+  position: absolute;
+  inset: 0;
+  place-content: center;
 }
 
 .map-center-marker,
