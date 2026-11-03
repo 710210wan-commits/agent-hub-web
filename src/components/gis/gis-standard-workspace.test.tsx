@@ -13,16 +13,25 @@ const mapRenderer = vi.hoisted(() => ({
   destroy: vi.fn(),
 }));
 
+type ReadyCallback = (renderer: typeof mapRenderer | null) => void;
+const mapHarness: { autoReady: boolean; onReady?: ReadyCallback } = {
+  autoReady: true,
+};
+
 function FakeMapCanvas({
   onRendererReady,
   children,
 }: {
-  onRendererReady?: (renderer: typeof mapRenderer | null) => void;
+  onRendererReady?: ReadyCallback;
   children?: ReactNode;
 }) {
   useEffect(() => {
-    onRendererReady?.(mapRenderer);
-    return () => onRendererReady?.(null);
+    mapHarness.onReady = onRendererReady;
+    if (mapHarness.autoReady) onRendererReady?.(mapRenderer);
+    return () => {
+      if (mapHarness.onReady === onRendererReady) mapHarness.onReady = undefined;
+      onRendererReady?.(null);
+    };
   }, [onRendererReady]);
   return <section aria-label="地图画布">{children}</section>;
 }
@@ -43,6 +52,10 @@ const gisUpdate: GisUpdate = {
     }],
   },
 };
+
+function updateFor(taskId: string, key: string): GisUpdate {
+  return { ...gisUpdate, taskId, key };
+}
 
 function makeTransport(events: GisStreamEvent[]) {
   const createRun = vi.fn(async () => ({ runId: "task-1" }));
@@ -72,9 +85,19 @@ function deferred() {
   return { promise, resolve };
 }
 
+function deferredValue<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("GisStandardWorkspace", () => {
   beforeEach(() => {
     Object.values(mapRenderer).forEach((spy) => spy.mockClear());
+    mapHarness.autoReady = true;
+    mapHarness.onReady = undefined;
   });
 
   it("runs a standard query through safe progress, map updates and final text", async () => {
@@ -157,5 +180,116 @@ describe("GisStandardWorkspace", () => {
       expect.any(AbortSignal),
     );
     expect(await screen.findByText("可保留的结果")).toBeInTheDocument();
+  });
+
+  it("aborts a late-created task after stop without opening its stream", async () => {
+    const created = deferredValue<{ runId: string }>();
+    const transport = makeTransport([]);
+    transport.createRun.mockImplementation(() => created.promise);
+    const streamRun = vi.fn(async function* () {});
+    transport.streamRun = streamRun;
+    render(<GisStandardWorkspace transport={transport} />);
+
+    submit();
+    fireEvent.click(screen.getByRole("button", { name: "停止任务" }));
+    expect(screen.getByText("生成已停止")).toBeInTheDocument();
+
+    await act(async () => {
+      created.resolve({ runId: "task-late" });
+    });
+
+    await waitFor(() => expect(transport.abortRun).toHaveBeenCalledWith("task-late"));
+    expect(streamRun).not.toHaveBeenCalled();
+    expect(screen.getByText("生成已停止")).toBeInTheDocument();
+  });
+
+  it("replays sanitized state when the renderer becomes ready after completion", async () => {
+    mapHarness.autoReady = false;
+    const transport = makeTransport([
+      { type: "gis.update", update: gisUpdate },
+      { type: "answer.done", content: "早于地图完成" },
+    ]);
+    render(<GisStandardWorkspace transport={transport} />);
+    submit();
+
+    expect(await screen.findByText("早于地图完成")).toBeInTheDocument();
+    expect(mapRenderer.apply).not.toHaveBeenCalled();
+
+    act(() => mapHarness.onReady?.(mapRenderer));
+
+    expect(mapRenderer.clear).toHaveBeenCalledOnce();
+    expect(mapRenderer.apply).toHaveBeenCalledOnce();
+    expect(mapRenderer.apply).toHaveBeenCalledWith(expect.objectContaining({
+      taskId: "task-1",
+      key: "task-1:call-1",
+    }));
+  });
+
+  it("keeps retained layers across runs and ignores an old stream after the new terminal", async () => {
+    const oldStream = deferred();
+    const transport = makeTransport([]);
+    transport.createRun
+      .mockResolvedValueOnce({ runId: "task-1" })
+      .mockResolvedValueOnce({ runId: "task-2" })
+      .mockResolvedValueOnce({ runId: "task-3" });
+    transport.streamRun = async function* (runId: string) {
+      if (runId === "task-1") {
+        yield { type: "gis.update", update: updateFor("task-1", "task-1:kept") } as const;
+        yield { type: "answer.done", content: "旧任务正文" } as const;
+        await oldStream.promise;
+        yield {
+          type: "gis.update",
+          update: updateFor("task-1", "task-1:late"),
+        } as const;
+        yield { type: "answer.done", content: "旧任务迟到正文" } as const;
+        yield { type: "run.disconnected", warning: "旧任务断线" } as const;
+      } else if (runId === "task-2") {
+        yield { type: "gis.update", update: updateFor("task-2", "task-2:transient") } as const;
+        yield { type: "answer.done", content: "新任务正文" } as const;
+      }
+    };
+    render(<GisStandardWorkspace transport={transport} />);
+
+    submit();
+    expect(await screen.findByText("旧任务正文")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "保留结果" }));
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    expect(await screen.findByText("新任务正文")).toBeInTheDocument();
+    expect(screen.getByText("图层更新 2 项")).toBeInTheDocument();
+    expect(mapRenderer.remove).not.toHaveBeenCalled();
+
+    await act(async () => {
+      oldStream.resolve();
+    });
+    expect(screen.getByText("新任务正文")).toBeInTheDocument();
+    expect(screen.queryByText("旧任务迟到正文")).not.toBeInTheDocument();
+    expect(screen.queryByText("旧任务断线")).not.toBeInTheDocument();
+    expect(mapRenderer.apply).not.toHaveBeenCalledWith(expect.objectContaining({
+      key: "task-1:late",
+    }));
+
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    await waitFor(() => expect(transport.createRun).toHaveBeenCalledTimes(3));
+    expect(mapRenderer.remove).toHaveBeenCalledOnce();
+    expect(mapRenderer.remove).toHaveBeenCalledWith("task-2:transient");
+    expect(mapRenderer.remove).not.toHaveBeenCalledWith("task-1:kept");
+    expect(screen.getByText("图层更新 1 项")).toBeInTheDocument();
+  });
+
+  it("delivers final text after rejecting a malformed GIS update", async () => {
+    const malformed = updateFor("task-1", "task-1:invalid");
+    const regions = malformed.gisData.regions as Array<{ coordinates: number[][] }>;
+    regions[0].coordinates = [[181, 30], [121, 30], [121, 31]];
+    const transport = makeTransport([
+      { type: "gis.update", update: malformed },
+      { type: "answer.done", content: "最终正文不受影响" },
+    ]);
+    render(<GisStandardWorkspace transport={transport} />);
+
+    submit();
+
+    expect(await screen.findByText("最终正文不受影响")).toBeInTheDocument();
+    expect(mapRenderer.apply).not.toHaveBeenCalled();
+    expect(screen.getByText("图层更新 0 项")).toBeInTheDocument();
   });
 });
