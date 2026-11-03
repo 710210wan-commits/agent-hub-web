@@ -5,6 +5,7 @@ import {
   gisDataSchema,
   type ValidatedGisData,
 } from "./gis-data-schema";
+import { resolveGisImageUrl } from "./map-renderer";
 import type {
   GeoJsonData,
   ImageCoordinates,
@@ -241,19 +242,22 @@ export function createMapLibreRenderer(
   function upsertImages(key: string, data: ValidatedGisData): void {
     for (const overlay of data.imageOverlays ?? []) {
       const sourceId = imageSourceId(key, overlay.id);
+      const layerId = `${sourceId}:raster`;
       const coordinates = imageCoordinates(overlay.rectangle);
+      const url = resolveGisImageUrl(overlay.url);
       const source = port.getSource(sourceId);
       if (source) {
-        source.updateImage({ url: overlay.url, coordinates });
+        source.updateImage({ url, coordinates });
+        port.setPaintProperty(layerId, "raster-opacity", overlay.alpha ?? 1);
         continue;
       }
       port.addSource(sourceId, {
         type: "image",
-        url: overlay.url,
+        url,
         coordinates,
       });
       port.addLayer({
-        id: `${sourceId}:raster`,
+        id: layerId,
         type: "raster",
         source: sourceId,
         paint: {

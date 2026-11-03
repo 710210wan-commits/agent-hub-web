@@ -22,6 +22,11 @@ export interface MapPort {
   getLayer(id: string): unknown;
   removeLayer(id: string): unknown;
   removeSource(id: string): unknown;
+  setPaintProperty(
+    layerId: string,
+    name: "raster-opacity",
+    value: number,
+  ): unknown;
   fitBounds(
     bounds: [[number, number], [number, number]],
     options: { maxZoom: number },
@@ -34,4 +39,9 @@ export interface MapRenderer {
   remove(key: string): void;
   clear(): void;
   destroy(): void;
+}
+
+export function resolveGisImageUrl(url: string): string {
+  if (url.startsWith("/") && !url.startsWith("//")) return `/agent-api${url}`;
+  return url;
 }

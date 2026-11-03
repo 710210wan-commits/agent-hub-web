@@ -55,6 +55,14 @@ function makeMapPort() {
     removeSource(id) {
       sources.delete(id);
     },
+    setPaintProperty(layerId, name, value) {
+      const layer = layers.get(layerId);
+      if (!layer || !("paint" in layer)) return;
+      layers.set(layerId, {
+        ...layer,
+        paint: { ...layer.paint, [name]: value },
+      } as AddLayerObject);
+    },
     fitBounds,
     flyTo,
   };
@@ -264,22 +272,54 @@ describe("createMapLibreRenderer", () => {
       },
     });
 
-    renderer.apply(imageUpdate("before", "/before.png"));
+    renderer.apply(imageUpdate("before", "/local-tiles/before.png"));
     scheduler.flush();
 
     const firstId = "gis:task-1%3Aimage:image:before";
     expect(sources.get(firstId)?.specification).toEqual({
       type: "image",
-      url: "/before.png",
+      url: "/agent-api/local-tiles/before.png",
       coordinates: [[120, 31], [121, 31], [121, 30], [120, 30]],
     });
 
-    renderer.apply(imageUpdate("after", "/after.png"));
+    renderer.apply(imageUpdate("after", "/satellite/after.png"));
     scheduler.flush();
 
     expect(sources.has(firstId)).toBe(false);
     expect(sources.get("gis:task-1%3Aimage:image:after")?.specification).toMatchObject({
-      url: "/after.png",
+      url: "/agent-api/satellite/after.png",
+    });
+  });
+
+  it("replaces URL, bounds and opacity for the same image ID", () => {
+    const { renderer, scheduler, sources, layers } = setup();
+    const imageUpdate = (url: string, alpha: number, east: number): GisUpdate => ({
+      version: 1,
+      taskId: "task-1",
+      key: "task-1:image",
+      gisData: {
+        type: "image",
+        imageOverlays: [{
+          id: "comparison",
+          url,
+          alpha,
+          rectangle: { west: 120, south: 30, east, north: 31 },
+        }],
+      },
+    });
+
+    renderer.apply(imageUpdate("https://images.test/before.png", 1, 121));
+    scheduler.flush();
+    renderer.apply(imageUpdate("https://images.test/after.png", 0, 122));
+    scheduler.flush();
+
+    const sourceId = "gis:task-1%3Aimage:image:comparison";
+    expect(sources.get(sourceId)?.specification).toMatchObject({
+      url: "https://images.test/after.png",
+      coordinates: [[120, 31], [122, 31], [122, 30], [120, 30]],
+    });
+    expect(layers.get(`${sourceId}:raster`)).toMatchObject({
+      paint: { "raster-opacity": 0 },
     });
   });
 

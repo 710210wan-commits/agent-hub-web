@@ -55,6 +55,9 @@ function createPort(map: MapLibreMap): MapPort {
     removeSource(id) {
       map.removeSource(id);
     },
+    setPaintProperty(layerId, name, value) {
+      map.setPaintProperty(layerId, name, value);
+    },
     fitBounds(bounds, options) {
       map.fitBounds(bounds, options);
     },
