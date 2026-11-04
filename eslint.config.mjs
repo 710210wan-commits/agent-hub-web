@@ -10,5 +10,5 @@ export default defineConfig([
       "@next/next/no-html-link-for-pages": "off",
     },
   },
-  globalIgnores([".next/**", "node_modules/**", "public/vendor/**", "playwright-report/**", "test-results/**"]),
+  globalIgnores([".next/**", "node_modules/**", "playwright-report/**", "test-results/**"]),
 ]);

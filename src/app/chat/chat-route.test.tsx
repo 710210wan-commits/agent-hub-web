@@ -23,7 +23,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/config/env", () => ({
-  readPublicRuntimeConfig: () => ({ transport: "mock", apiBaseUrl: "/agent-api" }),
+  readPublicRuntimeConfig: () => ({
+    transport: "mock",
+    apiBaseUrl: "/agent-api",
+    legacyFrontendUrl: "http://localhost:5000",
+  }),
 }));
 
 vi.mock("@/features/chat/transports/create-transport", () => ({

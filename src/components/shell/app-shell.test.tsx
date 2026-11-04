@@ -47,7 +47,9 @@ describe("AppShell", () => {
 
     for (const link of within(navigation).getAllByRole("link")) {
       if (link.textContent?.trim() === "GIS 工作台") {
-        expect(link).toHaveAttribute("href", "/gis?profile=standard");
+        expect(link).toHaveAttribute("href", "http://localhost:5000");
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).toHaveAttribute("rel", "noopener noreferrer");
       } else {
         expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
       }
