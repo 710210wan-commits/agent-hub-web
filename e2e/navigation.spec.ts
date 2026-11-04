@@ -43,6 +43,8 @@ test("GIS opens the legacy homepage in one new tab", async ({ page, context }) =
 
   await expect(legacyPage).toHaveURL("http://localhost:5000/");
   await expect(legacyPage.getByText("Legacy Cesium")).toBeVisible();
+  expect(context.pages().filter((item) => item !== page)).toHaveLength(1);
+  expect(await legacyPage.evaluate(() => window.opener === null)).toBe(true);
   await expect(page).toHaveURL(/\/chat\?mode=daily/);
 });
 

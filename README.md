@@ -63,9 +63,11 @@ corepack pnpm@9.0.0 build
 ## 容器
 
 ```bash
-docker build -t agent-hub-web .
+docker build --build-arg NEXT_PUBLIC_LEGACY_FRONTEND_URL=https://gis.example.com -t agent-hub-web .
 docker run --rm -p 3000:3000 agent-hub-web
 ```
+
+`NEXT_PUBLIC_LEGACY_FRONTEND_URL` 是构建时公开地址；生产容器构建必须传入实际老前端 HTTP(S) 地址，不能使用客户的 localhost。
 
 镜像运行 Next standalone 输出，使用非 root 用户。真实部署需让网关把 `/agent-api/` 路由到 `projects_new`，并关闭 SSE buffering。
 
