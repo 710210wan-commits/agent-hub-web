@@ -1,8 +1,36 @@
 export type ChatTransportMode = "mock" | "projects-new";
 
+function resolveLegacyFrontendUrl(
+  env: Readonly<Record<string, string | undefined>>,
+): string {
+  const configured = env.NEXT_PUBLIC_LEGACY_FRONTEND_URL?.trim();
+  if (!configured) {
+    if (env.NODE_ENV === "production") {
+      throw new Error("生产环境必须配置老前端地址");
+    }
+    return "http://localhost:5000";
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(configured);
+  } catch {
+    throw new Error("老前端地址必须是安全的 HTTP(S) 地址");
+  }
+  if (
+    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+    parsed.username ||
+    parsed.password
+  ) {
+    throw new Error("老前端地址必须是安全的 HTTP(S) 地址");
+  }
+  return configured;
+}
+
 export interface PublicRuntimeConfig {
   transport: ChatTransportMode;
   apiBaseUrl: string;
+  legacyFrontendUrl: string;
 }
 
 export function resolvePublicRuntimeConfig(
@@ -36,7 +64,11 @@ export function resolvePublicRuntimeConfig(
     throw new Error("API 地址必须是同源路径");
   }
 
-  return { transport, apiBaseUrl };
+  return {
+    transport,
+    apiBaseUrl,
+    legacyFrontendUrl: resolveLegacyFrontendUrl(env),
+  };
 }
 
 export function readPublicRuntimeConfig(): PublicRuntimeConfig {
@@ -44,5 +76,6 @@ export function readPublicRuntimeConfig(): PublicRuntimeConfig {
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_CHAT_TRANSPORT: process.env.NEXT_PUBLIC_CHAT_TRANSPORT,
     NEXT_PUBLIC_AGENT_API_BASE: process.env.NEXT_PUBLIC_AGENT_API_BASE,
+    NEXT_PUBLIC_LEGACY_FRONTEND_URL: process.env.NEXT_PUBLIC_LEGACY_FRONTEND_URL,
   });
 }

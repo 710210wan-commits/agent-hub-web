@@ -36,6 +36,7 @@ describe("resolveAgentApiRewrites", () => {
         NODE_ENV: "production",
         NEXT_PUBLIC_CHAT_TRANSPORT: "projects-new",
         NEXT_PUBLIC_AGENT_API_BASE: "/agent-api",
+        NEXT_PUBLIC_LEGACY_FRONTEND_URL: "https://gis.example.com",
       }).apiBaseUrl,
     ).toBe("/agent-api");
   });

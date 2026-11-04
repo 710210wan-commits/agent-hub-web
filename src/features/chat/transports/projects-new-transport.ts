@@ -39,7 +39,12 @@ export function mapProjectsNewEvent(event: ProjectsNewEvent): ChatStreamEvent[] 
   switch (type) {
     case "connected": {
       const runId = readString(event, "taskId");
-      return runId ? [{ type: "run.connected", runId }] : [];
+      return runId
+        ? [
+            { type: "run.connected", runId },
+            { type: "activity.update", label: "正在处理请求" },
+          ]
+        : [];
     }
     case "agent_turn":
       return [{ type: "activity.update", label: "正在处理请求" }];
@@ -66,13 +71,18 @@ export function mapProjectsNewEvent(event: ProjectsNewEvent): ChatStreamEvent[] 
       ];
     case "loop_stop": {
       const result = asRecord(event.result);
-      const finalAnswer = readString(result, "finalAnswer") ?? "";
+      const finalAnswer = readString(result, "finalAnswer");
       const stoppedBy = readString(result, "stoppedBy");
       if (stoppedBy === "aborted") {
         return [{ type: "run.stopped", reason: "生成已停止" }];
       }
       if (stoppedBy === "model_error") {
         return [{ type: "run.failed", message: "任务执行失败，请稍后重试" }];
+      }
+      if (!finalAnswer?.trim()) {
+        return [
+          { type: "run.failed", message: "任务未返回可显示内容，请重试" },
+        ];
       }
       return [{ type: "answer.done", content: finalAnswer }];
     }
@@ -124,12 +134,16 @@ export function createProjectsNewTransport(
       if (hasSelections(input)) {
         throw new Error("当前后端尚未接入所选能力");
       }
+      if (input.mode === "work") {
+        throw new Error("办公场景 Loop 尚未接入");
+      }
 
       const response = await fetchFn(`${apiBaseUrl}/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({
           query: input.content,
+          scenarioId: "daily",
           userId: "agent-hub-web",
           sessionId,
           clientRequestId: idFactory(),

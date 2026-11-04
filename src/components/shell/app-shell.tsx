@@ -9,9 +9,11 @@ import { Topbar } from "./topbar";
 export function AppShell({
   children,
   title,
+  topbarControl,
 }: {
   children: ReactNode;
   title: string;
+  topbarControl?: ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -20,6 +22,7 @@ export function AppShell({
       <Sidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
       <div className="app-workspace">
         <Topbar
+          centerControl={topbarControl}
           title={title}
           menuButton={
             <MobileSidebar

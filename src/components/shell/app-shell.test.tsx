@@ -46,7 +46,13 @@ describe("AppShell", () => {
     ]);
 
     for (const link of within(navigation).getAllByRole("link")) {
-      expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
+      if (link.textContent?.trim() === "GIS 工作台") {
+        expect(link).toHaveAttribute("href", "http://localhost:5000");
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      } else {
+        expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
+      }
       expect(link).toHaveAccessibleName(link.textContent?.trim());
       expect(link).toHaveAttribute("aria-label", link.textContent?.trim());
     }
