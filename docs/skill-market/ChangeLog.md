@@ -4,7 +4,7 @@
 >
 > 起始提交：A-01 所在提交。
 >
-> 维护方式：按日期正序追加；每项简要记录关联 Plan、问题和修改方案。仅完成方案、尚未修改生产代码的事项必须明确标注，不得与已落地功能混淆。
+> 维护方式：按日期正序追加；每项简要记录关联 Plan、对应模块序号、问题和修改方案。存在对应模块时，Git 提交使用 `<type>(<module-id>): <description>`；仅完成方案、尚未修改生产代码的事项必须明确标注，不得与已落地功能混淆。
 
 ## 2026-11-05
 
@@ -13,6 +13,8 @@
 提交：`c3d954d`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`A-01`（更新并批准新前端 Skill 绑定设计）
 
 #### 问题
 
@@ -35,6 +37,8 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 提交：`commit`
 
 Plan 文档：`path/to/plan.md`
+
+对应 Plan 模块：`T1`
 
 #### 问题
 
