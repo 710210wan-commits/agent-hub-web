@@ -37,6 +37,17 @@ $env:AGENT_API_ORIGIN='http://127.0.0.1:3001'
 corepack pnpm@9.0.0 dev
 ```
 
+连接 Xiaozhi 办公模式 BFF：
+
+```powershell
+$env:XIAOZHI_API_ORIGIN='http://127.0.0.1:5050'
+$env:XIAOZHI_API_KEY='<local-yxkey-secret>'
+$env:XIAOZHI_WORK_AGENT_SLUG='default-chatbot'
+corepack pnpm@9.0.0 dev
+```
+
+上述三个变量仅供 Next.js 服务端 Route Handler 使用。浏览器始终请求同源 `/api/work-agent/*`，不会直接访问 Xiaozhi，也不会收到 API Key。
+
 访问地址：
 
 ```bash
@@ -53,6 +64,9 @@ GIS 导航默认通过新 tab 打开 `http://localhost:5000` 的老前端完整�
 | `NEXT_PUBLIC_AGENT_API_BASE` | 浏览器 | `/agent-api` | 只允许 same-origin 相对路径 |
 | `NEXT_PUBLIC_LEGACY_FRONTEND_URL` | 浏览器 | 开发 `http://localhost:5000`；生产必填 | 老前端完整首页的 HTTP(S) 地址，不允许内嵌账号密码 |
 | `AGENT_API_ORIGIN` | 服务端 | 空 | 开发/Next 代理上游；不会进入浏览器包 |
+| `XIAOZHI_API_ORIGIN` | 服务端 | 空 | Xiaozhi API 的纯 HTTP(S) origin，不允许凭据、路径、查询或 fragment |
+| `XIAOZHI_API_KEY` | 服务端 | 空 | `yxkey_` 凭据；只由 BFF 注入上游 `Authorization`，不得使用 `NEXT_PUBLIC_*` |
+| `XIAOZHI_WORK_AGENT_SLUG` | 服务端 | 空 | 办公模式固定 Agent slug；BFF 会覆盖浏览器提交的 Agent 值 |
 
 浏览器请求 `/agent-api/*`。Next 开发代理可通过 `AGENT_API_ORIGIN` 转发；云端建议由同域网关直接转发，示例见 `deploy/nginx.example.conf`。
 
@@ -82,7 +96,8 @@ docker run --rm -p 3000:3000 agent-hub-web
 - AgentLoop 是对话隐式基底，不作为用户开关。
 - Workflow 暂不纳入首版。
 - GIS 不提供新版内部页面；点击导航后在新 tab 打开老前端 Cesium 首页。
-- 历史会话为 fixture；无 localStorage、鉴权或持久化。
+- 日常历史会话仍为 fixture；无 localStorage。
+- Xiaozhi 办公 BFF 首版使用单一演示用户 API Key。接入办公历史页后，所有演示访问者会看到同一用户的办公会话；这不是权限隔离。
 - 知识库、Skill、MCP 支持 UI 多选和消息级快照；当前真实后端尚未消费这些选项，因此真实模式会阻止带选择的提交。
 - 流式正文只显示最终可见内容；活动状态只显示安全的短描述，不展示内部推理。
 - 当前真实后端支持停止，不支持续写。断流后由用户手动重新生成；服务端任务可能仍在运行。
@@ -90,7 +105,7 @@ docker run --rm -p 3000:3000 agent-hub-web
 
 ## 后续接入点
 
-- 统一认证与会话服务
+- 统一认证接入后，在 `/api/work-agent/*` BFF 中把固定 `XIAOZHI_API_KEY` 替换为当前用户的服务端身份映射，并按用户隔离 thread；浏览器侧仍只使用同源接口。
 - 各能力负责人替换资源列表、详情和操作槽位
 - `projects_new` 合并稳定后补齐 selection schema、恢复与 steer
 - 云端域名、TLS、观测与网关策略
