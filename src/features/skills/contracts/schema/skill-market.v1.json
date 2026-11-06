@@ -2921,6 +2921,10 @@
       "DiagnosticErrorResponse": {
         "additionalProperties": false,
         "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
           "diagnostics": {
             "items": {
               "additionalProperties": false,
@@ -2957,6 +2961,10 @@
             "type": "array"
           },
           "error": {
+            "type": "string"
+          },
+          "requestId": {
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -3068,7 +3076,15 @@
       "ErrorResponse": {
         "additionalProperties": false,
         "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
           "error": {
+            "type": "string"
+          },
+          "requestId": {
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -7378,6 +7394,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -7480,6 +7516,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -7488,7 +7534,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -7597,6 +7643,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -7605,7 +7661,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -7714,6 +7770,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -7722,7 +7788,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -7831,6 +7897,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -7839,7 +7915,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -7948,6 +8024,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -7956,7 +8042,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -8065,6 +8151,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -8172,6 +8278,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8180,7 +8296,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -8289,6 +8405,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8297,7 +8423,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -8428,6 +8554,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -8527,6 +8673,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -8633,6 +8799,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8641,7 +8817,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -8741,6 +8917,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -8845,6 +9041,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -8960,6 +9176,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8968,7 +9194,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -9076,6 +9302,16 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -9084,7 +9320,7 @@
                 }
               }
             },
-            "description": "Deterministic validation failed."
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -9145,6 +9381,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -9263,6 +9519,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -9379,6 +9655,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -9484,6 +9780,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -9591,6 +9907,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -9691,6 +10027,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -9789,6 +10145,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -9895,6 +10271,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -10012,6 +10408,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -10128,6 +10544,26 @@
             },
             "description": "The requested Skill Market resource was not found."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -10236,6 +10672,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
@@ -10350,6 +10806,26 @@
               }
             },
             "description": "The requested Skill Market resource was not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request conflicts with the current resource revision or lifecycle state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticErrorResponse"
+                }
+              }
+            },
+            "description": "The request failed deterministic validation."
           },
           "500": {
             "content": {
