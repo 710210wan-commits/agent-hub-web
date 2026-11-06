@@ -225,4 +225,79 @@ describe("proxySkillMarketRequest", () => {
       error: "Skill Market upstream is unavailable.",
     });
   });
+
+  it("audits only allowlisted metadata and redacts exceptional details", async () => {
+    const secret = gatewayEnv.SKILL_MARKET_GATEWAY_HMAC_SECRET;
+    const origin = gatewayEnv.SKILL_MARKET_DAILY_ORIGIN;
+    const upload = "full-prompt-and-upload-canary";
+    const audit = vi.fn();
+    const auditNow = vi.fn()
+      .mockReturnValueOnce(1_000)
+      .mockReturnValueOnce(1_012);
+    const response = await proxySkillMarketRequest(
+      new Request(
+        "https://agent-hub.example.test/api/skill-market/creator/generate?mode=daily",
+        { method: "POST", body: upload },
+      ),
+      ["creator", "generate"],
+      {
+        audit,
+        auditNow,
+        env: gatewayEnv,
+        fetchImpl: vi.fn(async () => {
+          throw new Error(`${secret} ${origin} ${upload}\nprivate stack`);
+        }) as typeof fetch,
+      },
+    );
+
+    expect(response.status).toBe(502);
+    expect(audit).toHaveBeenCalledWith({
+      durationMs: 12,
+      method: "POST",
+      path: "/api/skill-market/creator/generate",
+      status: 502,
+    });
+    const observable = `${await response.text()}${JSON.stringify(audit.mock.calls)}`;
+    for (const sensitive of [secret, origin, upload, "private stack"]) {
+      expect(observable).not.toContain(sensitive);
+    }
+  });
+
+  it("keeps only a safe upstream request ID in the response and audit event", async () => {
+    const audit = vi.fn();
+    const response = await proxySkillMarketRequest(
+      new Request("https://agent-hub.example.test/api/skill-market/catalog?mode=daily"),
+      ["catalog"],
+      {
+        audit,
+        env: gatewayEnv,
+        fetchImpl: vi.fn(async () => new Response("[]", {
+          headers: { "content-type": "application/json", "x-request-id": "request-safe_42" },
+        })) as typeof fetch,
+      },
+    );
+
+    expect(response.headers.get("x-request-id")).toBe("request-safe_42");
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ requestId: "request-safe_42" }));
+  });
+
+  it("drops an unsafe upstream request ID from the response and audit event", async () => {
+    const audit = vi.fn();
+    const leakedRequestId = `${gatewayEnv.SKILL_MARKET_GATEWAY_HMAC_SECRET}@private-origin`;
+    const response = await proxySkillMarketRequest(
+      new Request("https://agent-hub.example.test/api/skill-market/catalog?mode=daily"),
+      ["catalog"],
+      {
+        audit,
+        env: gatewayEnv,
+        fetchImpl: vi.fn(async () => new Response("[]", {
+          headers: { "content-type": "application/json", "x-request-id": leakedRequestId },
+        })) as typeof fetch,
+      },
+    );
+
+    expect(response.headers.get("x-request-id")).toBeNull();
+    expect(JSON.stringify(audit.mock.calls)).not.toContain(leakedRequestId);
+    expect(audit).toHaveBeenCalledWith(expect.not.objectContaining({ requestId: expect.anything() }));
+  });
 });

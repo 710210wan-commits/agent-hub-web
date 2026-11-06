@@ -7,8 +7,15 @@ import {
   SkillMarketTargetError,
   resolveSkillMarketRequestTarget,
 } from "@/config/skill-market-targets";
+import {
+  createSkillMarketAuditRecord,
+  safeSkillMarketRequestId,
+  type SkillMarketAuditSink,
+} from "./security-audit";
 
 export interface SkillMarketGatewayOptions {
+  audit?: SkillMarketAuditSink;
+  auditNow?: () => number;
   env?: Readonly<Record<string, string | undefined>>;
   fetchImpl?: typeof fetch;
   now?: () => number;
@@ -39,10 +46,30 @@ export async function proxySkillMarketRequest(
 ): Promise<Response> {
   const env = options.env ?? process.env;
   const fetchImpl = options.fetchImpl ?? fetch;
+  const auditNow = options.auditNow ?? Date.now;
+  const auditStartedAt = auditNow();
+  let auditPath = "/api/skill-market";
+  const audited = (response: Response): Response => {
+    if (options.audit) {
+      const record = createSkillMarketAuditRecord({
+        durationMs: auditNow() - auditStartedAt,
+        method: request.method,
+        path: auditPath,
+        requestId: response.headers.get("x-request-id"),
+        status: response.status,
+      });
+      try {
+        options.audit(record);
+      } catch {
+        // Audit transport failures must not change the gateway response.
+      }
+    }
+    return response;
+  };
   const requestUrl = new URL(request.url);
   const modes = requestUrl.searchParams.getAll("mode");
   if (modes.length !== 1) {
-    return gatewayError(400, "SKILL_MARKET_MODE_INVALID", "Skill Market mode is required exactly once.");
+    return audited(gatewayError(400, "SKILL_MARKET_MODE_INVALID", "Skill Market mode is required exactly once."));
   }
 
   const query = new URLSearchParams(requestUrl.searchParams);
@@ -50,14 +77,15 @@ export async function proxySkillMarketRequest(
   const path = `/api/skill-market/${pathSegments.join("/")}`;
   const method = request.method.toUpperCase();
   if (!SUPPORTED_METHODS.has(method)) {
-    return gatewayError(405, "SKILL_MARKET_METHOD_NOT_ALLOWED", "Skill Market method is not allowed.");
+    return audited(gatewayError(405, "SKILL_MARKET_METHOD_NOT_ALLOWED", "Skill Market method is not allowed."));
   }
 
   let target;
   try {
     target = resolveSkillMarketRequestTarget({ mode: modes[0], path, query }, env);
+    auditPath = target.path;
   } catch (error) {
-    return targetErrorResponse(error);
+    return audited(targetErrorResponse(error));
   }
 
   const headers = forwardedRequestHeaders(request.headers);
@@ -72,14 +100,14 @@ export async function proxySkillMarketRequest(
     );
     principalHeaders.forEach((value, name) => headers.set(name, value));
   } catch (error) {
-    return principalErrorResponse(error);
+    return audited(principalErrorResponse(error));
   }
 
   let timeoutMs: number;
   try {
     timeoutMs = options.timeoutMs ?? resolveSkillMarketGatewayConfig(env).timeoutMs;
   } catch {
-    return gatewayError(500, "SKILL_MARKET_GATEWAY_CONFIG_INVALID", "Skill Market gateway is not configured.");
+    return audited(gatewayError(500, "SKILL_MARKET_GATEWAY_CONFIG_INVALID", "Skill Market gateway is not configured."));
   }
 
   const upstreamController = new AbortController();
@@ -116,26 +144,26 @@ export async function proxySkillMarketRequest(
     const responseHeaders = forwardedResponseHeaders(upstream.headers);
     if (!upstream.body || upstream.status === 204) {
       cleanup();
-      return new Response(null, {
+      return audited(new Response(null, {
         status: upstream.status,
         statusText: upstream.statusText,
         headers: responseHeaders,
-      });
+      }));
     }
-    return new Response(streamWithCleanup(upstream.body, cleanup), {
+    return audited(new Response(streamWithCleanup(upstream.body, cleanup), {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: responseHeaders,
-    });
+    }));
   } catch {
     cleanup();
     if (abortKind === "client") {
-      return gatewayError(499, "SKILL_MARKET_CLIENT_CLOSED_REQUEST", "Skill Market request was cancelled.");
+      return audited(gatewayError(499, "SKILL_MARKET_CLIENT_CLOSED_REQUEST", "Skill Market request was cancelled."));
     }
     if (abortKind === "timeout") {
-      return gatewayError(504, "SKILL_MARKET_UPSTREAM_TIMEOUT", "Skill Market upstream timed out.");
+      return audited(gatewayError(504, "SKILL_MARKET_UPSTREAM_TIMEOUT", "Skill Market upstream timed out."));
     }
-    return gatewayError(502, "SKILL_MARKET_UPSTREAM_UNAVAILABLE", "Skill Market upstream is unavailable.");
+    return audited(gatewayError(502, "SKILL_MARKET_UPSTREAM_UNAVAILABLE", "Skill Market upstream is unavailable."));
   }
 }
 
@@ -152,7 +180,13 @@ function forwardedResponseHeaders(source: Headers): Headers {
   const result = new Headers();
   for (const name of RESPONSE_HEADERS) {
     const value = source.get(name);
-    if (value !== null) result.set(name, value);
+    if (value === null) continue;
+    if (name === "x-request-id") {
+      const requestId = safeSkillMarketRequestId(value);
+      if (requestId) result.set(name, requestId);
+    } else {
+      result.set(name, value);
+    }
   }
   return result;
 }
