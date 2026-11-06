@@ -29,7 +29,7 @@ corepack pnpm@9.0.0 dev
 NEXT_PUBLIC_CHAT_TRANSPORT=projects-new AGENT_API_ORIGIN=http://127.0.0.1:3001 corepack pnpm@9.0.0 dev
 ```
 
-Windows PowerShell：
+Windows PowerShell 运行：
 
 ```powershell
 $env:NEXT_PUBLIC_CHAT_TRANSPORT='projects-new'
@@ -37,7 +37,13 @@ $env:AGENT_API_ORIGIN='http://127.0.0.1:3001'
 corepack pnpm@9.0.0 dev
 ```
 
-新前端默认运行在 `http://localhost:3000`。GIS 导航默认通过新 tab 打开 `http://localhost:5000` 的老前端完整首页；老前端在 `projects_new` 根目录使用 `pnpm dev`，其现有开发端口为 5000。
+访问地址：
+
+```bash
+http://localhost:3000
+```
+
+GIS 导航默认通过新 tab 打开 `http://localhost:5000` 的老前端完整首页；老前端在 `projects_new` 根目录使用 `pnpm dev`，其现有开发端口为 5000。
 
 ## 环境变量
 
