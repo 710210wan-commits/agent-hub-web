@@ -31,7 +31,7 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 ### 2. 增加 Skill Market 服务端目标与请求门禁
 
-提交：本次提交
+提交：`104e6f2`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
@@ -51,7 +51,7 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 ### 3. 增加 Skill Market Principal 签名适配
 
-提交：本次提交
+提交：`838cea3`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
@@ -69,7 +69,7 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 ### 4. 增加同源 Skill Market BFF 代理
 
-提交：本次提交
+提交：`215dc73`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
