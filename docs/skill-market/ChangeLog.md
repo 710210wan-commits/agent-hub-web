@@ -140,6 +140,25 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 将七类威胁映射到现有自动化负向测试或明确人工步骤，并标明 H-03、B-06、H-04/I-05 和 K-04/K-05 的后续责任。
 - H-01 聚焦边界和证据，不在前端复制后端权限规则，也不提前宣称日志扫描或 API client 缓存门禁完成。
 
+### 8. 建立统一 Skill Market 前端错误模型
+
+提交：`dc446cf`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T2/T6`（来源细化模块 `H-02`）
+
+#### 问题
+
+- 前端尚不能安全解码 I-06 的稳定错误 code、diagnostics 和 requestId，也无法区分认证、权限、不存在、冲突、校验和网关超时。
+- 错误体验缺少持久状态和恢复动作，422 diagnostics 无法定位到 Creator/Draft 等业务区域。
+
+#### 修改方案
+
+- 固定 `DSI-agent-loop@076c4951bd0adb97b104e82f595b099c691a4226` 的兼容 v1 Schema 并重新生成类型/Zod 契约。
+- 新增 `SkillMarketError` 解码与安全文案映射，未知 code 或非法 envelope 不展示后端原始消息，并保留排障 ID。
+- 新增持久错误组件，按 401/403/404/409/422/504 提供不同说明和恢复动作，diagnostics 可标记业务区域、字段和行号。
+
 ## 后续条目模板
 
 ```markdown
