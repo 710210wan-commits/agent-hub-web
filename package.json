@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "verify:skill-market-schema": "tsx scripts/verify-skill-market-schema.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -43,6 +44,7 @@
     "eslint-config-next": "16.1.1",
     "jsdom": "^27.1.0",
     "tailwindcss": "^4.1.16",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3",
     "vite": "^7.2.2",
     "vitest": "^4.0.8"
