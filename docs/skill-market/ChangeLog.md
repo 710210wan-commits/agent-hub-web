@@ -159,6 +159,24 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 新增 `SkillMarketError` 解码与安全文案映射，未知 code 或非法 envelope 不展示后端原始消息，并保留排障 ID。
 - 新增持久错误组件，按 401/403/404/409/422/504 提供不同说明和恢复动作，diagnostics 可标记业务区域、字段和行号。
 
+### 9. 建立 Skill Market API client 与 ViewModel 边界
+
+提交：`25b9523`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T6`（来源细化模块 `B-06`）
+
+#### 问题
+
+- 生成契约尚未接入统一请求边界，非法响应可能流入页面映射。
+- 取消、超时、错误、下载和 mutation 缺少统一处理，`work` 需在 client 层阻断。
+
+#### 修改方案
+
+- 新增 operation 驱动的 API client，先校验请求和响应，再调用 ViewModel adapter。
+- 统一取消、超时、错误解码、下载校验和 mutation 结果；`work` 在 fetch 前 fail-closed。
+- query key 包含 mode、资源类型和资源标识，并固定契约文件 LF 行尾。
 ## 后续条目模板
 
 ```markdown
