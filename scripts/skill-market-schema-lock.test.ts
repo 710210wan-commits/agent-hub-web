@@ -27,8 +27,8 @@ describe("verifyPinnedSkillMarketSchema", () => {
       contractId: "skill-market.v1",
       operationCount: 28,
       schemaVersion: "1.0.0",
-      sha256: "7350ac1affe970b54f69dffdc4fc4ba739acbe63fa4752806aaa5e3965ead682",
-      sourceCommit: "7ba2dc6821feb3054eebe955038e81a8a9fd6577",
+      sha256: "0ce61e0a9c1618190f0b28f981af7bfebfbdee89f63090fb41b398371624de40",
+      sourceCommit: "076c4951bd0adb97b104e82f595b099c691a4226",
     });
   });
 

@@ -1,7 +1,9 @@
 # Skill Market 信任边界测试矩阵
 
-日期：2026-11-06  
-Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`  
+日期：2026-11-06
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
 对应模块：`H-01`
 
 ## 1. 范围与结论

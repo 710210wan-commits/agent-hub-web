@@ -121,6 +121,25 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 生成物记录来源 commit、契约版本、Schema hash 和固定生成器版本并纳入版本控制；`check:skill-market-client` 检查漏生成或手改漂移。
 - 测试覆盖删除后完整恢复、非法响应拒绝、签名 Header 隔离和禁止导入后端源码或 monorepo shared 包。
 
+### 7. 冻结 Skill Market 信任边界测试矩阵
+
+提交：`2d29e38`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T7`（来源细化模块 `H-01`）
+
+#### 问题
+
+- 浏览器、BFF、日常后端、Artifact Store、数据库和 Runtime 的可信字段、鉴权、授权和审计点尚未形成统一矩阵。
+- Origin/Principal 注入、重放、过期签名、跨 scope、跨 mode 和缓存泄漏虽有分散测试，但缺少可追溯的威胁到证据映射。
+
+#### 修改方案
+
+- 新增信任边界矩阵，明确每一层的可信/非可信输入、鉴权点、授权点和审计责任。
+- 将七类威胁映射到现有自动化负向测试或明确人工步骤，并标明 H-03、B-06、H-04/I-05 和 K-04/K-05 的后续责任。
+- H-01 聚焦边界和证据，不在前端复制后端权限规则，也不提前宣称日志扫描或 API client 缓存门禁完成。
+
 ## 后续条目模板
 
 ```markdown
