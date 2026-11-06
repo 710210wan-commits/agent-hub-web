@@ -7,15 +7,23 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { AppShell } from "./app-shell";
 
 const replace = vi.fn();
+const push = vi.fn();
+const randomUUID = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/chat",
-  useRouter: () => ({ replace }),
+  useRouter: () => ({ push, replace }),
   useSearchParams: () => new URLSearchParams("mode=work&panel=open"),
 }));
 
 describe("AppShell", () => {
-  beforeEach(() => replace.mockClear());
+  beforeEach(() => {
+    replace.mockClear();
+    push.mockClear();
+    randomUUID.mockReset();
+    randomUUID.mockReturnValueOnce("draft-1").mockReturnValueOnce("draft-2");
+    vi.stubGlobal("crypto", { randomUUID });
+  });
 
   it("renders the approved brand and navigation without internal runtime labels", () => {
     render(
@@ -70,5 +78,23 @@ describe("AppShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "日常" }));
 
     expect(replace).toHaveBeenCalledWith("/chat?mode=daily&panel=open");
+  });
+
+  it("starts each new chat with a draft nonce rather than a fake conversation", () => {
+    render(
+      <AuthProvider>
+        <ModeProvider>
+          <AppShell title="新对话">内容</AppShell>
+        </ModeProvider>
+      </AuthProvider>,
+    );
+
+    const newChat = screen.getByRole("link", { name: "新对话" });
+    fireEvent.click(newChat);
+    fireEvent.click(newChat);
+
+    expect(push).toHaveBeenNthCalledWith(1, "/chat?mode=work&draft=draft-1");
+    expect(push).toHaveBeenNthCalledWith(2, "/chat?mode=work&draft=draft-2");
+    expect(push.mock.calls.flat().join(" ")).not.toContain("conversation=");
   });
 });

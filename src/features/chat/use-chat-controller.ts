@@ -9,6 +9,7 @@ import type {
   ChatSelectionSnapshot,
   CreateChatRunInput,
 } from "./contracts/chat";
+import { SessionNotFoundError } from "./contracts/session";
 import type { ChatTransport } from "./contracts/transport";
 import { chatReducer } from "./reducer/chat-reducer";
 import { createInitialChatState } from "./reducer/chat-state";
@@ -29,10 +30,31 @@ function hasSelections(selection: ChatSelectionSnapshot): boolean {
   );
 }
 
-export function useChatController(transport: ChatTransport, mode: AppMode) {
-  const [state, dispatch] = useReducer(chatReducer, undefined, createInitialChatState);
+export interface ChatControllerOptions {
+  initialSessionId?: string;
+  onSessionResolved?: (sessionId: string) => void;
+  routeKey?: string;
+}
+
+export function useChatController(
+  transport: ChatTransport,
+  mode: AppMode,
+  options: ChatControllerOptions = {},
+) {
+  const [state, dispatch] = useReducer(
+    chatReducer,
+    options.initialSessionId,
+    createInitialChatState,
+  );
   const abortControllerRef = useRef<AbortController | null>(null);
   const runIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(options.initialSessionId ?? null);
+  const notifiedSessionRef = useRef<string | null>(options.initialSessionId ?? null);
+  const onSessionResolvedRef = useRef(options.onSessionResolved);
+  const identityRef = useRef<{
+    mode: AppMode;
+    transport: ChatTransport;
+  } | null>(null);
   const generationRef = useRef(0);
   const batchGenerationRef = useRef(0);
   const lastInputRef = useRef<CreateChatRunInput | null>(null);
@@ -41,6 +63,81 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
       dispatch({ type: "stream.event", event: { type: "answer.delta", delta } });
     }
   });
+
+  useEffect(() => {
+    onSessionResolvedRef.current = options.onSessionResolved;
+  }, [options.onSessionResolved]);
+
+  useEffect(() => {
+    const previousIdentity = identityRef.current;
+    const routeCaughtUpToResolvedSession = Boolean(
+      previousIdentity &&
+        previousIdentity.mode === mode &&
+        previousIdentity.transport === transport &&
+        options.initialSessionId &&
+        options.initialSessionId === sessionIdRef.current,
+    );
+    identityRef.current = { mode, transport };
+    if (routeCaughtUpToResolvedSession) return;
+
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    batchedDeltas.reset();
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    runIdRef.current = null;
+    lastInputRef.current = null;
+    sessionIdRef.current = options.initialSessionId ?? null;
+    notifiedSessionRef.current = options.initialSessionId ?? null;
+    dispatch({
+      type: "session.reset",
+      sessionId: options.initialSessionId,
+    });
+
+    if (!options.initialSessionId) return;
+    if (!transport.sessions) {
+      dispatch({
+        type: "session.load.failed",
+        message: "当前模式不支持历史会话",
+      });
+      return;
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    dispatch({ type: "session.load.start" });
+    void transport.sessions
+      .loadSession(options.initialSessionId, abortController.signal)
+      .then((loaded) => {
+        if (generation !== generationRef.current || abortController.signal.aborted) return;
+        sessionIdRef.current = loaded.session.id;
+        dispatch({
+          type: "session.load.success",
+          sessionId: loaded.session.id,
+          messages: loaded.messages,
+        });
+      })
+      .catch((error: unknown) => {
+        if (generation !== generationRef.current || abortController.signal.aborted) return;
+        if (error instanceof SessionNotFoundError) {
+          sessionIdRef.current = null;
+          dispatch({ type: "session.load.not-found" });
+          return;
+        }
+        dispatch({
+          type: "session.load.failed",
+          message: error instanceof Error ? error.message : "会话加载失败，请稍后重试",
+        });
+      });
+
+    return () => abortController.abort();
+  }, [
+    batchedDeltas,
+    mode,
+    options.initialSessionId,
+    options.routeKey,
+    transport,
+  ]);
 
   const execute = useCallback(
     async (
@@ -51,7 +148,11 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
       const generation = generationRef.current + 1;
       generationRef.current = generation;
       batchedDeltas.reset();
-      lastInputRef.current = input;
+      const runInput: CreateChatRunInput = {
+        ...input,
+        ...(sessionIdRef.current ? { sessionId: sessionIdRef.current } : {}),
+      };
+      lastInputRef.current = runInput;
       if (behavior === "append") {
         dispatch({
           type: "message.submit",
@@ -77,8 +178,16 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
         const created =
           behavior === "continue" && resumeFromRunId && transport.resumeRun
             ? await transport.resumeRun(resumeFromRunId, abortController.signal)
-            : await transport.createRun(input, abortController.signal);
+            : await transport.createRun(runInput, abortController.signal);
         if (generation !== generationRef.current) return;
+        if (created.sessionId && !sessionIdRef.current) {
+          sessionIdRef.current = created.sessionId;
+          dispatch({ type: "session.resolve", sessionId: created.sessionId });
+          if (notifiedSessionRef.current !== created.sessionId) {
+            notifiedSessionRef.current = created.sessionId;
+            onSessionResolvedRef.current?.(created.sessionId);
+          }
+        }
         runIdRef.current = created.runId;
         dispatch({
           type: "stream.event",
@@ -117,6 +226,9 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
 
   const submit = useCallback(
     (content: string) => {
+      if (state.sessionStatus === "loading" || state.sessionStatus === "not-found" || state.sessionStatus === "failed") {
+        return false;
+      }
       const input = { mode, content, selection: state.draftSelection };
       if (!transport.capabilities.selections && hasSelections(input.selection)) {
         dispatch({
@@ -128,7 +240,13 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
       void execute(input, "append");
       return true;
     },
-    [execute, mode, state.draftSelection, transport.capabilities.selections],
+    [
+      execute,
+      mode,
+      state.draftSelection,
+      state.sessionStatus,
+      transport.capabilities.selections,
+    ],
   );
 
   const stop = useCallback(() => {
@@ -158,12 +276,7 @@ export function useChatController(transport: ChatTransport, mode: AppMode) {
     dispatch({ type: "selection.change", selection });
   }, []);
 
-  useEffect(
-    () => () => {
-      abortControllerRef.current?.abort();
-    },
-    [],
-  );
+  useEffect(() => () => abortControllerRef.current?.abort(), []);
 
   return {
     state,

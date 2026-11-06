@@ -3,6 +3,7 @@
 import { ArrowUp, Paperclip, Square } from "lucide-react";
 
 import type { ChatSelectionSnapshot } from "@/features/chat/contracts/chat";
+import type { AppMode } from "@/config/modes";
 import type { ChatRunState } from "@/features/chat/reducer/chat-state";
 
 import { CapabilitySelector } from "./capability-selector";
@@ -27,6 +28,7 @@ function isRunning(status: ChatRunState) {
 
 export function Composer({
   input,
+  mode,
   selection,
   status,
   onChange,
@@ -35,6 +37,7 @@ export function Composer({
   onStop,
 }: {
   input: string;
+  mode: AppMode;
   selection: ChatSelectionSnapshot;
   status: ChatRunState;
   onChange: (value: string) => void;
@@ -43,6 +46,7 @@ export function Composer({
   onStop: () => void;
 }) {
   const running = isRunning(status);
+  const workCapabilitiesPreconfigured = mode === "work";
   return (
     <div className="composer-dock">
       <div className="composer">
@@ -72,6 +76,7 @@ export function Composer({
             附件
           </button>
           <CapabilitySelector
+            disabled={workCapabilitiesPreconfigured}
             label="知识库"
             onChange={(knowledgeBaseIds) =>
               onSelectionChange({ ...selection, knowledgeBaseIds })
@@ -80,17 +85,24 @@ export function Composer({
             selectedIds={selection.knowledgeBaseIds}
           />
           <CapabilitySelector
+            disabled={workCapabilitiesPreconfigured}
             label="Skill"
             onChange={(skillIds) => onSelectionChange({ ...selection, skillIds })}
             options={skillOptions}
             selectedIds={selection.skillIds}
           />
           <CapabilitySelector
+            disabled={workCapabilitiesPreconfigured}
             label="MCP"
             onChange={(mcpIds) => onSelectionChange({ ...selection, mcpIds })}
             options={mcpOptions}
             selectedIds={selection.mcpIds}
           />
+          {workCapabilitiesPreconfigured ? (
+            <span className="composer-capability-note">
+              办公智能体已预配置知识库、Skill 与 MCP
+            </span>
+          ) : null}
           <button
             aria-label={running ? "停止" : "发送"}
             className="composer-send"
