@@ -29,6 +29,24 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 明确同源 BFF、HMAC Principal、Schema 生成、运行时校验、受保护名称和 daily Runtime 准入规则。
 - 将批准后的扩展设计写入 `docs/skill-market/2026-10-27-agent-hub-web-design.md`，原始 V1 绑定设计保持不变；生产代码仍以关联 Plan 为实施门禁。
 
+### 2. 增加 Skill Market 服务端目标与请求门禁
+
+提交：本次提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T7`（来源细化模块 `B-01`）
+
+#### 问题
+
+- 新前端尚无 daily 后端唯一目标配置，也没有阻止 work、任意目标和越界路径进入后续代理的统一门禁。
+
+#### 修改方案
+
+- 新增服务端专用 `SKILL_MARKET_DAILY_ORIGIN`，在 Next 启动/构建边界校验必填项、HTTP(S) 协议和纯 Origin 格式。
+- 仅允许 `daily` 解析到固定目标；`work`、非法 mode、目标覆盖、绝对 URL、编码路径和未登记 Skill Market operation 均在上游调用前失败。
+- 本模块只提供 B-01 目标与路径门禁；Principal 签名和实际 BFF 转发分别留给 B-02、B-03。
+
 ## 后续条目模板
 
 ```markdown
