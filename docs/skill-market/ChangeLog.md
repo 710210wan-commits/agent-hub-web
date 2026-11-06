@@ -67,6 +67,24 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 按 `skill-market-principal-v1` 对最终 HTTP 方法和 `originalUrl` 生成六个 Header，固定向量与后端 I-01 基线一致。
 - 增加过期及方法、路径、身份、角色、managed scenarios、permissions 篡改测试；错误不包含 Secret、签名原文或业务路径。
 
+### 4. 增加同源 Skill Market BFF 代理
+
+提交：本次提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T7`（来源细化模块 `B-03`）
+
+#### 问题
+
+- 浏览器尚无独立同源入口安全转发 Skill Market 请求，JSON、204、下载、超时和取消语义也没有统一边界。
+
+#### 修改方案
+
+- 新增 `/api/skill-market/[...path]` Node.js Route Handler，复用 B-01 目标门禁和 B-02 Principal 签名，不复制业务 DTO 或生命周期逻辑。
+- 流式转发请求与响应，保留 JSON 状态、204 和下载的类型、文件名、长度、hash；清理 hop-by-hop、Cookie、Host、Origin 和客户端 Principal Header。
+- 增加可配置超时、客户端取消传播及稳定的 502/504/499 网关错误；work、非法 mode 和目标覆盖保持零上游请求。
+
 ## 后续条目模板
 
 ```markdown
