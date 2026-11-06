@@ -85,6 +85,24 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 流式转发请求与响应，保留 JSON 状态、204 和下载的类型、文件名、长度、hash；清理 hop-by-hop、Cookie、Host、Origin 和客户端 Principal Header。
 - 增加可配置超时、客户端取消传播及稳定的 502/504/499 网关错误；work、非法 mode 和目标覆盖保持零上游请求。
 
+### 5. 固定跨仓 Skill Market Schema
+
+提交：`8d9e4fa`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T6`（来源细化模块 `B-04`）
+
+#### 问题
+
+- 新前端缺少可离线重建、可追溯且不依赖后端浮动分支的正式 Schema 输入。
+
+#### 修改方案
+
+- 将 `DSI-agent-loop@7ba2dc6821feb3054eebe955038e81a8a9fd6577` 的 `skill-market.v1.json` 字节级固定到前端仓库，记录版本 `1.0.0`、来源路径、28 个 operation 和 SHA-256。
+- 新增离线校验命令和漂移测试；字节、版本、hash、来源元数据或 Skill Market 路径范围不符时 fail closed。
+- 构建和校验只读取前端仓库内固定制品，不读取本机后端目录或网络分支。
+
 ## 后续条目模板
 
 ```markdown
