@@ -9,12 +9,14 @@ export function KbDialog({
   children,
   footer,
   dismissible = true,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
   dismissible?: boolean;
+  wide?: boolean;
 }) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -35,7 +37,11 @@ export function KbDialog({
         }
       }}
     >
-      <div aria-modal="true" className="kb-dialog" role="dialog">
+      <div
+        aria-modal="true"
+        className={`kb-dialog${wide ? " is-wide" : ""}`}
+        role="dialog"
+      >
         <header className="kb-dialog-header">
           <h2>{title}</h2>
           {dismissible ? (

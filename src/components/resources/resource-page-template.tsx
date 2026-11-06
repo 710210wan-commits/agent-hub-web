@@ -29,6 +29,7 @@ export function ResourcePageTemplate<T extends ResourceListItem>({
   loadingSlot,
   errorSlot,
   emptySlot,
+  headerAction,
 }: {
   title: string;
   description: string;
@@ -40,6 +41,7 @@ export function ResourcePageTemplate<T extends ResourceListItem>({
   loadingSlot?: ReactNode;
   errorSlot?: ReactNode;
   emptySlot?: ReactNode;
+  headerAction?: ReactNode;
 }) {
   const { mode } = useAppMode();
   const [query, setQuery] = useState("");
@@ -56,7 +58,9 @@ export function ResourcePageTemplate<T extends ResourceListItem>({
           <h1>{title}</h1>
           <p>{description}</p>
         </div>
-        <button aria-label={`${createLabel}（待接入）`} disabled type="button">{createLabel}</button>
+        {headerAction ?? (
+          <button aria-label={`${createLabel}（待接入）`} disabled type="button">{createLabel}</button>
+        )}
       </header>
       <label className="resource-search">
         <Search aria-hidden="true" size={16} />
