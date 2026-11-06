@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "generate:skill-market-client": "tsx scripts/generate-skill-market-client.ts",
+    "check:skill-market-client": "tsx scripts/check-skill-market-client.ts",
+    "verify:skill-market-schema": "tsx scripts/verify-skill-market-schema.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -28,7 +31,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0",
-    "zod": "^4.3.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
@@ -43,6 +46,7 @@
     "eslint-config-next": "16.1.1",
     "jsdom": "^27.1.0",
     "tailwindcss": "^4.1.16",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3",
     "vite": "^7.2.2",
     "vitest": "^4.0.8"

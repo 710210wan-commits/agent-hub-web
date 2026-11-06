@@ -1,0 +1,10 @@
+{
+  "artifact": "skill-market.v1.json",
+  "contractId": "skill-market.v1",
+  "operationCount": 28,
+  "schemaVersion": "1.0.0",
+  "sha256": "7350ac1affe970b54f69dffdc4fc4ba739acbe63fa4752806aaa5e3965ead682",
+  "sourceCommit": "7ba2dc6821feb3054eebe955038e81a8a9fd6577",
+  "sourcePath": "api/openapi/skill-market.v1.json",
+  "sourceRepository": "DSI-agent-loop"
+}
