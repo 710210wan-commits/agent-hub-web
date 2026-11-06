@@ -103,6 +103,24 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 新增离线校验命令和漂移测试；字节、版本、hash、来源元数据或 Skill Market 路径范围不符时 fail closed。
 - 构建和校验只读取前端仓库内固定制品，不读取本机后端目录或网络分支。
 
+### 6. 生成 Skill Market 前端契约
+
+提交：`3019c3a`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T6`（来源细化模块 `B-05`）
+
+#### 问题
+
+- 固定 Schema 尚未生成前端可直接使用的精确类型和运行时校验器，手写 DTO 会造成跨仓漂移。
+
+#### 修改方案
+
+- 新增 `generate:skill-market-client`，从 B-04 固定制品生成 40 个组件及 28 个 operation 的请求体、路径参数、查询参数和响应 Zod 契约。
+- 生成物记录来源 commit、契约版本、Schema hash 和固定生成器版本并纳入版本控制；`check:skill-market-client` 检查漏生成或手改漂移。
+- 测试覆盖删除后完整恢复、非法响应拒绝、签名 Header 隔离和禁止导入后端源码或 monorepo shared 包。
+
 ## 后续条目模板
 
 ```markdown
