@@ -177,6 +177,26 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 新增 operation 驱动的 API client，先校验请求和响应，再调用 ViewModel adapter。
 - 统一取消、超时、错误解码、下载校验和 mutation 结果；`work` 在 fetch 前 fail-closed。
 - query key 包含 mode、资源类型和资源标识，并固定契约文件 LF 行尾。
+
+### 10. 收口 Skill Market 日志与敏感信息检查
+
+提交：`11cb96d`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T7`（来源细化模块 `H-03`）
+
+#### 问题
+
+- BFF 缺少字段白名单化的统一审计日志，异常细节、上传内容或 Principal 数据存在被误记的风险。
+- 尚无自动门禁检查构建产物、Source Map、客户端资产和 `NEXT_PUBLIC_*` 中的 Secret、上游 Origin 或 Principal 配置。
+
+#### 修改方案
+
+- BFF 只记录 method、受控 path、status、duration 和安全 requestId；异常、Secret、Origin、上传/Prompt 和完整 Principal 不进入日志或网关错误。
+- 过滤不安全的上游 requestId，避免通过响应 Header 或审计事件把敏感值带给浏览器或日志。
+- 新增 `check:skill-market-sensitive-data`，扫描生产构建、Source Map、客户端资产、示例配置和实际构建环境，并用 canary 值执行负向测试。
+
 ## 后续条目模板
 
 ```markdown
