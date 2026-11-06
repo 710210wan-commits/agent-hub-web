@@ -47,6 +47,26 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 仅允许 `daily` 解析到固定目标；`work`、非法 mode、目标覆盖、绝对 URL、编码路径和未登记 Skill Market operation 均在上游调用前失败。
 - 本模块只提供 B-01 目标与路径门禁；Principal 签名和实际 BFF 转发分别留给 B-02、B-03。
 
+## 2026-11-06
+
+### 3. 增加 Skill Market Principal 签名适配
+
+提交：本次提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T7`（来源细化模块 `B-02`）
+
+#### 问题
+
+- 新前端 BFF 尚不能按后端冻结的规范建立可信 Principal，且必须防止浏览器提供身份、角色、权限、作用域或 Secret。
+
+#### 修改方案
+
+- 新增服务端单操作员 Principal 配置，校验 Secret 长度、身份、角色和列表字段，并在启动/构建边界 fail closed。
+- 按 `skill-market-principal-v1` 对最终 HTTP 方法和 `originalUrl` 生成六个 Header，固定向量与后端 I-01 基线一致。
+- 增加过期及方法、路径、身份、角色、managed scenarios、permissions 篡改测试；错误不包含 Secret、签名原文或业务路径。
+
 ## 后续条目模板
 
 ```markdown
