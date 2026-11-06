@@ -18,4 +18,5 @@ export interface CreateChatRunInput {
   mode: AppMode;
   content: string;
   selection: ChatSelectionSnapshot;
+  sessionId?: string;
 }
