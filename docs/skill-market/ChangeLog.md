@@ -289,6 +289,47 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 提交前展示 revision、文件数和未解决 diagnostics；删除与提交均单飞，提交成功后草稿转为只读。
 - 验证：聚焦测试 9/9、前端全量单测 246/246、typecheck 和 lint 通过。
 
+### 15. 完成 Skill Creator 全流程
+
+提交：`2557f21`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8`（来源细化模块 `E-01～E-06`）
+
+#### 问题
+
+- Creator 缺少从需求访谈、Spec 确认、Tool Resolution 到 Bundle 生成的连续工作流。
+- Validator diagnostics、Smoke Evidence 和保存草稿没有统一的步骤状态与失败恢复，容易把未确认数据误当作可提交结果。
+
+#### 修改方案
+
+- 新增显式 Creator 步骤状态机，串联 Requirement Analyze/Revise/Confirm、Tool Recommend/Confirm、Bundle Generate 与草稿保存；所有前进条件都由服务端响应和当前步骤共同约束。
+- 展示工具风险、权限、缺失能力与建议，保留结构化 Validator diagnostics；Smoke Test 区分用例建议、运行证据与软门禁，不把缺失证据显示为通过。
+- work 模式继续零请求；入口复用“我的 Skill”、草稿编辑和现有页面组件、表单样式及设计 token。
+- 验证：聚焦测试 9/9、前端全量单测 251/251、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
+
+### 16. 完成审核、Trigger Test 与发布衔接
+
+提交：`13375f6`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8`（来源细化模块 `F-01～F-04`）
+
+#### 问题
+
+- 新前端缺少由当前 Principal 后端授权的审核队列、Submission 证据详情和修订绑定的 Trigger Test。
+- 审核意见、通过、驳回、删除待审核项以及 approved 后发布/发布并启用尚未接入真实契约。
+
+#### 修改方案
+
+- 新增审核队列与详情路由：不在前端按角色过滤，严格使用后端返回的 Submission；Requirement、Definition、revision diff、Tool、Validator、Smoke Evidence 和审核历史按运行时 Schema 解析，缺失证据明确显示“后端未提供”。
+- Trigger Test 展示预置用例、结果摘要与服务端历史，运行请求单飞防重并在刷新后重新查询；结果按 Submission ID 与修订语义展示，不跨修订复用。
+- 审核检查、评语、批准/拒绝与不可撤销删除均以后端授权和返回状态为准；409 保留当前视图并要求刷新权威状态。
+- approved 提交支持“仅发布”和“发布并启用”，目标范围固定显示为 `scenario:daily`；组合操作分别呈现 Publication 与 Installation 结果，发布成功后禁止重复发布。
+- 验证：聚焦测试 5/5、前端全量单测 256/256、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
+
 ## 后续条目模板
 
 ```markdown
