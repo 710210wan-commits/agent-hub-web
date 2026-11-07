@@ -29,6 +29,7 @@ function catalogItem(overrides: Partial<CatalogItemViewModel> = {}): CatalogItem
     categorySource: "inferred",
     tools: ["gis-query"],
     loadedScenarios: [],
+    scopes: [],
     installState: "built-in-active",
     conflict: null,
     ...overrides,
@@ -65,6 +66,7 @@ const mixedCatalog = catalog([
     description: "查询日常目标",
     installState: "built-in-active",
     loadedScenarios: [{ id: "daily", name: "日常" }],
+    scopes: [{ type: "scenario", id: "daily", name: "日常" }],
   }),
   catalogItem({
     id: "market:beta",
@@ -217,6 +219,27 @@ describe("SkillCatalogPlaza", () => {
     const category = screen.getByRole("combobox", { name: "分类" });
     const options = Array.from(category.querySelectorAll("option")).map((option) => option.value);
     expect(options).toEqual(["all", "内置 Skill", "市场发布"]);
+  });
+
+  it("clears a category filter that disappears after refresh", async () => {
+    let response = mixedCatalog;
+    const query = vi.fn(async () => response);
+    renderPlaza(clientStub(query));
+    await screen.findByRole("heading", { name: "Alpha Query" });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "分类" }), {
+      target: { value: "市场发布" },
+    });
+    expect(screen.queryByRole("heading", { name: "Alpha Query" })).not.toBeInTheDocument();
+
+    response = catalog([mixedCatalog.items[0]]);
+    fireEvent.click(screen.getByRole("button", { name: "刷新" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox", { name: "分类" })).toHaveValue("all");
+    });
+    expect(screen.getByRole("heading", { name: "Alpha Query" })).toBeInTheDocument();
+    expect(screen.queryByText("没有符合条件的 Skill")).not.toBeInTheDocument();
   });
 
   it("keeps previous results with a non-blocking notice when refresh fails", async () => {

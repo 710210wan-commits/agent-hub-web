@@ -74,6 +74,9 @@ describe("skillCatalogViewModelAdapter", () => {
       conflict: null,
     });
     expect(item.loadedScenarios).toEqual([{ id: "daily", name: "日常" }]);
+    expect(item).toHaveProperty("scopes", [
+      { type: "scenario", id: "daily", name: "日常" },
+    ]);
     expect(item.tools).toEqual(["gis-query"]);
   });
 
@@ -197,6 +200,7 @@ describe("skillCatalogViewModelAdapter", () => {
       "name",
       "publicationId",
       "revision",
+      "scopes",
       "source",
       "title",
       "tools",

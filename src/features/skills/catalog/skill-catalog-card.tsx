@@ -17,8 +17,8 @@ export function SkillCatalogCard({ item }: { item: CatalogItemViewModel }) {
     item.name,
     item.revision !== null ? `r${item.revision}` : null,
     item.tools.length > 0 ? `${item.tools.length} 个工具` : null,
-    item.loadedScenarios.length > 0
-      ? `加载于 ${item.loadedScenarios.map((scenario) => scenario.name).join("、")}`
+    item.scopes.length > 0
+      ? `加载于 ${item.scopes.map((scope) => scope.name).join("、")}`
       : null,
   ].filter((part): part is string => Boolean(part));
 

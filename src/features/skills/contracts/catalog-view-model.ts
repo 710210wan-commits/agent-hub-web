@@ -14,6 +14,10 @@ export interface SkillCatalogScenarioViewModel {
   name: string;
 }
 
+export interface SkillCatalogScopeViewModel extends SkillCatalogScenarioViewModel {
+  type: "scenario";
+}
+
 export interface CatalogItemViewModel {
   id: string;
   name: string;
@@ -27,6 +31,7 @@ export interface CatalogItemViewModel {
   categorySource: "inferred";
   tools: string[];
   loadedScenarios: SkillCatalogScenarioViewModel[];
+  scopes: SkillCatalogScopeViewModel[];
   installState: SkillCatalogInstallState;
   conflict: { reasonCode: "skill.protected_name_conflict" } | null;
 }
@@ -70,6 +75,7 @@ function toCatalogItemViewModel(dto: CatalogItemDto): CatalogItemViewModel {
     categorySource: dto.categorySource,
     tools: [...dto.allowedTools],
     loadedScenarios: dto.loadedByScenarios.map((scenario) => ({ ...scenario })),
+    scopes: dto.loadedByScenarios.map((scenario) => ({ type: "scenario", ...scenario })),
     installState: resolveInstallState(dto, source, conflict),
     conflict,
   };

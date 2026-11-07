@@ -22,6 +22,7 @@ function catalog(itemCount = 1): SkillCatalogViewModel {
       categorySource: "inferred" as const,
       tools: [],
       loadedScenarios: [],
+      scopes: [],
       installState: "built-in-active" as const,
       conflict: null,
     })),
@@ -43,6 +44,13 @@ function failure(): SkillMarketError {
 describe("reduceSkillCatalogState", () => {
   it("starts idle", () => {
     expect(createInitialSkillCatalogState()).toEqual({ kind: "idle" });
+  });
+
+  it("resets loaded daily data to idle", () => {
+    expect(reduceSkillCatalogState(
+      { kind: "success", catalog: catalog(1) },
+      { type: "skill-catalog-reset" },
+    )).toEqual({ kind: "idle" });
   });
 
   it("moves idle to loading on first load", () => {

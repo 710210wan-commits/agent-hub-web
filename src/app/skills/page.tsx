@@ -1,5 +1,3 @@
-"use client";
-
 import { AppShell } from "@/components/shell/app-shell";
 import { SkillCatalogPlaza } from "@/features/skills/catalog/skill-catalog-plaza";
 

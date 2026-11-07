@@ -25,6 +25,7 @@ function item(overrides: Partial<CatalogItemViewModel> = {}): CatalogItemViewMod
     categorySource: "inferred",
     tools: ["gis-query"],
     loadedScenarios: [],
+    scopes: [],
     installState: "built-in-active",
     conflict: null,
     ...overrides,

@@ -220,6 +220,32 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 新增 `useSkillCatalog` hook：`daily` 自动加载、单飞防重复刷新、加载结果按 generation 防止过期回写、`work` 模式零请求。
 - 验证：C-01 聚焦测试 27/27、前端全量测试 211/211、typecheck、lint、生成契约漂移检查、production build 和 canary 敏感信息扫描通过。
 
+### 12. 迁移 Skill 广场列表、搜索与筛选
+
+提交：`ad55fe0`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8`（来源细化模块 `C-02`）
+
+#### 问题
+
+- `/skills` 页面仍渲染 `skillFixtures` 占位数据，没有接入 C-01 建立的统一 Catalog 数据模型。
+- 缺少名称、描述、工具的规范化前端搜索，以及分类、来源、可用/冲突状态的可组合筛选。
+- 目录一次加载后若每次键入都重新规范化全部条目，数据量增长时会造成重复重解析。
+
+#### 修改方案
+
+- `/skills` 页面替换为 `SkillCatalogPlaza`：daily 模式经 `useSkillCatalog` 加载统一 Catalog 并渲染列表；work 模式渲染“办公场景暂未接入”占位且不实例化数据请求。
+- 新增 `catalog-filter` 纯函数：NFKC 规范化搜索（名称/描述/工具）、分类/来源/冲突状态筛选可组合且保持后端稳定顺序；条目搜索文本在每次目录加载时只规范化一次，键入筛选复用索引，避免重复重解析。
+- 卡片显式展示来源（内置 Skill/市场发布）、安装状态（运行中/已启用/可安装/不可用）、名称冲突徽标、修订号、工具数和加载场景。
+- 空目录（“Skill 广场暂无内容”）与零搜索结果（“没有符合条件的 Skill”）使用不同文案；加载、持久错误（可重试）、非阻断刷新与刷新失败保留列表的体验接自 C-01/H-02。
+- Review 修正：`daily → work` 时使 generation 失效、取消在途请求并清空页面状态；Catalog ViewModel 将后端 `loadedByScenarios` 显式映射为 `scenario` scope，不推断契约未提供的 agent scope。
+- Review 修正：绑定默认浏览器 `fetch`，避免 Chrome 将其作为实例方法调用时触发 `Illegal invocation`；刷新后若当前分类已从 Catalog 消失，则复位为全部分类。
+- Review 修正：新增 daily Catalog 加载/前端筛选和 work 零请求的 Playwright 覆盖，并为 Playwright 测试服务器提供最小 server-only Skill Market 配置；`/skills` route 保持服务端薄组合边界。
+- 文档权威：`AGENTS.md` 已明确 Skill 扩展设计和跨仓 Plan 在 Skill 范围内覆盖旧 V1 占位设计，消除绑定依据冲突；既有 docs-only 历史不重写，后续回填随功能、修复或测试变更提交。
+- 验证：C-01/C-02/API client 聚焦测试 58/58，前端全量测试 233/233，Playwright 11/11，typecheck、lint、生成契约漂移检查、production build 和敏感信息扫描通过。
+
 ## 后续条目模板
 
 ```markdown

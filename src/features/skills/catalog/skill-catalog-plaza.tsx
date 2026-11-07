@@ -60,6 +60,9 @@ function SkillCatalogPlazaDaily({ client }: { client?: SkillMarketClient }) {
     () => (catalog ? listSkillCatalogCategories(catalog.items) : []),
     [catalog],
   );
+  if (filter.category !== "all" && !categories.includes(filter.category)) {
+    setFilter({ ...filter, category: "all" });
+  }
   const visibleItems = useMemo(
     () => filterSkillCatalogEntries(searchIndex, filter),
     [searchIndex, filter],

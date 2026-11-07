@@ -27,6 +27,12 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_CHAT_TRANSPORT: "mock",
       NEXT_PUBLIC_E2E_SCENARIOS: "1",
+      SKILL_MARKET_DAILY_ORIGIN: "http://127.0.0.1:3999",
+      SKILL_MARKET_GATEWAY_HMAC_SECRET: "e2e-only-skill-market-secret-32-bytes",
+      SKILL_MARKET_PRINCIPAL_ID: "playwright-operator",
+      SKILL_MARKET_PRINCIPAL_MANAGED_SCENARIOS: "daily",
+      SKILL_MARKET_PRINCIPAL_PERMISSIONS: "",
+      SKILL_MARKET_PRINCIPAL_ROLES: "author,reviewer,admin,scenario_admin",
     },
   },
 });

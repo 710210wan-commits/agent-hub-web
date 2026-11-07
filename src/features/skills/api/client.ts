@@ -61,7 +61,7 @@ export class SkillMarketClient {
   private readonly timeoutMs: number;
 
   constructor(options: SkillMarketClientOptions = {}) {
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 

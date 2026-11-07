@@ -10,6 +10,7 @@ export type SkillCatalogPageState =
   | { kind: "refreshing"; catalog: SkillCatalogViewModel };
 
 export type SkillCatalogEvent =
+  | { type: "skill-catalog-reset" }
   | { type: "skill-catalog-load-started" }
   | { type: "skill-catalog-load-succeeded"; catalog: SkillCatalogViewModel }
   | { type: "skill-catalog-load-failed"; error: SkillMarketError };
@@ -23,6 +24,8 @@ export function reduceSkillCatalogState(
   event: SkillCatalogEvent,
 ): SkillCatalogPageState {
   switch (event.type) {
+    case "skill-catalog-reset":
+      return createInitialSkillCatalogState();
     case "skill-catalog-load-started":
       if (state.kind === "success") return { kind: "refreshing", catalog: state.catalog };
       if (state.kind === "refreshing") return state;

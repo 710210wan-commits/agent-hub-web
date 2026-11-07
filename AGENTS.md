@@ -2,8 +2,11 @@
 
 ## Authority
 
-- Binding design: `docs/superpowers/specs/2026-10-27-agent-hub-web-design.md`.
-- Active plan: `docs/superpowers/plans/2026-10-27-agent-hub-web-v1.md`.
+- Base V1 design: `docs/superpowers/specs/2026-10-27-agent-hub-web-design.md`.
+- Base V1 plan: `docs/superpowers/plans/2026-10-27-agent-hub-web-v1.md`.
+- Binding Skill extension design: `docs/skill-market/2026-10-27-agent-hub-web-design.md`.
+- Active Skill extension plan: `D:\0 ysq文件\DSI-agent-loop\docs\plans\2026-11-05-skill-market-frontend-migration.md`.
+- For the Skill module, the approved Skill extension design and plan supersede the base V1 placeholder-only resource scope where they explicitly differ.
 - Report conflicts instead of silently widening scope.
 
 ## Development

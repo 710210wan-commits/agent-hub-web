@@ -30,15 +30,30 @@ export function useSkillCatalog({ client, mode }: UseSkillCatalogOptions): UseSk
   );
   const inFlightRef = useRef(false);
   const generationRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | undefined>(undefined);
+
+  const cancelCurrentLoad = useCallback(() => {
+    generationRef.current += 1;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = undefined;
+    inFlightRef.current = false;
+  }, []);
 
   const load = useCallback(() => {
     if (mode !== "daily" || inFlightRef.current) return;
     inFlightRef.current = true;
     const generation = ++generationRef.current;
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     dispatch({ type: "skill-catalog-load-started" });
     client
       .query(
-        { mode: "daily", operation: "getSkillCatalog", queryParameters: {} },
+        {
+          mode: "daily",
+          operation: "getSkillCatalog",
+          queryParameters: {},
+          signal: abortController.signal,
+        },
         skillCatalogViewModelAdapter,
       )
       .then((catalog) => {
@@ -52,12 +67,21 @@ export function useSkillCatalog({ client, mode }: UseSkillCatalogOptions): UseSk
       .finally(() => {
         if (generationRef.current !== generation) return;
         inFlightRef.current = false;
+        if (abortControllerRef.current === abortController) {
+          abortControllerRef.current = undefined;
+        }
       });
   }, [client, mode]);
 
   useEffect(() => {
+    if (mode !== "daily") {
+      cancelCurrentLoad();
+      dispatch({ type: "skill-catalog-reset" });
+      return;
+    }
     load();
-  }, [load]);
+    return cancelCurrentLoad;
+  }, [cancelCurrentLoad, load, mode]);
 
   const refresh = useCallback(() => {
     load();

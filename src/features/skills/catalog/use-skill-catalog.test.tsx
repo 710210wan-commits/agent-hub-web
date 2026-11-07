@@ -149,4 +149,41 @@ describe("useSkillCatalog", () => {
     await waitFor(() => expect(result.current.state.kind).toBe("idle"));
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it("clears completed daily data when the mode changes to work", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(catalogBody(1))) as typeof fetch;
+    const client = new SkillMarketClient({ fetchImpl });
+    const { result, rerender } = renderHook(
+      ({ mode }: { mode: "daily" | "work" }) => useSkillCatalog({ client, mode }),
+      { initialProps: { mode: "daily" as "daily" | "work" } },
+    );
+
+    await waitFor(() => expect(result.current.state.kind).toBe("success"));
+    rerender({ mode: "work" });
+
+    await waitFor(() => expect(result.current.state.kind).toBe("idle"));
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts an in-flight daily request before entering work mode", async () => {
+    let requestAborted = false;
+    const fetchImpl = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          requestAborted = true;
+          reject(new DOMException("aborted", "AbortError"));
+        }, { once: true });
+      })) as typeof fetch;
+    const client = new SkillMarketClient({ fetchImpl });
+    const { result, rerender } = renderHook(
+      ({ mode }: { mode: "daily" | "work" }) => useSkillCatalog({ client, mode }),
+      { initialProps: { mode: "daily" as "daily" | "work" } },
+    );
+
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+    rerender({ mode: "work" });
+
+    await waitFor(() => expect(requestAborted).toBe(true));
+    expect(result.current.state.kind).toBe("idle");
+  });
 });

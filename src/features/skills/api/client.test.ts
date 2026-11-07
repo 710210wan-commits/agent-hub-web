@@ -8,6 +8,24 @@ import {
 } from "./client";
 
 describe("SkillMarketClient", () => {
+  it("binds the default browser fetch to the global object", async () => {
+    const fetchImpl = vi.fn(function (this: unknown) {
+      expect(this).toBe(globalThis);
+      return Promise.resolve(Response.json([]));
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+
+    try {
+      const client = new SkillMarketClient();
+      await expect(client.query(
+        { mode: "daily", operation: "listDrafts" },
+        defineSkillMarketViewModelAdapter("listDrafts", (drafts) => drafts),
+      )).resolves.toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("validates a response before invoking its ViewModel adapter", async () => {
     const toViewModel = vi.fn((drafts: unknown[]) => ({ count: drafts.length }));
     const client = new SkillMarketClient({
