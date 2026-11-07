@@ -218,6 +218,16 @@ Skill 模块的交互与视觉一致性是绑定约束：
 - 401/403、404、409、422 和网关超时具有不同说明及恢复动作；422 diagnostics 必须保留结构化详情。
 - 本期不按角色拆分前端入口；后端对 author、reviewer、admin、scenario_admin 执行最终授权。
 
+### 10.5 实施进展（2026-11-07）
+
+- Catalog、广场、详情和“我的 Skill”（C-01～C-05）已由 `f7b0e31`、`ad55fe0`、`f579c50`、`c8a9048` 实现。
+- Draft 作者工作台（D-01～D-04）已由 `0f9893a` 实现；Creator（E-01～E-06）已由 `2557f21` 实现。
+- 审核、Trigger Test 和发布衔接（F-01～F-04）已由 `13375f6` 实现；ChangeLog 由 `8ce144b` 回填。
+- Publication、Artifact、Installation 管理和权限/作用域负向体验（G-01～G-05、H-04）已由 `d0a637c` 实现，入口为 `/skills/manage?mode=daily`，详情为 `/skills/manage/[id]?mode=daily`。
+- Artifact 下载保存前同时校验实际字节 SHA-256、`X-Content-Sha256` 和 Publication content hash；任何不一致均显示持久错误且不保存文件。
+- 当前公开契约允许 `scenario|agent` 类型但没有 authorized agent target 或 Installation 列表接口；为避免浏览器扩大 managed scope 或虚构安装明细，当前页面只开放固定 `scenario:daily`，不读取 URL/自由表单中的 scope。后端仍是权限和作用域的最终权威。
+- 最新验证为 G/H-04 聚焦 9/9、前端全量单测 263/263、typecheck 和 lint 通过。按当前实施约定尚未补跑 Draft、Creator、Review、Publication 的 Playwright 与 production build；跨仓真实生命周期、旧前端回归和双仓发布门禁继续由 J/K 模块收口。
+
 ## 11. GIS 工作台
 
 首版仅提供：

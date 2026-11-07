@@ -330,6 +330,29 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - approved 提交支持“仅发布”和“发布并启用”，目标范围固定显示为 `scenario:daily`；组合操作分别呈现 Publication 与 Installation 结果，发布成功后禁止重复发布。
 - 验证：聚焦测试 5/5、前端全量单测 256/256、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
 
+### 17. 完成 Publication、Artifact 与 Installation 管理
+
+提交：`d0a637c`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T12`（来源细化模块 `G-01～G-05、H-04`）
+
+#### 问题
+
+- 新前端尚无 Publication 列表/详情、Artifact 完整性下载、daily 安装启停、下架和创建新修订入口。
+- 发布并启用发生部分成功后，缺少只重试 Installation 的合法补救路径；URL 或自由表单也不能被用于扩大 managed scope。
+
+#### 修改方案
+
+- 新增 `/skills/manage` 列表与详情：组合 Publication 管理接口和统一 Catalog，区分最新、历史、withdrawn、名称冲突、daily 已启用与未启用状态；当前契约未提供 Installation 列表时不虚构安装明细。
+- Artifact 继续经同源 BFF 下载，使用 `Content-Disposition` 文件名并展示 `Content-Type`；保存前计算实际字节 SHA-256，同时比对 `X-Content-Sha256` 和 Publication content hash，任一不一致均中止保存。
+- Installation mutation 固定为 `scenario:daily`，不读取 URL 中的 scope 参数；安装/启用/停用显示服务端最后操作结果，历史、下架、冲突或 Catalog 不可见项不显示为可安装。
+- 发布并启用部分成功后从审核结果直达 Publication 详情，只执行 `setInstallationStatus`，不会重复创建 Publication。
+- 下架前明确说明安装停用与 Runtime 退出并二次确认；创建新修订跳转后展示来源 Publication 和服务端返回的新 revision，不覆盖历史 Artifact。
+- H-04 代表性负向体验覆盖 403 明确拒绝与返回路径，以及 URL 注入 `agent/work` scope 仍只能发送 `scenario:daily`；前端未新增角色 UI，最终授权继续由后端决定。
+- 验证：聚焦测试 9/9、前端全量单测 263/263、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
+
 ## 后续条目模板
 
 ```markdown
