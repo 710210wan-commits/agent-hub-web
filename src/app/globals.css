@@ -412,6 +412,69 @@ a {
   font-size: 10px;
 }
 
+.skill-catalog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.skill-catalog-controls .resource-search {
+  margin-bottom: 0;
+}
+
+.skill-catalog-controls select {
+  height: 38px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.skill-catalog-clear {
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.skill-catalog-status {
+  margin: -8px 0 14px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.skill-catalog-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.skill-card-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.skill-badge {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: var(--color-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.skill-badge-conflict {
+  border-color: #ddbfbf;
+  color: #a14a4a;
+}
+
 .state-card {
   display: grid;
   min-height: 180px;
