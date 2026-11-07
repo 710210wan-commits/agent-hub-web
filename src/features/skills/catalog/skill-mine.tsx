@@ -34,6 +34,7 @@ function SkillMineDaily({ client }: { client: SkillMarketClient }) {
       <header className="page-heading">
         <div><h1>我的 Skill</h1><p>仅展示日常后端与当前 Principal 正式关联的数据</p></div>
         <div className="skill-page-actions">
+          <Link href="/skills/manage?mode=daily">发布管理</Link>
           <Link href="/skills/review?mode=daily">审核</Link>
           <Link href="/skills/creator?mode=daily">Creator</Link>
           <Link href="/skills/drafts/new?mode=daily">上传草稿</Link>

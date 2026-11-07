@@ -209,7 +209,7 @@ function PublishAndEnableResult({ result }: { result: PublishAndEnableResponse }
     <p>发布成功：{result.publication.value.id} · submission {result.publication.value.submissionId}</p>
     {result.installation.status === "completed"
       ? <p>启用成功：{result.installation.value.scopeType}:{result.installation.value.scopeId}</p>
-      : <p className="skill-draft-validation">发布已完成，但启用失败：{result.installation.error}。请单独处理启用，不要重复发布。</p>}
+      : <><p className="skill-draft-validation">发布已完成，但启用失败：{result.installation.error}。请单独处理启用，不要重复发布。</p><Link href={`/skills/manage/${encodeURIComponent(result.publication.value.id)}?mode=daily`}>前往发布管理继续启用</Link></>}
   </div>;
 }
 

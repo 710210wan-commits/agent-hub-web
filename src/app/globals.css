@@ -684,6 +684,41 @@ a {
   width: auto;
 }
 
+.skill-publication-metadata {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+
+.skill-publication-metadata > div {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 12px;
+}
+
+.skill-publication-metadata dt,
+.skill-publication-copy > span {
+  color: var(--color-muted);
+}
+
+.skill-publication-metadata dd {
+  margin: 0;
+}
+
+.skill-publication-copy {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.skill-publication-copy code {
+  overflow: hidden;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .skill-mine-section > h2,
 .skill-detail-grid h2 {
   margin: 0 0 12px;
@@ -845,6 +880,14 @@ a {
 
   .settings-layout {
     grid-template-columns: 1fr;
+  }
+
+  .skill-publication-copy {
+    grid-template-columns: 1fr auto;
+  }
+
+  .skill-publication-copy > span {
+    grid-column: 1 / -1;
   }
 
   .settings-tabs {

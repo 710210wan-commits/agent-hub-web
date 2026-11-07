@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { LoadingState } from "@/components/states/loading-state";
@@ -33,6 +33,7 @@ export function SkillDraftEditor({ client, id }: { client?: SkillMarketClient; i
 
 function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const actionRef = useRef<Action | undefined>(undefined);
   const [generation, setGeneration] = useState(0);
   const [draft, setDraft] = useState<DraftViewModel>();
@@ -124,6 +125,8 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
   const serverBuffer = toBuffer(draft);
   const dirty = edit.files !== serverBuffer.files || edit.metadata !== serverBuffer.metadata;
   const unresolved = diagnostics.filter((item) => item.severity === "error").length;
+  const sourcePublication = searchParams.get("sourcePublication");
+  const sourceRevision = Number(searchParams.get("revision"));
 
   return (
     <section className="resource-page skill-draft-page">
@@ -132,6 +135,7 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
         <div><h1>{draft.name}</h1><p>状态：{draft.status} · 修订 r{draft.revision} · {draft.fileCount} 个文件</p></div>
       </header>
 
+      {sourcePublication && sourceRevision === draft.revision ? <div className="skill-draft-notice" role="status">已从 Publication {sourcePublication} 创建新修订 r{draft.revision}；原 Publication 与 Artifact 不会被覆盖。</div> : null}
       {!draft.editable ? <div className="skill-draft-notice" role="status">该草稿已不可编辑，当前仅可查看。</div> : null}
       <div className="skill-draft-panel">
         <p className="skill-draft-memory-note">未保存内容仅保留在当前页面内存中；重新加载会放弃本地编辑。</p>
