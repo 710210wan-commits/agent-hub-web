@@ -642,6 +642,48 @@ a {
   margin: 0;
 }
 
+.skill-review-evidence {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.skill-review-evidence .creator-section {
+  margin-top: 0;
+}
+
+.skill-review-evidence dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.skill-review-evidence dl > div {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+}
+
+.skill-review-evidence dt,
+.skill-review-missing {
+  color: var(--color-muted);
+}
+
+.skill-review-evidence dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.skill-review-inline {
+  display: flex !important;
+  align-items: center;
+  grid-template-columns: auto 1fr;
+}
+
+.skill-review-inline input {
+  width: auto;
+}
+
 .skill-mine-section > h2,
 .skill-detail-grid h2 {
   margin: 0 0 12px;
@@ -796,7 +838,8 @@ a {
   }
 
   .creator-form-grid,
-  .creator-tool-grid {
+  .creator-tool-grid,
+  .skill-review-evidence {
     grid-template-columns: 1fr;
   }
 
