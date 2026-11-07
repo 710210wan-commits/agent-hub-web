@@ -224,6 +224,8 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 提交：`ad55fe0`
 
+审查修复：`f579c50`
+
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
 对应 Plan 模块：`T8`（来源细化模块 `C-02`）

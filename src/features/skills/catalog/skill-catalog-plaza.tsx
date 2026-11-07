@@ -1,6 +1,8 @@
 "use client";
 
 import { Search } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/states/empty-state";
@@ -20,13 +22,16 @@ import {
   listSkillCatalogCategories,
   type SkillCatalogFilter,
 } from "./catalog-filter";
+import { catalogDetailHref, parseSkillCatalogFilter } from "./catalog-navigation";
 import { SkillCatalogCard } from "./skill-catalog-card";
 import { useSkillCatalog } from "./use-skill-catalog";
 
 export function SkillCatalogPlaza({ client }: { client?: SkillMarketClient }) {
   const { mode } = useAppMode();
+  const searchParams = useSearchParams();
   if (mode === "work") return <SkillMarketWorkPlaceholder />;
-  return <SkillCatalogPlazaDaily client={client} />;
+  const filter = parseSkillCatalogFilter(searchParams);
+  return <SkillCatalogPlazaDaily client={client} initialFilter={filter} key={searchParams.toString()} />;
 }
 
 export function SkillMarketWorkPlaceholder() {
@@ -38,12 +43,18 @@ export function SkillMarketWorkPlaceholder() {
   );
 }
 
-function SkillCatalogPlazaDaily({ client }: { client?: SkillMarketClient }) {
+function SkillCatalogPlazaDaily({
+  client,
+  initialFilter,
+}: {
+  client?: SkillMarketClient;
+  initialFilter: SkillCatalogFilter;
+}) {
   const { refresh, state } = useSkillCatalog({
     client: client ?? getBrowserSkillMarketClient(),
     mode: "daily",
   });
-  const [filter, setFilter] = useState<SkillCatalogFilter>(EMPTY_SKILL_CATALOG_FILTER);
+  const [filter, setFilter] = useState<SkillCatalogFilter>(initialFilter);
 
   const catalog: SkillCatalogViewModel | undefined =
     state.kind === "success" || state.kind === "refreshing"
@@ -60,7 +71,7 @@ function SkillCatalogPlazaDaily({ client }: { client?: SkillMarketClient }) {
     () => (catalog ? listSkillCatalogCategories(catalog.items) : []),
     [catalog],
   );
-  if (filter.category !== "all" && !categories.includes(filter.category)) {
+  if (catalog && filter.category !== "all" && !categories.includes(filter.category)) {
     setFilter({ ...filter, category: "all" });
   }
   const visibleItems = useMemo(
@@ -79,7 +90,10 @@ function SkillCatalogPlazaDaily({ client }: { client?: SkillMarketClient }) {
           <h1>Skill 广场</h1>
           <p>浏览日常后端返回的内置与市场 Skill</p>
         </div>
-        <button type="button" onClick={refresh}>刷新</button>
+        <div className="skill-page-actions">
+          <Link href="/skills/mine?mode=daily">我的</Link>
+          <button type="button" onClick={refresh}>刷新</button>
+        </div>
       </header>
 
       {catalog ? (
@@ -144,7 +158,11 @@ function SkillCatalogPlazaDaily({ client }: { client?: SkillMarketClient }) {
           {visibleItems.length > 0 ? (
             <div className="resource-grid">
               {visibleItems.map((item) => (
-                <SkillCatalogCard item={item} key={item.id} />
+                <SkillCatalogCard
+                  href={catalogDetailHref(item.id, filter, "daily")}
+                  item={item}
+                  key={item.id}
+                />
               ))}
             </div>
           ) : catalog.items.length === 0 ? (

@@ -12,7 +12,7 @@ const INSTALL_STATE_LABELS: Record<CatalogItemViewModel["installState"], string>
   blocked: "不可用",
 };
 
-export function SkillCatalogCard({ item }: { item: CatalogItemViewModel }) {
+export function SkillCatalogCard({ href, item }: { href?: string; item: CatalogItemViewModel }) {
   const meta = [
     item.name,
     item.revision !== null ? `r${item.revision}` : null,
@@ -25,7 +25,9 @@ export function SkillCatalogCard({ item }: { item: CatalogItemViewModel }) {
   return (
     <article className="resource-card skill-catalog-card">
       <div className="resource-card-copy">
-        <h2 className="skill-card-title">{item.title}</h2>
+        {href ? (
+          <a className="skill-card-link" href={href}><h2 className="skill-card-title">{item.title}</h2></a>
+        ) : <h2 className="skill-card-title">{item.title}</h2>}
         <span>{item.description || "暂无描述"}</span>
         <small>{meta.join(" · ")}</small>
       </div>

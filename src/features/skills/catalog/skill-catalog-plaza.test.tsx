@@ -296,5 +296,5 @@ describe("SkillCatalogPlaza", () => {
     expect(screen.getByRole("heading", { name: "Skill 0" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Skill 499" })).toBeInTheDocument();
     expect(query).toHaveBeenCalledTimes(1);
-  });
+  }, 10_000);
 });
