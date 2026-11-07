@@ -26,9 +26,9 @@ describe("verifyPinnedSkillMarketSchema", () => {
     expect(verified.lock).toMatchObject({
       contractId: "skill-market.v1",
       operationCount: 28,
-      schemaVersion: "1.0.0",
-      sha256: "0ce61e0a9c1618190f0b28f981af7bfebfbdee89f63090fb41b398371624de40",
-      sourceCommit: "076c4951bd0adb97b104e82f595b099c691a4226",
+      schemaVersion: "1.1.0",
+      sha256: "49d3a134485a714362e50ae92288fb85ce830b225862472846798dbd325c372e",
+      sourceCommit: "f8b6ad021547158acbd68181a78a13bf2bc1d92c",
     });
   });
 
@@ -41,7 +41,7 @@ describe("verifyPinnedSkillMarketSchema", () => {
   it("fails closed when version metadata drifts", async () => {
     const fixture = await createFixture();
     const lock = JSON.parse(await readFile(fixture.lockPath, "utf8"));
-    lock.schemaVersion = "1.1.0";
+    lock.schemaVersion = "2.0.0";
     await writeFile(fixture.lockPath, `${JSON.stringify(lock, null, 2)}\n`);
     await expect(verifyPinnedSkillMarketSchema(fixture)).rejects.toThrow("version");
   });
