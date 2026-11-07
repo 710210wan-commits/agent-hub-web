@@ -197,6 +197,29 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 过滤不安全的上游 requestId，避免通过响应 Header 或审计事件把敏感值带给浏览器或日志。
 - 新增 `check:skill-market-sensitive-data`，扫描生产构建、Source Map、客户端资产、示例配置和实际构建环境，并用 canary 值执行负向测试。
 
+## 2026-11-07
+
+### 11. 建立 Skill Catalog 数据模型与页面状态
+
+提交：`f7b0e31`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8`（来源细化模块 `C-01`）；本次同步完成来源细化模块 `B-04` 的 Schema 重钉。
+
+#### 问题
+
+- 前端固定 Schema 仍停留在 I-06 时点的 `1.0.0`（`0ce61e0a`），未包含 I-04 统一 Catalog 在 `1.1.0` 中新增的 `source`、`status: available|conflict` 与 `availability`，C-01 需要的来源和冲突状态无法从契约中表达。
+- Catalog 页面此前只有 `skillFixtures` 占位，没有显式表达来源、修订、作用域、加载场景、分类、工具、安装状态和冲突状态的 ViewModel，也没有 `idle/loading/success/empty/error/refreshing` 页面状态。
+
+#### 修改方案
+
+- 将固定制品升级为 `DSI-agent-loop@f8b6ad021547158acbd68181a78a13bf2bc1d92c` 的 `skill-market.v1@1.1.0`（SHA-256 `49d3a134485a714362e50ae92288fb85ce830b225862472846798dbd325c372e`，28 个 operation），重新生成类型与运行时校验器，并同步钉版断言与版本漂移测试。
+- 新增 `CatalogItemViewModel`/`SkillCatalogViewModel` 和 `getSkillCatalog` adapter：显式表达来源（内置/市场，兼容旧响应按 `market` 字段确定性推断）、修订、加载场景、分类、工具、安装状态（`built-in-active`/`enabled`/`installable`/`blocked`）与冲突状态；ViewModel 不包含 Prompt 字段，不猜测或补造响应中不存在的数据。
+- 新增 Catalog 页面状态机：首载 `loading`、有数据 `success`、零结果 `empty`、失败 `error`、刷新 `refreshing`；刷新与刷新失败均保留已有结果，错误为非阻断展示。
+- 新增 `useSkillCatalog` hook：`daily` 自动加载、单飞防重复刷新、加载结果按 generation 防止过期回写、`work` 模式零请求。
+- 验证：C-01 聚焦测试 27/27、前端全量测试 211/211、typecheck、lint、生成契约漂移检查、production build 和 canary 敏感信息扫描通过。
+
 ## 后续条目模板
 
 ```markdown
