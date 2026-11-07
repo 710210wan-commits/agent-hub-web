@@ -6,7 +6,7 @@
 
 ## 1. 意图
 
-建设独立、简洁、可扩展的智能体 Web 前端。首页采用 GPT 类对话体验，让用户进入系统即可提问；左侧直接展示主要能力入口。平台负责统一外壳、导航、对话交互与扩展协议，各能力负责人以后可独立替换页面展示形式和视觉风格。
+建设独立、简洁、可扩展的智能体 Web 前端。首页采用 GPT 类对话体验，让用户进入系统即可提问；左侧直接展示主要能力入口。平台负责统一外壳、导航、设计 token、基础控件、状态体验、对话交互与扩展协议；各能力可独立调整信息架构和展示形式，但不得自行形成与新前端割裂的视觉语言。
 
 AgentLoop 是普通对话的隐式运行底座，不作为用户可选能力。Workflow 暂不进入首版。
 
@@ -67,7 +67,9 @@ AgentLoop 不显示。GIS 工作台独立于普通对话。知识库、Skill、M
 - `/skills?mode=daily|work`
 - `/skills/[id]?mode=daily`
 - `/skills/mine?mode=daily`
-- `/skills/create?mode=daily`
+- `/skills/creator?mode=daily[&draftId=...]`
+- `/skills/drafts/new?mode=daily`
+- `/skills/drafts/[id]?mode=daily`
 - `/skills/review?mode=daily`
 - `/skills/manage?mode=daily`
 - `/mcp?mode=daily|work`
@@ -166,7 +168,7 @@ UI 状态机至少包含：
 - 默认卡片列表
 - loading、empty、error 插槽
 
-负责人可替换为卡片、表格、看板或其他视觉形式。统一外壳不约束卡片内容、详情页或编辑流程。
+负责人可在统一设计语言内选择卡片、表格、看板或其他适合的信息展示形式。详情页和编辑流程可按业务需要扩展，但必须继续使用新前端已有的页面宽度、间距、字号、颜色、边框、按钮、表单、卡片和 loading/empty/error 状态模式。
 
 详情页首版只提供返回导航和内容插槽。
 
@@ -182,6 +184,13 @@ Skill 不再沿用只读 fixture 和详情占位，而是在 `mode=daily` 提供
 - 发布管理：Publication、Artifact 下载、安装、启用、停用、下架和创建新修订。
 
 App Router 页面保持薄，业务代码放在 `src/features/skills/` 下的 contract、api、catalog、authoring、creator、review、publication 和共享组件中。API DTO、运行时校验、错误转换和 UI ViewModel 分离；Creator 使用显式步骤状态机，不能重新形成超大单文件页面。
+
+Skill 模块的交互与视觉一致性是绑定约束：
+
+- 优先复用 `AppShell`、`page-heading`、资源卡片、返回链接、按钮、表单、徽标和共享状态组件，不为 Skill 另建一套全局样式或设计 token。
+- 新样式只服务于 Catalog、Draft、Creator、Review 和 Publication 等必要业务结构，其颜色、圆角、间距、排版和交互反馈必须与新前端其他页面保持一致。
+- 长流程可增加步骤导航、diagnostics 和 Evidence 等业务组件，但不得复制 shell、导航、通用状态页或基础表单控件。
+- 每个 Skill 前端 Task 完成前都要与对话、知识库、MCP 和设置页做同屏视觉自审；发现不一致时优先复用/抽取现有前端模式，不以 Skill 业务特殊为由扩展独立风格。
 
 ### 10.2 Skill 后端与契约边界
 
@@ -343,6 +352,7 @@ src/
 - OpenAPI/JSON Schema 导出、前端代码生成和 CI 漂移检查可重复执行。
 - 后端和旧前端保持向后兼容，数据库结构和不可变历史数据不变。
 - Skill 相关单元、组件、BFF、Playwright、跨仓 E2E、双仓构建和旧前端回归通过。
+- Skill 广场、我的 Skill、Draft、Creator、审核和发布页与新前端其他页面共用设计 token、基础控件和状态模式，1280px 桌面布局无独立子产品感。
 
 ## 20. 本设计中的实现方判断
 
@@ -364,5 +374,6 @@ src/
 | --- | --- | --- |
 | 2026-10-27 | Agent Hub Web V1 设计基线 | 已批准并实现 |
 | 2026-11-05 | 将日常模式 Skill Creator + Skill Market 完整生命周期纳入绑定设计；work 保持无请求占位 | 已批准，可据此编写跨仓 Development Plan |
+| 2026-11-07 | 固化 Skill 模块与新前端其他部分的视觉/交互一致性，同步 Draft/Creator 实际路由 | 已批准 |
 
 本次批准不授权直接实施生产代码。跨仓实现必须先完成并批准 Development Plan，之后按 Plan 的独立 Task、测试、评审和提交门禁执行。
