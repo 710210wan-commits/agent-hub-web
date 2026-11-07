@@ -248,6 +248,27 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 文档权威：`AGENTS.md` 已明确 Skill 扩展设计和跨仓 Plan 在 Skill 范围内覆盖旧 V1 占位设计，消除绑定依据冲突；既有 docs-only 历史不重写，后续回填随功能、修复或测试变更提交。
 - 验证：C-01/C-02/API client 聚焦测试 58/58，前端全量测试 233/233，Playwright 11/11，typecheck、lint、生成契约漂移检查、production build 和敏感信息扫描通过。
 
+### 13. 完成 Skill Catalog 详情、我的 Skill 与场景隔离
+
+提交：`c8a9048`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8`（来源细化模块 `C-03～C-05`）
+
+#### 问题
+
+- Skill 详情页仍使用占位数据，无法从广场稳定进入同一 Catalog 项的真实详情。
+- 缺少按当前 Principal 聚合草稿、已启用市场 Skill 和可安装 Skill 的“我的 Skill”页面。
+- Skill Market 路由和组件需要在 work 模式下零请求，并在列表、详情往返时保持 daily 模式和筛选上下文。
+
+#### 修改方案
+
+- 详情页改为按 Catalog ID 加载真实数据，展示来源、修订、安装/冲突状态、工具、场景和作用域；不补造后端未返回的字段。
+- 新增 `/skills/mine`，并行加载统一 Catalog 和当前 Principal 草稿，明确分组“我创建”“已安装/启用”和“可用未安装”。
+- 将 mode 及列表筛选编码到导航 URL；work 模式在组件边界直接显示占位且不创建请求，daily 列表和详情共用统一 adapter 语义。
+- 验证：聚焦测试 25/25、前端全量单测 239/239、typecheck 和 lint 通过。
+
 ## 后续条目模板
 
 ```markdown

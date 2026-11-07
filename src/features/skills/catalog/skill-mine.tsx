@@ -34,6 +34,7 @@ function SkillMineDaily({ client }: { client: SkillMarketClient }) {
       <header className="page-heading">
         <div><h1>我的 Skill</h1><p>仅展示日常后端与当前 Principal 正式关联的数据</p></div>
         <div className="skill-page-actions">
+          <Link href="/skills/drafts/new?mode=daily">上传草稿</Link>
           <Link href="/skills?mode=daily">返回广场</Link>
           <button type="button" onClick={refresh}>刷新</button>
         </div>
@@ -41,13 +42,13 @@ function SkillMineDaily({ client }: { client: SkillMarketClient }) {
 
       <MineSection title="我创建" empty="当前账号没有草稿。">
         {drafts.map((draft) => (
-          <article className="resource-card" key={draft.id}>
+          <Link className="resource-card" href={`/skills/drafts/${encodeURIComponent(draft.id)}?mode=daily`} key={draft.id}>
             <span className="resource-card-copy">
               <strong>{draft.name}</strong>
               <span>状态：{draft.status}</span>
-              <small>r{draft.revision} · {draft.fileCount} 个文件</small>
+              <small>r{draft.revision} · {draft.fileCount} 个文件 · 更新时间未提供</small>
             </span>
-          </article>
+          </Link>
         ))}
       </MineSection>
 

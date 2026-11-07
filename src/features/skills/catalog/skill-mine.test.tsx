@@ -70,7 +70,14 @@ describe("SkillMine", () => {
     render(<ModeProvider><SkillMine client={clientStub(query)} /></ModeProvider>);
 
     expect(await screen.findByRole("heading", { name: "我的 Skill" })).toBeInTheDocument();
-    expect(screen.getByText("my-draft")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /my-draft/ })).toHaveAttribute(
+      "href",
+      "/skills/drafts/draft-1?mode=daily",
+    );
+    expect(screen.getByRole("link", { name: "上传草稿" })).toHaveAttribute(
+      "href",
+      "/skills/drafts/new?mode=daily",
+    );
     expect(screen.getByRole("heading", { name: "Enabled Skill" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Available Skill" })).toBeInTheDocument();
     expect(query).toHaveBeenCalledTimes(2);
