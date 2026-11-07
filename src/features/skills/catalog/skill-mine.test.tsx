@@ -78,6 +78,10 @@ describe("SkillMine", () => {
       "href",
       "/skills/drafts/new?mode=daily",
     );
+    expect(screen.getByRole("link", { name: "Creator" })).toHaveAttribute(
+      "href",
+      "/skills/creator?mode=daily",
+    );
     expect(screen.getByRole("heading", { name: "Enabled Skill" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Available Skill" })).toBeInTheDocument();
     expect(query).toHaveBeenCalledTimes(2);

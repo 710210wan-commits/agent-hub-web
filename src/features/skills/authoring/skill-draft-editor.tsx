@@ -144,6 +144,7 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
         {draft.editable ? <div className="skill-draft-actions">
           <button disabled={Boolean(action) || !dirty} type="button" onClick={() => void save()}>{action === "save" ? "正在保存…" : "保存修改"}</button>
           <button disabled={Boolean(action)} type="button" onClick={() => void remove()}>{action === "delete" ? "正在删除…" : "删除草稿"}</button>
+          <Link href={`/skills/creator?mode=daily&draftId=${encodeURIComponent(draft.id)}`}>Creator 继续编辑</Link>
         </div> : null}
       </div>
 

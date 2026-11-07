@@ -546,6 +546,102 @@ a {
   font-size: 12px;
 }
 
+.creator-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+.creator-steps span {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: var(--color-muted);
+  font-size: 10px;
+}
+
+.creator-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  padding: 22px;
+}
+
+.creator-section h2,
+.creator-section p {
+  margin: 0;
+}
+
+.creator-section label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.creator-section input,
+.creator-section select,
+.creator-section textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  padding: 9px 11px;
+  color: var(--color-text);
+}
+
+.creator-section textarea {
+  resize: vertical;
+}
+
+.creator-form-grid,
+.creator-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.creator-tool-card,
+.creator-smoke-case,
+.creator-recommendations {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  padding: 13px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.creator-tool-card > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text);
+}
+
+.creator-tool-card input {
+  width: auto;
+}
+
+.creator-requirement {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.creator-requirement > div {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+}
+
+.creator-requirement dd {
+  margin: 0;
+}
+
 .skill-mine-section > h2,
 .skill-detail-grid h2 {
   margin: 0 0 12px;
@@ -696,6 +792,11 @@ a {
   }
 
   .resource-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .creator-form-grid,
+  .creator-tool-grid {
     grid-template-columns: 1fr;
   }
 

@@ -269,6 +269,26 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 将 mode 及列表筛选编码到导航 URL；work 模式在组件边界直接显示占位且不创建请求，daily 列表和详情共用统一 adapter 语义。
 - 验证：聚焦测试 25/25、前端全量单测 239/239、typecheck 和 lint 通过。
 
+### 14. 完成草稿上传、编辑、修订冲突与提交审核
+
+提交：`0f9893a`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8`（来源细化模块 `D-01～D-04`）
+
+#### 问题
+
+- 作者无法从“我的 Skill”进入真实草稿，也缺少 ZIP/目录上传、文件与元数据编辑、删除和提交审核流程。
+- 并发编辑时需要使用服务端 revision 检测冲突，且 409 不能自动覆盖本地编辑。
+
+#### 修改方案
+
+- 新增草稿创建与详情路由，列表使用稳定草稿 ID；支持 ZIP 和保留相对路径的目录选择，并提供等待、取消、重试与防重。
+- 草稿编辑维护服务端快照、当前编辑和脏状态，保存携带 `expectedRevision`；409 保留本地内容并提供显式重载。
+- 提交前展示 revision、文件数和未解决 diagnostics；删除与提交均单飞，提交成功后草稿转为只读。
+- 验证：聚焦测试 9/9、前端全量单测 246/246、typecheck 和 lint 通过。
+
 ## 后续条目模板
 
 ```markdown
