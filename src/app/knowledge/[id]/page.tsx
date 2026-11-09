@@ -27,6 +27,7 @@ import {
   getKbDatabase,
   getKbDocumentContent,
   getKbDocumentStatus,
+  generateKbSampleQuestions,
   getKbQueryParams,
   getKbSampleQuestions,
   indexKbDocuments,
@@ -49,9 +50,17 @@ import {
   formatKbCount,
   formatKbDateTime,
 } from "@/lib/kb-format";
+import {
+  KB_DOCUMENTS_PAGE_SIZE,
+  clampKbPage,
+  getKbTotalPages,
+} from "@/lib/kb-pagination";
 
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = ["md", "pdf", "docx", "txt"];
+/** 与 xiaozhi 上传弹窗保持一致的支持格式 */
+const ALLOWED_EXTENSIONS = ["md", "pdf", "docx", "txt", "jpg", "jpeg"];
+const ALLOWED_EXTENSIONS_LABEL = ALLOWED_EXTENSIONS.join("、");
+const ALLOWED_EXTENSIONS_ACCEPT = ALLOWED_EXTENSIONS.map((ext) => `.${ext}`).join(",");
 
 type PagePhase = "loading" | "error" | "ready";
 
@@ -65,40 +74,7 @@ type KbStatusFilterKey =
   | "index_failed"
   | "indexed";
 
-/** 依赖对话模型的 Tab：入口先占位，明确告知不可用原因 */
-type KbPendingTabKey = "graph" | "mindmap" | "rag" | "benchmark";
-
-type KbDetailTabKey = "files" | "query" | KbPendingTabKey;
-
-const PENDING_TABS: Record<
-  KbPendingTabKey,
-  { label: string; title: string; reason: string }
-> = {
-  graph: {
-    label: "知识图谱",
-    title: "知识图谱",
-    reason:
-      "xiaozhi 构建图谱时需要调用对话模型做实体与关系抽取；当前环境未配置可用的对话模型，因此无法建图和展示。",
-  },
-  mindmap: {
-    label: "知识导图",
-    title: "知识导图",
-    reason:
-      "知识导图由对话模型根据库内文档生成；当前环境未配置可用的对话模型，生成接口不可用。",
-  },
-  rag: {
-    label: "RAG 评估",
-    title: "RAG 评估",
-    reason:
-      "RAG 评估需要对话模型生成答案并做质量打分；当前环境未配置可用的对话模型，无法运行评估。",
-  },
-  benchmark: {
-    label: "评估基准",
-    title: "评估基准",
-    reason:
-      "评估基准的题目生成、标准答案与评测过程都依赖对话模型；当前环境未配置可用的对话模型，暂不可用。",
-  },
-};
+type KbDetailTabKey = "files" | "query";
 
 /** 导出格式：菜单里给出用途说明，避免只显示扩展名造成误解 */
 const EXPORT_FORMATS: Array<{
@@ -215,6 +191,7 @@ export default function KnowledgeDetailPage() {
   const [detail, setDetail] = useState<KbDatabaseDetail | null>(null);
   const [documents, setDocuments] = useState<KbDocument[]>([]);
   const [documentTotal, setDocumentTotal] = useState(0);
+  const [documentPage, setDocumentPage] = useState(1);
   const [loadError, setLoadError] = useState("");
   const [needLogin, setNeedLogin] = useState(false);
   const [notice, setNotice] = useState<ActionNotice | null>(null);
@@ -250,6 +227,7 @@ export default function KnowledgeDetailPage() {
   const [statusFilter, setStatusFilter] = useState<KbStatusFilterKey>("all");
   const [sampleQuestions, setSampleQuestions] = useState<string[]>([]);
   const [sampleLoadedKbId, setSampleLoadedKbId] = useState<string | null>(null);
+  const [sampleGenerating, setSampleGenerating] = useState(false);
   const [queryParams, setQueryParams] = useState<KbQueryParamField[]>([]);
   const [queryText, setQueryText] = useState("");
   const [queryValues, setQueryValues] = useState<
@@ -303,7 +281,14 @@ export default function KnowledgeDetailPage() {
 
     let cancelled = false;
 
-    Promise.all([getKbDatabase(kbId), listKbDocuments(kbId)])
+    setDocumentPage(1);
+    Promise.all([
+      getKbDatabase(kbId),
+      listKbDocuments(kbId, {
+        page: 1,
+        pageSize: KB_DOCUMENTS_PAGE_SIZE,
+      }),
+    ])
       .then(([database, list]) => {
         if (cancelled) return;
         setDetail(database);
@@ -325,7 +310,7 @@ export default function KnowledgeDetailPage() {
 
   const hasPendingDocuments = documents.some(isPendingDocument);
 
-  // 样例问题随知识库切换加载；仅做只读展示，生成入口暂时隐藏（xiaozhi 对话模型未配置）
+  // 样例问题随知识库切换加载；生成成功后原地替换，不随知识库切换重复拉取
   useEffect(() => {
     if (!kbId) {
       return;
@@ -387,7 +372,11 @@ export default function KnowledgeDetailPage() {
     // 轮询失败静默忽略，用户仍可点「刷新」手动获取。
     let cancelled = false;
     const timer = window.setInterval(() => {
-      listKbDocuments(kbId, { parentId: currentFolderId })
+      listKbDocuments(kbId, {
+        page: documentPage,
+        pageSize: KB_DOCUMENTS_PAGE_SIZE,
+        parentId: currentFolderId,
+      })
         .then((list) => {
           if (cancelled) return;
           setDocuments(list.documents);
@@ -400,13 +389,37 @@ export default function KnowledgeDetailPage() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [currentFolderId, hasPendingDocuments, kbId, phase]);
+  }, [currentFolderId, documentPage, hasPendingDocuments, kbId, phase]);
 
   async function reload() {
     const [database, list] = await Promise.all([
       getKbDatabase(kbId),
-      listKbDocuments(kbId, { parentId: currentFolderId }),
+      listKbDocuments(kbId, {
+        page: documentPage,
+        pageSize: KB_DOCUMENTS_PAGE_SIZE,
+        parentId: currentFolderId,
+      }),
     ]);
+
+    // 末页被删空时回退到上一页，避免停在空白页
+    if (list.documents.length === 0 && documentPage > 1) {
+      const fallback = clampKbPage(
+        documentPage - 1,
+        list.total,
+        KB_DOCUMENTS_PAGE_SIZE,
+      );
+      const retry = await listKbDocuments(kbId, {
+        page: fallback,
+        pageSize: KB_DOCUMENTS_PAGE_SIZE,
+        parentId: currentFolderId,
+      });
+      setDocumentPage(fallback);
+      setDetail(database);
+      setDocuments(retry.documents);
+      setDocumentTotal(retry.total);
+      return;
+    }
+
     setDetail(database);
     setDocuments(list.documents);
     setDocumentTotal(list.total);
@@ -416,6 +429,36 @@ export default function KnowledgeDetailPage() {
         list.documents.some((document) => document.file_id === fileId),
       ),
     );
+  }
+
+  async function goToDocumentPage(next: number) {
+    const target = clampKbPage(
+      next,
+      documentTotal,
+      KB_DOCUMENTS_PAGE_SIZE,
+    );
+    if (target === documentPage || refreshing) {
+      return;
+    }
+
+    setDocumentPage(target);
+    setSelectedFileIds([]);
+    setSelectionMode(false);
+    setRefreshing(true);
+    try {
+      const list = await listKbDocuments(kbId, {
+        page: target,
+        pageSize: KB_DOCUMENTS_PAGE_SIZE,
+        parentId: currentFolderId,
+      });
+      setDocuments(list.documents);
+      setDocumentTotal(list.total);
+    } catch (error) {
+      setDocumentPage(documentPage);
+      setNotice({ tone: "error", text: kbErrorMessage(error) });
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   async function handleManualRefresh() {
@@ -491,7 +534,7 @@ export default function KnowledgeDetailPage() {
     for (const file of files) {
       const extension = file.name.toLowerCase().split(".").pop() ?? "";
       if (!ALLOWED_EXTENSIONS.includes(extension)) {
-        rejected.push(`${file.name}（格式不支持）`);
+        rejected.push(`${file.name}（格式不支持，仅支持 ${ALLOWED_EXTENSIONS_LABEL}）`);
         continue;
       }
       if (file.size > MAX_UPLOAD_BYTES) {
@@ -583,6 +626,7 @@ export default function KnowledgeDetailPage() {
 
   async function navigateToFolder(nextPath: Array<{ id: string; name: string }>) {
     setFolderPath(nextPath);
+    setDocumentPage(1);
     setSelectedFileIds([]);
     setSelectionMode(false);
     setStatusFilter("all");
@@ -591,6 +635,8 @@ export default function KnowledgeDetailPage() {
     setNotice(null);
     try {
       const list = await listKbDocuments(kbId, {
+        page: 1,
+        pageSize: KB_DOCUMENTS_PAGE_SIZE,
         parentId: nextPath.length ? nextPath[nextPath.length - 1].id : undefined,
       });
       setDocuments(list.documents);
@@ -892,6 +938,11 @@ export default function KnowledgeDetailPage() {
     return document.filename.toLowerCase().includes(searchKeyword);
   });
 
+  const documentTotalPages = getKbTotalPages(
+    documentTotal,
+    KB_DOCUMENTS_PAGE_SIZE,
+  );
+
   function statusChipClass(filter: { key: KbStatusFilterKey; count: number }): string {
     if (statusFilter === filter.key) {
       return "kb-status-chip is-active";
@@ -991,6 +1042,30 @@ export default function KnowledgeDetailPage() {
       setNotice({ tone: "error", text: kbErrorMessage(error) });
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleGenerateSamples() {
+    if (sampleGenerating || phase !== "ready") {
+      return;
+    }
+    setSampleGenerating(true);
+    setNotice(null);
+    try {
+      const result = await generateKbSampleQuestions(kbId, 10);
+      setSampleQuestions(result.questions);
+      setSampleLoadedKbId(kbId);
+      setNotice({
+        tone: result.questions.length > 0 ? "success" : "info",
+        text:
+          result.questions.length > 0
+            ? `已生成 ${formatKbCount(result.questions.length)} 个样例问题`
+            : "本次没有生成样例问题，请确认库内已有已入库文档后重试",
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: kbErrorMessage(error) });
+    } finally {
+      setSampleGenerating(false);
     }
   }
 
@@ -1191,7 +1266,7 @@ export default function KnowledgeDetailPage() {
                 : "上传文档"}
             </button>
             <input
-              accept=".md,.pdf,.docx,.txt"
+              accept={ALLOWED_EXTENSIONS_ACCEPT}
               className="kb-file-input"
               multiple
               onChange={handleFilesSelected}
@@ -1298,24 +1373,11 @@ export default function KnowledgeDetailPage() {
               >
                 检索测试
               </button>
-              {(Object.keys(PENDING_TABS) as KbPendingTabKey[]).map((key) => (
-                <button
-                  aria-selected={detailTab === key}
-                  className={`kb-detail-tab is-pending${detailTab === key ? " is-active" : ""}`}
-                  key={key}
-                  onClick={() => setDetailTab(key)}
-                  role="tab"
-                  type="button"
-                >
-                  {PENDING_TABS[key].label}
-                  <span className="kb-detail-tab-badge">未启用</span>
-                </button>
-              ))}
             </div>
 
             {detailTab === "files" ? (
               <>
-            {!sampleLoading && sampleQuestions.length > 0 ? (
+            {!sampleLoading ? (
               <section className="kb-sample-section">
                 <div className="kb-section-heading">
                   <div className="kb-folder-bar">
@@ -1325,18 +1387,38 @@ export default function KnowledgeDetailPage() {
                     </span>
                   </div>
                   <div className="kb-section-actions">
-                    <span className="kb-section-count">
-                      共 {formatKbCount(sampleQuestions.length)} 个
-                    </span>
+                    {sampleQuestions.length > 0 ? (
+                      <span className="kb-section-count">
+                        共 {formatKbCount(sampleQuestions.length)} 个
+                      </span>
+                    ) : null}
+                    <button
+                      className="kb-tint-button is-blue"
+                      disabled={sampleGenerating || phase !== "ready"}
+                      onClick={() => void handleGenerateSamples()}
+                      type="button"
+                    >
+                      {sampleGenerating
+                        ? "生成中…"
+                        : sampleQuestions.length > 0
+                          ? "重新生成"
+                          : "生成样例问题"}
+                    </button>
                   </div>
                 </div>
-                <ol className="kb-sample-list">
-                  {sampleQuestions.map((question, index) => (
-                    <li className="kb-sample-item" key={`${index}-${question}`}>
-                      {question}
-                    </li>
-                  ))}
-                </ol>
+                {sampleQuestions.length > 0 ? (
+                  <ol className="kb-sample-list">
+                    {sampleQuestions.map((question, index) => (
+                      <li className="kb-sample-item" key={`${index}-${question}`}>
+                        {question}
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="kb-sample-empty">
+                    还没有样例问题。库内有已入库文档后，点右上角即可生成。
+                  </p>
+                )}
               </section>
             ) : null}
 
@@ -1379,7 +1461,7 @@ export default function KnowledgeDetailPage() {
                     aria-label="按文件名搜索"
                     className="kb-doc-search"
                     onChange={(event) => setDocumentSearch(event.target.value)}
-                    placeholder="搜索文件名"
+                    placeholder="搜索当前页文件名"
                     type="search"
                     value={documentSearch}
                   />
@@ -1442,7 +1524,7 @@ export default function KnowledgeDetailPage() {
                   description={
                     documents.length > 0
                       ? "当前筛选条件下暂无文档，可切换其他状态查看。"
-                      : "可拖拽或选择 md、pdf、docx、txt 文件，上传后系统会自动解析并入库。"
+                      : `可拖拽或选择 ${ALLOWED_EXTENSIONS_LABEL} 文件，上传后系统会自动解析并入库。`
                   }
                   title={
                     documents.length > 0
@@ -1453,6 +1535,32 @@ export default function KnowledgeDetailPage() {
                   }
                 />
               )}
+
+              {documentTotalPages > 1 ? (
+                <div className="kb-pagination">
+                  <span className="kb-pagination-info">
+                    第 {documentPage} / {documentTotalPages} 页
+                  </span>
+                  <div className="kb-pagination-actions">
+                    <button
+                      className="kb-back-button"
+                      disabled={documentPage <= 1 || refreshing}
+                      onClick={() => void goToDocumentPage(documentPage - 1)}
+                      type="button"
+                    >
+                      上一页
+                    </button>
+                    <button
+                      className="kb-back-button"
+                      disabled={documentPage >= documentTotalPages || refreshing}
+                      onClick={() => void goToDocumentPage(documentPage + 1)}
+                      type="button"
+                    >
+                      下一页
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </section>
               </>
             ) : null}
@@ -1671,19 +1779,6 @@ export default function KnowledgeDetailPage() {
                 )
               ) : null}
             </section>
-            ) : null}
-
-            {detailTab !== "files" && detailTab !== "query" ? (
-              <section className="kb-unavailable-panel">
-                <h2>{PENDING_TABS[detailTab].title}</h2>
-                <p className="kb-unavailable-reason">
-                  {PENDING_TABS[detailTab].reason}
-                </p>
-                <p className="kb-unavailable-hint">
-                  接入可用的对话模型后开放（内网部署的对话模型或云端 API Key 均可），
-                  当前不影响文档上传、解析、入库和检索测试。
-                </p>
-              </section>
             ) : null}
 
             {editorOpen ? (
