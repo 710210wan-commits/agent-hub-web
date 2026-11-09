@@ -3,7 +3,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/states/empty-state";
 import { InlineError } from "@/components/states/inline-error";
@@ -13,7 +13,7 @@ import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
-import type { SkillCatalogViewModel } from "../contracts/catalog-view-model";
+import type { CatalogItemViewModel, SkillCatalogViewModel } from "../contracts/catalog-view-model";
 import {
   buildSkillCatalogSearchIndex,
   EMPTY_SKILL_CATALOG_FILTER,
@@ -22,8 +22,9 @@ import {
   listSkillCatalogCategories,
   type SkillCatalogFilter,
 } from "./catalog-filter";
-import { catalogDetailHref, parseSkillCatalogFilter } from "./catalog-navigation";
+import { parseSkillCatalogFilter } from "./catalog-navigation";
 import { SkillCatalogCard } from "./skill-catalog-card";
+import { SkillCatalogDrawer } from "./skill-catalog-drawer";
 import { useSkillCatalog } from "./use-skill-catalog";
 
 export function SkillCatalogPlaza({ client }: { client?: SkillMarketClient }) {
@@ -55,6 +56,8 @@ function SkillCatalogPlazaDaily({
     mode: "daily",
   });
   const [filter, setFilter] = useState<SkillCatalogFilter>(initialFilter);
+  const [selectedItem, setSelectedItem] = useState<CatalogItemViewModel | null>(null);
+  const closeDrawer = useCallback(() => setSelectedItem(null), []);
 
   const catalog: SkillCatalogViewModel | undefined =
     state.kind === "success" || state.kind === "refreshing"
@@ -90,11 +93,10 @@ function SkillCatalogPlazaDaily({
           <h1>Skill 广场</h1>
           <p>浏览日常后端返回的内置与市场 Skill</p>
         </div>
-        <div className="skill-page-actions">
-          <Link href="/skills/manage?mode=daily">发布管理</Link>
-          <Link href="/skills/review?mode=daily">审核</Link>
-          <Link href="/skills/mine?mode=daily">我的</Link>
-          <button type="button" onClick={refresh}>刷新</button>
+        <div className="skill-page-actions skill-catalog-actions">
+          <Link className="skill-page-action" href="/skills/manage?mode=daily">发布管理</Link>
+          <Link className="skill-page-action" href="/skills/review?mode=daily">审核</Link>
+          <Link className="skill-page-action" href="/skills/mine?mode=daily">我的</Link>
         </div>
       </header>
 
@@ -161,9 +163,9 @@ function SkillCatalogPlazaDaily({
             <div className="resource-grid">
               {visibleItems.map((item) => (
                 <SkillCatalogCard
-                  href={catalogDetailHref(item.id, filter, "daily")}
                   item={item}
                   key={item.id}
+                  onSelect={() => setSelectedItem(item)}
                 />
               ))}
             </div>
@@ -189,6 +191,7 @@ function SkillCatalogPlazaDaily({
       ) : (
         <LoadingState label="正在加载 Skill 广场…" />
       )}
+      {selectedItem ? <SkillCatalogDrawer item={selectedItem} onClose={closeDrawer} /> : null}
     </section>
   );
 }

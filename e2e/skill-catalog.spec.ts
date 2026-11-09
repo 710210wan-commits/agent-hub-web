@@ -56,6 +56,7 @@ test("daily Skill plaza loads the catalog and filters it without another request
   await page.goto("/skills?mode=daily");
   await expect(page.getByRole("heading", { name: "Alpha Query" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Beta Report" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "刷新" })).toHaveCount(0);
 
   await page.getByRole("searchbox", { name: "搜索 Skill" }).fill("document-render");
   await expect(page.getByRole("heading", { name: "Beta Report" })).toBeVisible();

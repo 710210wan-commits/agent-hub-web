@@ -138,6 +138,36 @@ describe("SkillCatalogPlaza", () => {
     expect(within(gammaCard).getByText("不可用")).toBeInTheDocument();
   });
 
+  it("opens card details in a dismissible right-side dialog", async () => {
+    const query = vi.fn(async () => mixedCatalog);
+    renderPlaza(clientStub(query));
+
+    const cardTrigger = await screen.findByRole("button", { name: "查看 Alpha Query 详情" });
+    cardTrigger.focus();
+    fireEvent.click(cardTrigger);
+
+    const dialog = screen.getByRole("dialog", { name: "Alpha Query" });
+    expect(within(dialog).getByText("查询日常目标")).toBeInTheDocument();
+    expect(within(dialog).getByText("gis-query")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("内置 Skill")).toHaveLength(2);
+    expect(screen.queryByRole("link", { name: "Alpha Query" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Alpha Query" })).not.toBeInTheDocument();
+    expect(cardTrigger).toHaveFocus();
+  });
+
+  it("styles the three page actions as buttons and omits manual refresh", async () => {
+    const query = vi.fn(async () => mixedCatalog);
+    renderPlaza(clientStub(query));
+    await screen.findByRole("heading", { name: "Alpha Query" });
+
+    for (const name of ["发布管理", "审核", "我的"]) {
+      expect(screen.getByRole("link", { name })).toHaveClass("skill-page-action");
+    }
+    expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
+  });
+
   it("shows a persistent error state with retry when the initial load fails", async () => {
     const query = vi.fn(async (): Promise<SkillCatalogViewModel> => {
       throw new SkillMarketError({
@@ -219,52 +249,6 @@ describe("SkillCatalogPlaza", () => {
     const category = screen.getByRole("combobox", { name: "分类" });
     const options = Array.from(category.querySelectorAll("option")).map((option) => option.value);
     expect(options).toEqual(["all", "内置 Skill", "市场发布"]);
-  });
-
-  it("clears a category filter that disappears after refresh", async () => {
-    let response = mixedCatalog;
-    const query = vi.fn(async () => response);
-    renderPlaza(clientStub(query));
-    await screen.findByRole("heading", { name: "Alpha Query" });
-
-    fireEvent.change(screen.getByRole("combobox", { name: "分类" }), {
-      target: { value: "市场发布" },
-    });
-    expect(screen.queryByRole("heading", { name: "Alpha Query" })).not.toBeInTheDocument();
-
-    response = catalog([mixedCatalog.items[0]]);
-    fireEvent.click(screen.getByRole("button", { name: "刷新" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("combobox", { name: "分类" })).toHaveValue("all");
-    });
-    expect(screen.getByRole("heading", { name: "Alpha Query" })).toBeInTheDocument();
-    expect(screen.queryByText("没有符合条件的 Skill")).not.toBeInTheDocument();
-  });
-
-  it("keeps previous results with a non-blocking notice when refresh fails", async () => {
-    let fail = false;
-    const query = vi.fn(async (): Promise<SkillCatalogViewModel> => {
-      if (fail) {
-        throw new SkillMarketError({
-          code: "SKILL_MARKET_UPSTREAM_UNAVAILABLE",
-          presentation: "unavailable",
-          recovery: "retry",
-          retryable: true,
-          status: 502,
-          userMessage: "Skill Market 服务暂不可用，请稍后重试。",
-        });
-      }
-      return mixedCatalog;
-    });
-    renderPlaza(clientStub(query));
-    await screen.findByRole("heading", { name: "Alpha Query" });
-
-    fail = true;
-    fireEvent.click(screen.getByRole("button", { name: "刷新" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("Skill Market 服务暂不可用");
-    expect(screen.getByRole("heading", { name: "Alpha Query" })).toBeInTheDocument();
   });
 
   it("filters 500 catalog entries per keystroke with a single catalog load", async () => {

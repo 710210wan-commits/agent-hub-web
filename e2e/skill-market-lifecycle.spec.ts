@@ -8,10 +8,12 @@ test("filters the Plaza, opens Detail, and visits My Skills", async ({ page }) =
   await page.getByLabel("来源").selectOption("market");
   await expect(page.getByRole("heading", { name: "Market K03" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Built In K03" })).toHaveCount(0);
-  await page.getByRole("link", { name: "Market K03" }).click();
-  await expect(page.getByRole("heading", { name: "Market K03" })).toBeVisible();
-  await expect(page.getByText("市场发布", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "返回 Skill 广场" }).click();
+  await page.getByRole("button", { name: "查看 Market K03 详情" }).click();
+  const detail = page.getByRole("dialog", { name: "Market K03" });
+  await expect(detail).toBeVisible();
+  await expect(detail.getByText("市场发布", { exact: true })).toBeVisible();
+  await detail.getByRole("button", { name: "关闭 Skill 详情" }).click();
+  await expect(detail).toHaveCount(0);
   await page.getByRole("link", { name: "我的" }).click();
   await expect(page.getByRole("heading", { name: "我的 Skill" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "我创建" })).toBeVisible();
