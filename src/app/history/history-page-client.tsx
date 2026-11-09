@@ -4,11 +4,15 @@ import { Clock3, Pin } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { DailySessionAuthGate } from "@/components/chat/daily-session-auth-gate";
+import { DailySessionHistory } from "@/components/chat/daily-session-history";
 import { AppShell } from "@/components/shell/app-shell";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { LoadingState } from "@/components/states/loading-state";
 import type { AppMode } from "@/config/modes";
+import { DailySessionAuthProvider } from "@/features/chat/session/daily-session-auth-provider";
+import type { DailySessionClient } from "@/features/chat/transports/daily-session-client";
 import type {
   ChatSessionSummary,
   ChatSessionTransport,
@@ -30,9 +34,11 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 });
 
 export function HistoryPageClient({
+  dailySessionClient,
   mode,
   sessionTransport,
 }: {
+  dailySessionClient?: DailySessionClient;
   mode: AppMode;
   sessionTransport?: ChatSessionTransport;
 }) {
@@ -80,11 +86,16 @@ export function HistoryPageClient({
             <p>
               {mode === "work"
                 ? "查看并继续办公智能体会话"
-                : "日常会话将在 Session 接入后展示"}
+                : "查看、创建并管理日常持久会话"}
             </p>
           </div>
         </header>
-        {renderContent(mode, sessionTransport, currentResult)}
+        {renderContent(
+          mode,
+          sessionTransport,
+          currentResult,
+          dailySessionClient,
+        )}
       </section>
     </AppShell>
   );
@@ -94,13 +105,18 @@ function renderContent(
   mode: AppMode,
   sessionTransport: ChatSessionTransport | undefined,
   result: HistoryLoadResult | null,
+  dailySessionClient: DailySessionClient | undefined,
 ) {
   if (mode === "daily") {
+    if (!dailySessionClient) {
+      return <ErrorState message="当前模式不支持历史会话" />;
+    }
     return (
-      <EmptyState
-        description="当前仅办公场景支持真实历史会话"
-        title="日常历史待 session 接入"
-      />
+      <DailySessionAuthProvider client={dailySessionClient}>
+        <DailySessionAuthGate>
+          <DailySessionHistory client={dailySessionClient} />
+        </DailySessionAuthGate>
+      </DailySessionAuthProvider>
     );
   }
   if (!sessionTransport) {

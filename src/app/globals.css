@@ -508,6 +508,154 @@ a {
   font-size: 10px;
 }
 
+.primary-button,
+.secondary-button,
+.text-button {
+  border-radius: 9px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.primary-button {
+  border: 1px solid #25262a;
+  background: #25262a;
+  color: white;
+}
+
+.secondary-button {
+  border: 1px solid var(--color-border);
+  background: white;
+  color: var(--color-text);
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.text-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.daily-session-auth-card {
+  width: min(100%, 380px);
+  margin: 42px auto 0;
+  padding: 28px;
+}
+
+.daily-session-auth-card form,
+.daily-session-auth-card label {
+  display: grid;
+  gap: 7px;
+}
+
+.daily-session-auth-card form {
+  gap: 14px;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.daily-session-auth-card input,
+.daily-history-rename input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: white;
+  padding: 9px 10px;
+  color: var(--color-text);
+}
+
+.daily-session-authenticated {
+  display: grid;
+  gap: 14px;
+}
+
+.daily-session-auth-user {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.daily-history {
+  display: grid;
+  gap: 12px;
+}
+
+.daily-history-toolbar,
+.daily-history-load-more {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.daily-history-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.daily-history-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.daily-history-item {
+  position: relative;
+}
+
+.daily-history-link {
+  padding-right: 52px;
+}
+
+.daily-history-rename-button {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.daily-history-rename-button:hover {
+  background: var(--color-soft);
+}
+
+.daily-history-rename {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .settings-layout {
   display: grid;
   grid-template-columns: 160px 1fr;
