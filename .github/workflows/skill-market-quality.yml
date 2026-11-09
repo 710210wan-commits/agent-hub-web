@@ -1,0 +1,62 @@
+name: Skill Market quality
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/skill-market-quality.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "scripts/skill-market-*.ts"
+      - "src/app/api/skill-market/**"
+      - "src/features/skills/**"
+  push:
+    paths:
+      - ".github/workflows/skill-market-quality.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "scripts/skill-market-*.ts"
+      - "src/app/api/skill-market/**"
+      - "src/features/skills/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-layers:
+    name: Frontend ${{ matrix.layer }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        layer: [bff, components]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test:skill-market:${{ matrix.layer }}
+
+  pinned-contract:
+    name: Pinned Schema and generated client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run verify:skill-market-schema
+      - run: pnpm run generate:skill-market-client
+      - run: git diff --exit-code -- src/features/skills/contracts/generated
+      - run: pnpm run check:skill-market-client
+      - run: pnpm run test:skill-market:contract

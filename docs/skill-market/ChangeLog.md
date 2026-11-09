@@ -376,6 +376,25 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - Catalog 只有在 `loadedByScenarios` 明确包含 `daily` 时才显示 daily 已启用；`osint`、`border` 等历史 scope 仍保留展示，但不冒充 daily 安装。
 - 验证：兼容与边界脚本通过，聚焦单测 10/10、前端全量单测 264/264、typecheck 和 lint 通过；未执行 K-05 全生命周期 E2E、build 或 Playwright。
 
+### 19. 完成 K-01/K-02 分层测试与契约生成 CI
+
+提交：见本条所在提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T14`（来源细化模块 `K-01、K-02`）
+
+#### 问题
+
+- Skill Market 前端测试已有覆盖，但缺少按 BFF、组件、契约划分的稳定命令，CI 无法按责任层独立运行。
+- 固定 Schema、SHA 锁和生成器已有本地门禁，但仓库没有 CI workflow，手改或漏提交生成物无法在合并前自动阻断。
+
+#### 修改方案
+
+- 增加 `test:skill-market:bff`、`test:skill-market:components`、`test:skill-market:contract` 三个互不重复的测试入口，领域规则继续留在最低稳定层，上层只验证边界和集成结果。
+- 新增独立 Skill Market CI：固定 Node/pnpm 版本，校验 Schema 来源、版本和 SHA，离线重生成 Zod/TypeScript 客户端并执行 `git diff --exit-code`，最后运行契约与非法响应测试；不在构建时读取 DSI 仓库或远端 `main`。
+- 实际验证：BFF 27/27、组件 68/68、契约 43/43、全量 Vitest 264/264、typecheck、lint、Schema 锁和生成物无漂移检查全部通过；Playwright、build 与 K-03 以后任务未在本轮执行。
+
 ## 后续条目模板
 
 ```markdown
