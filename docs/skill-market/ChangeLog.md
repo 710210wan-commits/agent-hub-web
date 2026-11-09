@@ -353,6 +353,29 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - H-04 代表性负向体验覆盖 403 明确拒绝与返回路径，以及 URL 注入 `agent/work` scope 仍只能发送 `scenario:daily`；前端未新增角色 UI，最终授权继续由后端决定。
 - 验证：聚焦测试 9/9、前端全量单测 263/263、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
 
+## 2026-11-09
+
+### 18. 完成 J-01/J-02 数据库边界与既有数据兼容验证
+
+提交：见本条所在提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T13`（来源细化模块 `J-01、J-02`）
+
+#### 问题
+
+- 新前端尚缺少可执行门禁，无法持续证明 BFF/Feature 只依赖 HTTP 契约而不读取 Skill Market 数据库实现。
+- Docker 既有数据包含非 `daily` 的历史 Installation；Catalog ViewModel 曾把任意可运行 scope 都显示成“daily 已启用”。
+- 新旧前端对共享 Draft、Submission、Publication、Installation、Artifact 的业务状态缺少同数据集对照证据。
+
+#### 修改方案
+
+- 新增前端数据库边界检查，扫描 Skill BFF/Feature，拒绝数据库驱动、Schema、表名等实现依赖。
+- 使用后端只读快照和生成契约解析同一批 Docker PostgreSQL 既有数据，对照旧前端业务投影；覆盖正常、历史修订、withdrawn、disabled、Artifact 缺失和不落库的历史受保护名称冲突夹具。
+- Catalog 只有在 `loadedByScenarios` 明确包含 `daily` 时才显示 daily 已启用；`osint`、`border` 等历史 scope 仍保留展示，但不冒充 daily 安装。
+- 验证：兼容与边界脚本通过，聚焦单测 10/10、前端全量单测 264/264、typecheck 和 lint 通过；未执行 K-05 全生命周期 E2E、build 或 Playwright。
+
 ## 后续条目模板
 
 ```markdown

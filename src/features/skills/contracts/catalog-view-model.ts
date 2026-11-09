@@ -88,6 +88,6 @@ function resolveInstallState(
 ): SkillCatalogInstallState {
   if (conflict) return "blocked";
   if (source === "built-in") return "built-in-active";
-  const runnable = dto.availability?.runnable ?? dto.loadedByScenarios.length > 0;
-  return runnable ? "enabled" : "installable";
+  const dailyEnabled = dto.loadedByScenarios.some((scenario) => scenario.id === "daily");
+  return dailyEnabled ? "enabled" : "installable";
 }

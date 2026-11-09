@@ -103,6 +103,24 @@ describe("skillCatalogViewModelAdapter", () => {
     });
   });
 
+  it("does not treat a legacy non-daily installation as daily enabled", () => {
+    const dto: MarketCatalogResponse = {
+      generatedAt: "2026-11-08T00:00:00.000Z",
+      items: [catalogItemDto({
+        source: "market",
+        market: { publicationId: "pub-osint", revision: 1 },
+        loadedByScenarios: [{ id: "osint", name: "开源情报" }],
+        availability: { installable: true, runnable: true },
+      })],
+      total: 1,
+    };
+
+    const item = toViewModel(dto).items[0];
+
+    expect(item.installState).toBe("installable");
+    expect(item.scopes).toEqual([{ id: "osint", name: "开源情报", type: "scenario" }]);
+  });
+
   it("maps an installable market item that is not enabled anywhere yet", () => {
     const dto: MarketCatalogResponse = {
       generatedAt: "2026-11-07T00:00:00.000Z",
