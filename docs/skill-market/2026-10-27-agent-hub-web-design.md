@@ -226,7 +226,7 @@ Skill 模块的交互与视觉一致性是绑定约束：
 - Publication、Artifact、Installation 管理和权限/作用域负向体验（G-01～G-05、H-04）已由 `d0a637c` 实现，入口为 `/skills/manage?mode=daily`，详情为 `/skills/manage/[id]?mode=daily`。
 - Artifact 下载保存前同时校验实际字节 SHA-256、`X-Content-Sha256` 和 Publication content hash；任何不一致均显示持久错误且不保存文件。
 - 当前公开契约允许 `scenario|agent` 类型但没有 authorized agent target 或 Installation 列表接口；为避免浏览器扩大 managed scope 或虚构安装明细，当前页面只开放固定 `scenario:daily`，不读取 URL/自由表单中的 scope。后端仍是权限和作用域的最终权威。
-- K-03～K-05 已收口关键测试：Skill Market Playwright 12/12、安全矩阵 44/44、前端全量 Vitest 341/341、typecheck/lint 通过；真实 Docker PostgreSQL + Artifact Store + Catalog/Runtime 生命周期已验证 enable、disable 和 withdraw 退出。Playwright 过程修复了含 `:` 的 Catalog ID 详情路由解码。production build、旧前端回归和双仓发布/并行运行仍由 K-06～K-08 收口。
+- K-03～K-08 已收口测试与交付门禁：真实 Docker PostgreSQL + Artifact Store + Catalog/Runtime 生命周期验证 enable、disable 和 withdraw 退出；两仓独立 release gate、production build、Schema/生成物、敏感数据扫描均通过。新前端全量 Vitest 346/346、Playwright 21 passed/1 个缺少真实小智密钥的外部用例 skipped。K-07 使用 API/旧前端/新前端三个 production 进程比较同一 14 项 Catalog，验证旧四个 Skill 页面、work 零请求以及双向停机隔离；证据位于 `docs/skill-market/evidence/2026-11-09-parallel-run.json`。兼容矩阵和 Runbook 已冻结发布顺序与独立回滚，本轮未执行生产发布或数据库变更。
 
 ## 11. GIS 工作台
 

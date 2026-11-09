@@ -57,6 +57,8 @@ pnpm run test:skill-market:parallel
 
 脚本使用独立端口同时启动 API、旧前端 production server 和新前端 production server，比较两个 BFF 返回的 Catalog 身份/修订/状态；浏览器记录证明新前端不请求旧 Origin 或 `/api/skills`。脚本随后停止旧前端并复验新前端，重启旧前端后停止新前端并复验旧前端。
 
+2026-11-09 本地演练已通过：Catalog 14 项一致；旧 `/skills`、`/skills/mine`、`/skills/review`、`/skills/manage` 通过；旧停新存、新停旧存均为 true。版本、Build ID、请求和 Catalog 记录见 [`evidence/2026-11-09-parallel-run.json`](./evidence/2026-11-09-parallel-run.json)。证据中的 `dirty: true` 如实表示演练发生在收口提交前，不应作为洁净生产制品声明。
+
 ## 5. 构建、健康检查与 smoke
 
 ```powershell

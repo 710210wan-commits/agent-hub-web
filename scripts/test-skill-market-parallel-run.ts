@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { chromium } from "@playwright/test";
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     const frontend = startFrontend();
     await Promise.all([
       waitFor(`${backendOrigin}/health`, "backend"),
-      waitFor(`${legacyOrigin}/api/health`, "legacy frontend"),
+      waitFor(`${legacyOrigin}/`, "legacy frontend"),
       waitFor(`${frontendOrigin}/skills?mode=work`, "new frontend"),
     ]);
 
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
     assert.deepEqual(catalogIdentity(afterLegacyStop), catalogIdentity(initialFrontendCatalog));
 
     legacy = startLegacy();
-    await waitFor(`${legacyOrigin}/api/health`, "restarted legacy frontend");
+    await waitFor(`${legacyOrigin}/`, "restarted legacy frontend");
     await stop(frontend);
     processes.splice(processes.indexOf(frontend), 1);
     const afterFrontendStop = await catalog(`${legacyOrigin}/api/skill-market/catalog`);
@@ -58,9 +58,15 @@ async function main(): Promise<void> {
     const evidence = {
       checkedAt: new Date().toISOString(),
       versions: {
-        backend: gitRevision(dsiRoot),
-        legacyFrontend: gitRevision(dsiRoot),
-        newFrontend: gitRevision(frontendRoot),
+        backend: gitState(dsiRoot),
+        legacyFrontend: {
+          ...gitState(dsiRoot),
+          buildId: await buildId(path.join(dsiRoot, ".next", "BUILD_ID")),
+        },
+        newFrontend: {
+          ...gitState(frontendRoot),
+          buildId: await buildId(path.join(frontendRoot, ".next", "BUILD_ID")),
+        },
       },
       origins: { backendOrigin, frontendOrigin, legacyOrigin },
       catalog: catalogIdentity(initialFrontendCatalog),
@@ -170,7 +176,9 @@ async function waitFor(url: string, label: string): Promise<void> {
 
 async function catalog(url: string): Promise<Record<string, unknown>> {
   const response = await fetch(url, { headers: { accept: "application/json" } });
-  assert.equal(response.status, 200, `${url}: ${response.status} ${await response.text()}`);
+  if (response.status !== 200) {
+    throw new Error(`${url}: ${response.status} ${await response.text()}`);
+  }
   return await response.json() as Record<string, unknown>;
 }
 
@@ -211,12 +219,12 @@ async function verifyFrontendNetworkBoundaries(): Promise<{
     const legacyPage = await browser.newPage();
     const legacyRoutes = [
       ["/skills", "Skill 广场"],
-      ["/skills/mine", "作者工作台"],
+      ["/skills/mine", "我的 Skill"],
       ["/skills/review", "Skill 审核队列"],
       ["/skills/manage", "发布与安装管理"],
     ] as const;
     for (const [route, heading] of legacyRoutes) {
-      const response = await legacyPage.goto(`${legacyOrigin}${route}`, { waitUntil: "networkidle" });
+      const response = await legacyPage.goto(`${legacyOrigin}${route}`, { waitUntil: "domcontentloaded" });
       assert.equal(response?.ok(), true, `legacy route failed: ${route}`);
       await legacyPage.getByRole("heading", { name: heading }).waitFor();
     }
@@ -239,10 +247,16 @@ function requiredPath(name: string): string {
   return path.resolve(value);
 }
 
-function gitRevision(root: string): string {
+function gitState(root: string): { commit: string; dirty: boolean } {
   const result = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
-  return result.stdout.trim();
+  const status = spawnSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" });
+  assert.equal(status.status, 0, status.stderr);
+  return { commit: result.stdout.trim(), dirty: status.stdout.trim().length > 0 };
+}
+
+async function buildId(target: string): Promise<string> {
+  return (await readFile(target, "utf8")).trim();
 }
 
 void main().catch((error: unknown) => {

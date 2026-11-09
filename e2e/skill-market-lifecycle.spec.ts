@@ -11,7 +11,7 @@ test("filters the Plaza, opens Detail, and visits My Skills", async ({ page }) =
   await page.getByRole("button", { name: "查看 Market K03 详情" }).click();
   const detail = page.getByRole("dialog", { name: "Market K03" });
   await expect(detail).toBeVisible();
-  await expect(detail.getByText("市场发布", { exact: true })).toBeVisible();
+  await expect(detail.locator(".skill-detail-drawer-source", { hasText: "市场发布" })).toBeVisible();
   await detail.getByRole("button", { name: "关闭 Skill 详情" }).click();
   await expect(detail).toHaveCount(0);
   await page.getByRole("link", { name: "我的" }).click();

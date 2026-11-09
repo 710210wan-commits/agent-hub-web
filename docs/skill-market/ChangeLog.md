@@ -416,6 +416,27 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 后端新增真实 E2E 脚本，使用 Docker PostgreSQL、Drizzle service/repository、LocalArtifactStore、Catalog 和 Runtime Provider；数据事务回滚且临时文件清理。
 - 验证：Playwright 12/12、安全聚焦 44/44、全量 Vitest 341/341、typecheck 和 lint 通过。真实链路保留 ID/revision/hash/状态证据并验证 disable/withdraw 退出。Trigger 使用明示的确定性测试判定器，不代表模型质量验证。
 
+### 21. 完成 K-06～K-08 双仓门禁、production 并行与回滚方案
+
+提交：阶段实现 `92b4815`；收口提交见本条所在提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T13、T14`（来源细化模块 `K-06～K-08`）
+
+#### 问题
+
+- 两仓缺少可一键复现的最终 release gate，production build、旧前端关键页面和新旧并行尚无统一证据。
+- 新前端必须证明不依赖旧页面、旧 BFF 或 `/api/skills`，并在任一前端停止时保持另一端可用。
+- 发布顺序、server-only 环境变量、兼容矩阵、停止条件和数据库不可回写边界尚未形成完整 Runbook。
+
+#### 修改方案
+
+- 新增独立性扫描、双仓 release gate、CI job、Docker 构建边界、部署 Runbook 和 K-07 production 三进程脚本；证据记录 commit dirty 状态、Build ID、Catalog 和网络请求。
+- 两仓 release gate 均通过；新前端全量 Vitest 346/346、Playwright 21 passed/1 个缺少真实 `yxkey_` 的外部用例 skipped、build 与敏感信息扫描通过。
+- K-07 比较两个 BFF 的同一 14 项 Catalog，验证旧四个 Skill 页面、work 零请求、旧停新存和新停旧存；证据写入 `docs/skill-market/evidence/2026-11-09-parallel-run.json`。
+- 冻结后端兼容优先、旧前端先回归、新前端后发布和独立回滚规则；本轮未执行生产发布、流量切换或数据库变更。
+
 ## 后续条目模板
 
 ```markdown
