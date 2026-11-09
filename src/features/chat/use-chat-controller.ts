@@ -50,6 +50,7 @@ export function useChatController(
   const runIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(options.initialSessionId ?? null);
   const notifiedSessionRef = useRef<string | null>(options.initialSessionId ?? null);
+  const pendingRouteSessionRef = useRef<string | null>(null);
   const onSessionResolvedRef = useRef(options.onSessionResolved);
   const identityRef = useRef<{
     mode: AppMode;
@@ -75,10 +76,14 @@ export function useChatController(
         previousIdentity.mode === mode &&
         previousIdentity.transport === transport &&
         options.initialSessionId &&
-        options.initialSessionId === sessionIdRef.current,
+        options.initialSessionId === sessionIdRef.current &&
+        options.initialSessionId === pendingRouteSessionRef.current,
     );
     identityRef.current = { mode, transport };
-    if (routeCaughtUpToResolvedSession) return;
+    if (routeCaughtUpToResolvedSession) {
+      pendingRouteSessionRef.current = null;
+      return;
+    }
 
     const generation = generationRef.current + 1;
     generationRef.current = generation;
@@ -89,6 +94,7 @@ export function useChatController(
     lastInputRef.current = null;
     sessionIdRef.current = options.initialSessionId ?? null;
     notifiedSessionRef.current = options.initialSessionId ?? null;
+    pendingRouteSessionRef.current = null;
     dispatch({
       type: "session.reset",
       sessionId: options.initialSessionId,
@@ -182,6 +188,7 @@ export function useChatController(
         if (generation !== generationRef.current) return;
         if (created.sessionId && !sessionIdRef.current) {
           sessionIdRef.current = created.sessionId;
+          pendingRouteSessionRef.current = created.sessionId;
           dispatch({ type: "session.resolve", sessionId: created.sessionId });
           if (notifiedSessionRef.current !== created.sessionId) {
             notifiedSessionRef.current = created.sessionId;
@@ -202,15 +209,16 @@ export function useChatController(
             batchGenerationRef.current = generation;
             batchedDeltas.push(event.delta);
           } else {
-            batchedDeltas.flush();
+            await batchedDeltas.drain();
             if (generation !== generationRef.current) return;
             dispatch({ type: "stream.event", event });
           }
         }
-        if (generation === generationRef.current) batchedDeltas.flush();
+        if (generation === generationRef.current) await batchedDeltas.drain();
       } catch (error) {
         if (generation !== generationRef.current) return;
-        batchedDeltas.flush();
+        await batchedDeltas.drain();
+        if (generation !== generationRef.current) return;
         if (abortController.signal.aborted) return;
         dispatch({
           type: "stream.event",

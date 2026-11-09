@@ -35,6 +35,27 @@ describe("useBatchedDeltas", () => {
     expect(onFlush).toHaveBeenCalledWith("未到定时器");
   });
 
+  it("drains a buffered SSE burst across visible batches before terminal events", async () => {
+    const onFlush = vi.fn();
+    const { result } = renderHook(() => useBatchedDeltas(onFlush));
+    let drained!: Promise<void>;
+
+    act(() => {
+      for (let index = 0; index < 30; index += 1) {
+        result.current.push(String(index));
+      }
+      drained = result.current.drain();
+    });
+
+    await act(async () => vi.runAllTimersAsync());
+    await drained;
+
+    expect(onFlush.mock.calls.length).toBeGreaterThan(1);
+    expect(onFlush.mock.calls.flat().join("")).toBe(
+      Array.from({ length: 30 }, (_, index) => String(index)).join(""),
+    );
+  });
+
   it("clamps custom intervals to 40-80ms", () => {
     const onFlush = vi.fn();
     const { result, rerender } = renderHook(

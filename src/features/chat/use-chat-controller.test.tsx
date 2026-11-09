@@ -18,6 +18,61 @@ function deferred<T>() {
 }
 
 describe("useChatController run lifecycle", () => {
+  it("restarts an aborted initial history load when the route is re-evaluated", async () => {
+    let firstSignal: AbortSignal | undefined;
+    const loaded = {
+      session: {
+        id: "thread-strict",
+        title: "Strict 历史会话",
+        updatedAt: 2,
+        isPinned: false,
+      },
+      messages: [
+        { id: "m1", role: "user" as const, content: "历史问题", createdAt: 1 },
+        { id: "m2", role: "assistant" as const, content: "历史回答", createdAt: 2 },
+      ],
+    };
+    const loadSession = vi
+      .fn()
+      .mockImplementationOnce((_id: string, signal: AbortSignal) => {
+        firstSignal = signal;
+        return new Promise<typeof loaded>(() => undefined);
+      })
+      .mockResolvedValueOnce(loaded);
+    const transport: ChatTransport = {
+      kind: "xiaozhi",
+      capabilities: { selections: false, answerDeltas: true, resume: false },
+      sessions: {
+        listSessions: vi.fn(async () => []),
+        loadSession,
+      },
+      createRun: vi.fn(),
+      streamRun: async function* () {},
+      abortRun: vi.fn(async () => undefined),
+    };
+    const { result, rerender } = renderHook(
+      ({ routeKey }) =>
+        useChatController(transport, "work", {
+          initialSessionId: "thread-strict",
+          routeKey,
+        }),
+      {
+        initialProps: {
+          routeKey: "work:conversation:thread-strict:initial",
+        },
+      },
+    );
+
+    rerender({ routeKey: "work:conversation:thread-strict:rechecked" });
+    await waitFor(() => expect(loadSession).toHaveBeenCalledTimes(2));
+    expect(firstSignal?.aborted).toBe(true);
+    await waitFor(() => expect(result.current.state.sessionStatus).toBe("ready"));
+    expect(result.current.state.messages.map((message) => message.content)).toEqual([
+      "历史问题",
+      "历史回答",
+    ]);
+  });
+
   it("loads history before allowing a send and then reuses that session", async () => {
     const history = deferred<{
       session: { id: string; title: string; updatedAt: number; isPinned: boolean };

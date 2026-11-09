@@ -56,6 +56,48 @@ http://localhost:3000
 
 GIS 导航默认通过新 tab 打开 `http://localhost:5000` 的老前端完整首页；老前端在 `projects_new` 根目录使用 `pnpm dev`，其现有开发端口为 5000。
 
+### Xiaozhi 办公模式最小联调
+
+启动顺序：
+
+1. 启动 PostgreSQL 与 Redis。聊天、SSE、停止和历史会话不要求 RAG、向量 DB 或 sandbox。
+2. 在 Xiaozhi 仓库根目录分别启动 API 与 Worker；两者都用进程环境注入 `DEEPSEEK_API_KEY`。
+3. 为联调用户创建启用的 `yxkey_` API Key，只写入 Agent Hub 服务端环境变量 `XIAOZHI_API_KEY`。
+4. 配置本节列出的 Agent Hub 环境变量，再启动前端。
+
+```powershell
+# Xiaozhi API terminal
+$env:DEEPSEEK_API_KEY='<local-secret>'
+.\backend\.venv\Scripts\python.exe .\scripts\dev\run_native_api.py
+
+# Xiaozhi Worker terminal
+$env:DEEPSEEK_API_KEY='<local-secret>'
+.\backend\.venv\Scripts\python.exe .\scripts\dev\run_native_worker.py
+
+# Agent Hub terminal
+$env:XIAOZHI_API_ORIGIN='http://127.0.0.1:5050'
+$env:XIAOZHI_API_KEY='<local-yxkey-secret>'
+$env:XIAOZHI_WORK_AGENT_SLUG='default-chatbot'
+corepack pnpm@9.0.0 dev
+```
+
+联调地址与模式映射：
+
+| 项目 | 地址/后端 |
+|---|---|
+| Xiaozhi health | `http://127.0.0.1:5050/api/system/health` |
+| Agent Hub | `http://127.0.0.1:3000`（可用 `--port 3100` 改端口） |
+| 日常模式 | `projects_new`，经 `/agent-api/*`；历史会话等待其 Session 计划落地 |
+| 办公模式 | Xiaozhi，浏览器只访问同源 `/api/work-agent/*` |
+| 办公历史 | `/history?mode=work` |
+| 办公会话 | `/chat?mode=work&conversation=<xiaozhi-thread-id>` |
+
+当前 `XIAOZHI_API_KEY` 代表一个 shared-demo-user。所有访问者共享该用户的办公会话列表；它只适合内网联调/低风险演示，不提供登录、权限或用户隔离。统一认证接入后必须替换为服务端用户身份映射。
+
+停止顺序：在 Agent Hub、Worker、API 三个终端分别按 `Ctrl+C`；确认 3000/3100、5050 不再监听后，再按基础设施项目自己的 Compose 命令停止 PostgreSQL/Redis。不要删除共享 volume。
+
+本轮非目标：统一认证与多用户隔离、RAG/知识库、sandbox Skill、刷新后 active run 恢复、动态 Skill/MCP 选择、附件与产物、历史搜索/删除/重命名。
+
 ## 环境变量
 
 | 变量 | 可见范围 | 默认值 | 说明 |
@@ -80,6 +122,12 @@ corepack pnpm@9.0.0 test:e2e
 corepack pnpm@9.0.0 build
 ```
 
+Xiaozhi 后端相关回归在其 `backend` 目录运行。测试依赖位于独立 `test` group；Windows 应用控制可能阻止 `pytest.exe` shim，因此统一使用模块入口：
+
+```powershell
+uv run --group test python -m pytest test/unit/test_auth_utils.py test/integration/api/test_apikey_router.py test/unit/services/test_agent_run_service.py test/unit/storage/test_conversation_repository.py -q
+```
+
 ## 容器
 
 ```bash
@@ -100,7 +148,7 @@ docker run --rm -p 3000:3000 agent-hub-web
 - Xiaozhi 办公 BFF 首版使用单一演示用户 API Key。接入办公历史页后，所有演示访问者会看到同一用户的办公会话；这不是权限隔离。
 - 知识库、Skill、MCP 支持 UI 多选和消息级快照；当前真实后端尚未消费这些选项，因此真实模式会阻止带选择的提交。
 - 流式正文只显示最终可见内容；活动状态只显示安全的短描述，不展示内部推理。
-- 当前真实后端支持停止，不支持续写。断流后由用户手动重新生成；服务端任务可能仍在运行。
+- 两套真实后端均支持停止；办公模式会同时停止浏览器读取并请求 Xiaozhi cancel。当前不支持续写；断流后由用户手动重新生成。
 - 模型、评测、API、详情、创建、附件均为明确的待接入槽位。
 
 ## 后续接入点
