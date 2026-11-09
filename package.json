@@ -14,8 +14,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:daily-session": "playwright test --config=playwright.daily-session.config.ts",
     "test:e2e:thin-loop": "playwright test --config=playwright.thin-loop.config.ts",
-    "test:e2e:production": "playwright test --config=playwright.production.config.ts"
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts",
+    "smoke:daily-session-j1": "node scripts/daily-session-j1-smoke.mjs"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",
