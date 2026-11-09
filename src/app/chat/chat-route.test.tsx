@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => {
   const push = vi.fn();
   const dailyLoadSession = vi.fn();
   const workLoadSession = vi.fn();
+  const getAuthStatus = vi.fn();
+  const loadSnapshot = vi.fn();
+  const loadMessages = vi.fn();
   const dailyTransport: ChatTransport = {
     kind: "mock",
     capabilities: { selections: true, answerDeltas: true, resume: true },
@@ -41,17 +44,32 @@ const mocks = vi.hoisted(() => {
       loadSession: workLoadSession,
     },
   };
+  const dailySessionClient = {
+    getAuthStatus,
+    login: vi.fn(),
+    logout: vi.fn(async () => undefined),
+    listConversations: vi.fn(),
+    createConversation: vi.fn(),
+    loadSnapshot,
+    loadMessages,
+    renameConversation: vi.fn(),
+  };
   return {
     search: "mode=work",
     replace,
     push,
     dailyLoadSession,
     workLoadSession,
+    getAuthStatus,
+    loadSnapshot,
+    loadMessages,
+    dailySessionClient,
     dailyTransport,
     workTransport,
     createChatTransport: vi.fn(() => dailyTransport),
     createProjectsNewTransport: vi.fn(() => dailyTransport),
     createXiaozhiTransport: vi.fn(() => workTransport),
+    createDailySessionClient: vi.fn(() => dailySessionClient),
   };
 });
 
@@ -81,6 +99,13 @@ vi.mock("@/features/chat/transports/xiaozhi-transport", () => ({
   createXiaozhiTransport: mocks.createXiaozhiTransport,
 }));
 
+vi.mock("@/features/chat/transports/daily-session-client", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/features/chat/transports/daily-session-client")
+  >();
+  return { ...actual, createDailySessionClient: mocks.createDailySessionClient };
+});
+
 function renderRoute() {
   return render(
     <AuthProvider>
@@ -101,6 +126,49 @@ describe("ChatRoute", () => {
     mocks.createChatTransport.mockClear();
     mocks.createProjectsNewTransport.mockClear();
     mocks.createXiaozhiTransport.mockClear();
+    mocks.createDailySessionClient.mockClear();
+    mocks.getAuthStatus.mockReset().mockResolvedValue({
+      enabled: true,
+      xiaozhiUrl: "http://xiaozhi.local",
+      user: {
+        id: "daily-user",
+        displayName: "日常用户",
+        sessionExpiresAt: "2026-11-10T00:00:00.000Z",
+      },
+    });
+    mocks.loadSnapshot.mockReset().mockResolvedValue({
+      conversation: {
+        conversationId: "10000000-0000-4000-8000-000000000001",
+        scenarioId: "daily",
+        agentKey: "agent-loop",
+        title: "日常历史",
+        status: "open",
+        archivedAt: null,
+        version: 1,
+        lastEventSeq: "2",
+        lastTurnIndex: "1",
+        createdAt: "2026-11-09T00:00:00.000Z",
+        updatedAt: "2026-11-09T01:00:00.000Z",
+      },
+      activeTurn: null,
+      messages: [
+        {
+          messageId: "40000000-0000-4000-8000-000000000004",
+          conversationId: "10000000-0000-4000-8000-000000000001",
+          turnId: "20000000-0000-4000-8000-000000000002",
+          ordinal: "2",
+          role: "assistant",
+          content: { kind: "text", text: "日常持久回答" },
+          revision: 1,
+          status: "committed",
+          artifactRefs: [],
+          createdAt: "2026-11-09T01:00:00.000Z",
+        },
+      ],
+      nextCursor: null,
+      lastEventSeq: "2",
+    });
+    mocks.loadMessages.mockReset();
     vi.stubEnv("NEXT_PUBLIC_E2E_SCENARIOS", "1");
   });
 
@@ -119,6 +187,23 @@ describe("ChatRoute", () => {
     expect(screen.getByRole("textbox", { name: "消息" })).toBeInTheDocument();
     expect(mocks.createChatTransport).toHaveBeenCalledOnce();
     expect(mocks.createXiaozhiTransport).not.toHaveBeenCalled();
+    expect(mocks.createDailySessionClient).not.toHaveBeenCalled();
+  });
+
+  it("routes a daily conversation to the read-only Session client", async () => {
+    mocks.search =
+      "mode=daily&conversation=10000000-0000-4000-8000-000000000001";
+    renderRoute();
+
+    expect(await screen.findByText("日常持久回答")).toBeInTheDocument();
+    expect(mocks.loadSnapshot).toHaveBeenCalledWith(
+      "10000000-0000-4000-8000-000000000001",
+      expect.any(AbortSignal),
+    );
+    expect(mocks.createChatTransport).not.toHaveBeenCalled();
+    expect(mocks.dailyLoadSession).not.toHaveBeenCalled();
+    expect(screen.queryByRole("textbox", { name: "消息" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "发送" })).not.toBeInTheDocument();
   });
 
   it("never lets the E2E real-backend override replace work transport", () => {
@@ -129,7 +214,7 @@ describe("ChatRoute", () => {
     expect(mocks.createProjectsNewTransport).not.toHaveBeenCalled();
   });
 
-  it("loads conversation only through the current work-mode transport", async () => {
+  it("loads work conversations only through the work transport", async () => {
     mocks.search = "mode=work&conversation=thread-work";
     mocks.workLoadSession.mockResolvedValue({
       session: {
@@ -143,18 +228,14 @@ describe("ChatRoute", () => {
         { id: "m2", role: "assistant", content: "历史回答", createdAt: 2 },
       ],
     });
-    const view = renderRoute();
+    renderRoute();
 
     expect(await screen.findByText("历史回答")).toBeInTheDocument();
     expect(mocks.workLoadSession).toHaveBeenCalledWith(
       "thread-work",
       expect.any(AbortSignal),
     );
-    view.unmount();
-
-    mocks.search = "mode=daily&conversation=thread-work";
-    renderRoute();
-    expect(mocks.dailyLoadSession).not.toHaveBeenCalled();
+    expect(mocks.loadSnapshot).not.toHaveBeenCalled();
   });
 
   it("replaces draft URL with the newly persisted work conversation", async () => {
