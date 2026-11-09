@@ -24,7 +24,7 @@
 | 重命名、409 刷新后重试 | 通过 | Playwright：冲突刷新 + 成功重命名 |
 | 刷新恢复、空会话 | 通过 | Playwright：reload 后恢复同一会话 |
 | 只读消息、历史分页、去重 | 通过 | Playwright：snapshot/messages 两页合并 |
-| 401 清空身份与旧内容 | 通过 | Playwright：失效后返回登录门禁 |
+| 401 清空身份与旧内容 | 通过 | Playwright：详情与历史列表失效后返回登录门禁 |
 | A/B 账号隔离 | 通过（假后端） | Playwright：B 不见 A 列表且 A 会话安全 404 |
 | 日常旧 Loop 发送回归 | 通过 | Playwright mock transport 回归 |
 | 办公历史回归 | 通过 | Playwright work history 回归 |
@@ -33,15 +33,15 @@
 
 ## 自动化命令
 
-执行时间：`2026-11-09 15:05—15:09 +08:00`。
+执行时间：`2026-11-09 15:25—15:27 +08:00`（终审修复后重跑）。
 
 | 命令 | 退出码 | 结果 |
 | --- | ---: | --- |
-| `pnpm test` | 0 | 35 files / 319 tests 通过 |
+| `pnpm test` | 0 | 36 files / 328 tests 通过 |
 | `pnpm lint` | 0 | 通过 |
 | `pnpm typecheck` | 0 | 通过 |
 | `pnpm build` | 0 | 通过；使用仅本次进程的必需本机占位配置 |
-| `pnpm test:e2e:daily-session` | 0 | Chromium 3/3 通过，1440×900 |
+| `pnpm test:e2e:daily-session` | 0 | Chromium 4/4 通过，1440×900 |
 | `git diff --check` | 0 | 通过 |
 
 复现命令：

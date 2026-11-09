@@ -24,7 +24,9 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 
 export function DailySessionHistory({ client }: { client: DailySessionClient }) {
   const auth = useDailySessionAuth();
-  const store = useDailySessionStore(client, auth.identityGeneration);
+  const store = useDailySessionStore(client, auth.identityGeneration, {
+    onAuthRequired: auth.invalidate,
+  });
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
@@ -196,6 +198,11 @@ function renderHistoryContent(input: {
       )}
       {store.nextCursor ? (
         <div className="daily-history-load-more">
+          {store.errorMessage ? (
+            <div className="inline-error" role="alert">
+              {store.errorMessage}
+            </div>
+          ) : null}
           <button
             className="secondary-button"
             disabled={store.isLoadingMore}

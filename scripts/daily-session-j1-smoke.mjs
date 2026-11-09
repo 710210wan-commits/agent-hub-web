@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 const requiredEnv = [
   "DAILY_SESSION_J1_ORIGIN",
@@ -7,20 +8,27 @@ const requiredEnv = [
   "DAILY_SESSION_J1_USER_B",
   "DAILY_SESSION_J1_PASSWORD_B",
 ];
-const missing = requiredEnv.filter((name) => !process.env[name]?.trim());
-
-if (missing.length > 0) {
-  console.error(
-    `[daily-session-j1] SKIP（非通过）：缺少环境变量 ${missing.join(", ")}`,
-  );
-  process.exitCode = 2;
-} else {
-  await run().catch((error) => {
+export async function main() {
+  const missing = requiredEnv.filter((name) => !process.env[name]?.trim());
+  if (missing.length > 0) {
+    console.error(
+      `[daily-session-j1] SKIP（非通过）：缺少环境变量 ${missing.join(", ")}`,
+    );
+    return 2;
+  }
+  try {
+    await run();
+    return 0;
+  } catch (error) {
     console.error(
       `[daily-session-j1] FAIL：${error instanceof Error ? error.message : "未知错误"}`,
     );
-    process.exitCode = 1;
-  });
+    return 1;
+  }
+}
+
+if (isDirectExecution()) {
+  process.exitCode = await main();
 }
 
 async function run() {
@@ -30,6 +38,7 @@ async function run() {
   const clientA = new SmokeClient(origin);
   const clientB = new SmokeClient(origin);
   let created;
+  let primaryError;
 
   console.log(`[daily-session-j1] START origin=${origin.origin}`);
   try {
@@ -106,11 +115,34 @@ async function run() {
       throw new Error("refresh A 未读到重命名后的元数据");
     }
     console.log("[daily-session-j1] PASS refresh A");
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    await Promise.allSettled([clientA.logout(), clientB.logout()]);
+    const cleanupError = logoutFailure(
+      await Promise.allSettled([clientA.logout(), clientB.logout()]),
+    );
+    if (cleanupError && primaryError) {
+      console.error(`[daily-session-j1] CLEANUP FAIL：${cleanupError.message}`);
+    } else if (cleanupError) {
+      throw cleanupError;
+    }
   }
 
   console.log("[daily-session-j1] PASS all checks; test conversations retained");
+}
+
+export function logoutFailure(results) {
+  const failed = results
+    .map((result, index) => (result.status === "rejected" ? (index === 0 ? "A" : "B") : null))
+    .filter(Boolean);
+  return failed.length > 0 ? new Error(`logout ${failed.join("/")} 失败`) : null;
+}
+
+function isDirectExecution() {
+  return Boolean(
+    process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href,
+  );
 }
 
 function credentials(label) {

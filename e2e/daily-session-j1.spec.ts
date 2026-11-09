@@ -46,6 +46,7 @@ interface FakeCall {
 class DailySessionFake {
   activeUser: UserKey | null = null;
   conflictNextRename = false;
+  unauthorizedNextList = false;
   unauthorizedNextSnapshot = false;
   readonly calls: FakeCall[] = [];
   private readonly idempotency = new Map<string, string>();
@@ -91,6 +92,12 @@ class DailySessionFake {
     }
 
     if (url.pathname === "/agent-api/conversations" && request.method() === "GET") {
+      if (this.unauthorizedNextList) {
+        this.unauthorizedNextList = false;
+        this.activeUser = null;
+        await error(route, 401, "AUTH_REQUIRED");
+        return;
+      }
       const all = this.conversations[this.activeUser];
       const cursor = url.searchParams.get("cursor");
       await json(route, {
@@ -268,6 +275,20 @@ test("restores and pages read-only messages, resets on 401, then isolates accoun
   ).toBeVisible();
   await page.goto("/history?mode=daily");
   await expect(page.getByText("用户 B 独立会话")).toBeVisible();
+  await expect(page.getByText("用户 A 第一页会话")).toHaveCount(0);
+});
+
+test("clears history rows and returns to login when list auth expires", async ({ page }) => {
+  const fake = new DailySessionFake();
+  await fake.install(page);
+  await page.goto("/history?mode=daily");
+  await login(page, "alice");
+  await expect(page.getByText("用户 A 第一页会话")).toBeVisible();
+
+  fake.unauthorizedNextList = true;
+  await page.reload();
+
+  await expect(page.getByRole("heading", { name: "登录日常会话" })).toBeVisible();
   await expect(page.getByText("用户 A 第一页会话")).toHaveCount(0);
 });
 

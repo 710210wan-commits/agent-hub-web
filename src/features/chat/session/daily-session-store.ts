@@ -42,6 +42,7 @@ export interface DailySessionStore extends Omit<StoreState, "owner"> {
 
 interface DailySessionStoreOptions {
   requestIdFactory?: () => string;
+  onAuthRequired?: () => void;
 }
 
 interface PendingCreate {
@@ -63,6 +64,8 @@ export function useDailySessionStore(
   const requestIdFactory = options.requestIdFactory ?? (() => crypto.randomUUID());
   const requestIdFactoryRef = useRef(requestIdFactory);
   requestIdFactoryRef.current = requestIdFactory;
+  const onAuthRequiredRef = useRef(options.onAuthRequired);
+  onAuthRequiredRef.current = options.onAuthRequired;
 
   const [state, setState] = useState<StoreState>(() =>
     initialState(identityGeneration),
@@ -91,6 +94,16 @@ export function useDailySessionStore(
       !signal.aborted,
     [],
   );
+
+  const invalidateAuth = useCallback(() => {
+    epochRef.current += 1;
+    for (const controller of controllersRef.current) controller.abort();
+    controllersRef.current.clear();
+    pendingCreateRef.current = null;
+    failedCreateTitleRef.current = undefined;
+    setState(initialState(generationRef.current));
+    onAuthRequiredRef.current?.();
+  }, []);
 
   const loadPage = useCallback(
     async (input: {
@@ -124,6 +137,10 @@ export function useDailySessionStore(
         });
       } catch (error) {
         if (!isCurrent(input.generation, input.epoch, controller.signal)) return;
+        if (isAuthRequired(error)) {
+          invalidateAuth();
+          return;
+        }
         setState((current) => ({
           ...(current.owner === input.generation
             ? current
@@ -136,7 +153,7 @@ export function useDailySessionStore(
         finishRequest(controller);
       }
     },
-    [beginRequest, client, finishRequest, isCurrent],
+    [beginRequest, client, finishRequest, invalidateAuth, isCurrent],
   );
 
   useEffect(() => {
@@ -211,13 +228,17 @@ export function useDailySessionStore(
       } catch (error) {
         if (!isCurrent(generation, epoch, controller.signal)) return { status: "failed" };
         failedCreateTitleRef.current = pending.title;
-        if (isNetworkUncertainty(error)) {
+        if (isCreateOutcomeUnknown(error)) {
           setState((current) => ({
             ...current,
             createStatus: "unknown",
             createError: CREATE_UNKNOWN,
           }));
           return { status: "unknown" };
+        }
+        if (isAuthRequired(error)) {
+          invalidateAuth();
+          return { status: "failed" };
         }
         pendingCreateRef.current = null;
         setState((current) => ({
@@ -230,7 +251,7 @@ export function useDailySessionStore(
         finishRequest(controller);
       }
     },
-    [beginRequest, client, finishRequest, isCurrent],
+    [beginRequest, client, finishRequest, invalidateAuth, isCurrent],
   );
 
   const createConversation = useCallback(
@@ -285,6 +306,10 @@ export function useDailySessionStore(
         return "renamed" as const;
       } catch (error) {
         if (!isCurrent(generation, epoch, controller.signal)) return "failed" as const;
+        if (isAuthRequired(error)) {
+          invalidateAuth();
+          return "failed" as const;
+        }
         if (isConflict(error)) {
           await loadPage({ generation, epoch, replace: true });
           if (generationRef.current === generation && epochRef.current === epoch) {
@@ -306,7 +331,7 @@ export function useDailySessionStore(
         finishRequest(controller);
       }
     },
-    [beginRequest, client, finishRequest, isCurrent, loadPage, state],
+    [beginRequest, client, finishRequest, invalidateAuth, isCurrent, loadPage, state],
   );
 
   const clearRenameError = useCallback(() => {
@@ -363,8 +388,15 @@ function normalizeOptionalTitle(title?: string): string | undefined {
   return normalized ? normalized : undefined;
 }
 
-function isNetworkUncertainty(error: unknown): boolean {
-  return error instanceof DailySessionClientError && error.code === "NETWORK_ERROR";
+function isCreateOutcomeUnknown(error: unknown): boolean {
+  return (
+    error instanceof DailySessionClientError &&
+    (error.code === "NETWORK_ERROR" || error.code === "INVALID_RESPONSE")
+  );
+}
+
+function isAuthRequired(error: unknown): boolean {
+  return error instanceof DailySessionClientError && error.status === 401;
 }
 
 function isConflict(error: unknown): boolean {

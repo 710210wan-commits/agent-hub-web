@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DailySessionClientError,
+  createDailySessionClient,
   type DailySessionClient,
 } from "@/features/chat/transports/daily-session-client";
 import type { ConversationMetadata } from "@/features/chat/transports/daily-session-contract";
@@ -140,6 +141,39 @@ describe("useDailySessionStore", () => {
     );
   });
 
+  it("reuses a create key after an invalid success response", async () => {
+    let createAttempts = 0;
+    const fetchFn = vi.fn<typeof fetch>(async (_input, init) => {
+      if (init?.method === "GET") {
+        return jsonResponse({ conversations: [], nextCursor: null });
+      }
+      createAttempts += 1;
+      return createAttempts === 1
+        ? new Response("{", {
+            status: 201,
+            headers: { "content-type": "application/json" },
+          })
+        : jsonResponse({ conversation: conversation(FIRST_ID), reused: true }, 201);
+    });
+    const realClient = createDailySessionClient({ fetchFn });
+    const { result } = renderHook(() =>
+      useDailySessionStore(realClient, 1, { requestIdFactory: idFactory }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    await act(async () => {
+      expect(await result.current.createConversation("标题")).toEqual({
+        status: "unknown",
+      });
+    });
+    await act(async () => void (await result.current.retryCreate()));
+
+    const retriedBody = JSON.parse(String(fetchFn.mock.calls[2]?.[1]?.body));
+    expect(retriedBody).toMatchObject(
+      { clientRequestId: FIRST_ID, title: "标题" },
+    );
+  });
+
   it("releases a create key after an explicit rejection", async () => {
     vi.mocked(client.createConversation)
       .mockRejectedValueOnce(
@@ -246,4 +280,87 @@ describe("useDailySessionStore", () => {
     expect(result.current.conversations).toHaveLength(1);
     expect(result.current.conversations[0]?.title).toBe("新用户会话");
   });
+
+  it("invalidates auth when the initial list returns 401", async () => {
+    const onAuthRequired = vi.fn();
+    vi.mocked(client.listConversations).mockRejectedValue(authRequired());
+
+    renderHook(() =>
+      useDailySessionStore(client, 1, { requestIdFactory: idFactory, onAuthRequired }),
+    );
+
+    await waitFor(() => expect(onAuthRequired).toHaveBeenCalledOnce());
+  });
+
+  it("invalidates auth on pagination 401 and clears loaded rows", async () => {
+    const onAuthRequired = vi.fn();
+    vi.mocked(client.listConversations)
+      .mockResolvedValueOnce({
+        conversations: [conversation(FIRST_ID)],
+        nextCursor: "next-page",
+      })
+      .mockRejectedValueOnce(authRequired());
+    const { result } = renderHook(() =>
+      useDailySessionStore(client, 1, { requestIdFactory: idFactory, onAuthRequired }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    await act(async () => void (await result.current.loadMore()));
+
+    expect(onAuthRequired).toHaveBeenCalledOnce();
+    expect(result.current.conversations).toHaveLength(0);
+  });
+
+  it("invalidates auth when create returns 401", async () => {
+    const onAuthRequired = vi.fn();
+    vi.mocked(client.listConversations).mockResolvedValue({
+      conversations: [conversation(FIRST_ID)],
+      nextCursor: null,
+    });
+    vi.mocked(client.createConversation).mockRejectedValue(authRequired());
+    const { result } = renderHook(() =>
+      useDailySessionStore(client, 1, { requestIdFactory: idFactory, onAuthRequired }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    await act(async () => void (await result.current.createConversation()));
+
+    expect(onAuthRequired).toHaveBeenCalledOnce();
+    expect(result.current.conversations).toHaveLength(0);
+  });
+
+  it("invalidates auth when rename returns 401", async () => {
+    const onAuthRequired = vi.fn();
+    vi.mocked(client.listConversations).mockResolvedValue({
+      conversations: [conversation(FIRST_ID)],
+      nextCursor: null,
+    });
+    vi.mocked(client.renameConversation).mockRejectedValue(authRequired());
+    const { result } = renderHook(() =>
+      useDailySessionStore(client, 1, { requestIdFactory: idFactory, onAuthRequired }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    await act(async () => {
+      await result.current.renameConversation(FIRST_ID, "新标题");
+    });
+
+    expect(onAuthRequired).toHaveBeenCalledOnce();
+    expect(result.current.conversations).toHaveLength(0);
+  });
 });
+
+function authRequired() {
+  return new DailySessionClientError({
+    code: "AUTH_REQUIRED",
+    message: "登录已失效",
+    status: 401,
+  });
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}

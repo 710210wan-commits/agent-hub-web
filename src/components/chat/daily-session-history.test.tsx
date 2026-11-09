@@ -209,6 +209,56 @@ describe("DailySessionHistory", () => {
     expect(await screen.findByText("暂无日常历史会话")).toBeInTheDocument();
   });
 
+  it("shows a pagination failure beside loaded rows and allows retry", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations)
+      .mockResolvedValueOnce({
+        conversations: [conversation(FIRST_ID)],
+        nextCursor: "next-page",
+      })
+      .mockRejectedValueOnce(new Error("upstream secret"))
+      .mockResolvedValueOnce({
+        conversations: [conversation(SECOND_ID, { title: "第二页" })],
+        nextCursor: null,
+      });
+    renderHistory(client);
+
+    await screen.findByRole("link", { name: /边境态势分析/ });
+    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "日常历史加载失败，请稍后重试",
+    );
+    expect(screen.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+    expect(await screen.findByRole("link", { name: /第二页/ })).toBeInTheDocument();
+  });
+
+  it("returns to the login gate when history pagination expires", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations)
+      .mockResolvedValueOnce({
+        conversations: [conversation(FIRST_ID)],
+        nextCursor: "next-page",
+      })
+      .mockRejectedValueOnce(
+        new DailySessionClientError({
+          code: "AUTH_REQUIRED",
+          message: "登录已失效",
+          status: 401,
+        }),
+      );
+    renderHistory(client);
+
+    await screen.findByRole("link", { name: /边境态势分析/ });
+    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "登录日常会话" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("边境态势分析")).not.toBeInTheDocument();
+  });
+
   it("logs out through the authenticated boundary", async () => {
     const client = createClient();
     renderHistory(client);
