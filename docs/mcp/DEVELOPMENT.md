@@ -10,7 +10,7 @@
 
 ## 启动
 
-1. 后端：在 DSI-git-mcp/integrations/mcp 执行 pnpm install，再执行 pnpm console，默认 127.0.0.1:4318。
+1. 后端：在 DSI-git-mcp/integrations/mcp 执行 pnpm install --ignore-workspace --frozen-lockfile，再执行 pnpm console，默认 127.0.0.1:4318。
 2. 前端：按根目录 .env.example 配置已有模块的必填环境变量，增加 MCP_API_ORIGIN=http://127.0.0.1:4318。
 3. 执行 pnpm dev --hostname 127.0.0.1 --port 3010，打开 /mcp。
 4. 若改用 3011，后端启动时设置 MCP_UI_ORIGINS=http://127.0.0.1:3011,http://localhost:3011。
