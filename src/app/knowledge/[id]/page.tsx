@@ -281,7 +281,6 @@ export default function KnowledgeDetailPage() {
 
     let cancelled = false;
 
-    setDocumentPage(1);
     Promise.all([
       getKbDatabase(kbId),
       listKbDocuments(kbId, {
@@ -291,6 +290,7 @@ export default function KnowledgeDetailPage() {
     ])
       .then(([database, list]) => {
         if (cancelled) return;
+        setDocumentPage(1);
         setDetail(database);
         setDocuments(list.documents);
         setDocumentTotal(list.total);
