@@ -55,7 +55,10 @@ describe("AppShell", () => {
 
     for (const link of within(navigation).getAllByRole("link")) {
       if (link.textContent?.trim() === "GIS 工作台") {
-        expect(link).toHaveAttribute("href", "http://localhost:5000");
+        expect(link).toHaveAttribute(
+          "href",
+          process.env.NEXT_PUBLIC_LEGACY_FRONTEND_URL ?? "http://localhost:5000",
+        );
         expect(link).toHaveAttribute("target", "_blank");
         expect(link).toHaveAttribute("rel", "noopener noreferrer");
       } else {

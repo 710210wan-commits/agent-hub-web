@@ -7,6 +7,13 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "scripts/skill-market-*.ts"
+      - "scripts/check-skill-market-independence.ts"
+      - "scripts/test-skill-market-parallel-run.ts"
+      - "e2e/skill-market-*.ts"
+      - "Dockerfile"
+      - "playwright.config.ts"
+      - ".env.example"
+      - "docs/skill-market/**"
       - "src/app/api/skill-market/**"
       - "src/features/skills/**"
   push:
@@ -15,6 +22,13 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "scripts/skill-market-*.ts"
+      - "scripts/check-skill-market-independence.ts"
+      - "scripts/test-skill-market-parallel-run.ts"
+      - "e2e/skill-market-*.ts"
+      - "Dockerfile"
+      - "playwright.config.ts"
+      - ".env.example"
+      - "docs/skill-market/**"
       - "src/app/api/skill-market/**"
       - "src/features/skills/**"
   workflow_dispatch:
@@ -60,3 +74,30 @@ jobs:
       - run: git diff --exit-code -- src/features/skills/contracts/generated
       - run: pnpm run check:skill-market-client
       - run: pnpm run test:skill-market:contract
+
+  release-gate:
+    name: Independent frontend release gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run verify:skill-market:release
+        env:
+          AGENT_API_ORIGIN: http://127.0.0.1:3001
+          NEXT_PUBLIC_AGENT_API_BASE: /agent-api
+          NEXT_PUBLIC_CHAT_TRANSPORT: projects-new
+          NEXT_PUBLIC_LEGACY_FRONTEND_URL: http://127.0.0.1:5000
+          SKILL_MARKET_BFF_TIMEOUT_MS: 30000
+          SKILL_MARKET_DAILY_ORIGIN: http://127.0.0.1:3001
+          SKILL_MARKET_GATEWAY_HMAC_SECRET: ci-only-skill-market-secret-32-bytes
+          SKILL_MARKET_PRINCIPAL_ID: ci-operator
+          SKILL_MARKET_PRINCIPAL_MANAGED_SCENARIOS: daily
+          SKILL_MARKET_PRINCIPAL_PERMISSIONS: ""
+          SKILL_MARKET_PRINCIPAL_ROLES: author,reviewer,admin,scenario_admin

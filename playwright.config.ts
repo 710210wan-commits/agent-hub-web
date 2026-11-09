@@ -20,13 +20,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "corepack pnpm@9.0.0 dev --hostname 127.0.0.1 --port 3100",
+    command: "pnpm dev --hostname 127.0.0.1 --port 3100",
     url: "http://127.0.0.1:3100/chat?mode=daily",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
       NEXT_PUBLIC_CHAT_TRANSPORT: "mock",
       NEXT_PUBLIC_E2E_SCENARIOS: "1",
+      NEXT_PUBLIC_LEGACY_FRONTEND_URL: "http://localhost:5000",
       SKILL_MARKET_DAILY_ORIGIN: "http://127.0.0.1:3999",
       SKILL_MARKET_GATEWAY_HMAC_SECRET: "e2e-only-skill-market-secret-32-bytes",
       SKILL_MARKET_PRINCIPAL_ID: "playwright-operator",

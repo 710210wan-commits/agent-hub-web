@@ -10,7 +10,17 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 ARG NEXT_PUBLIC_LEGACY_FRONTEND_URL
+ARG AGENT_API_ORIGIN
 ENV NEXT_PUBLIC_LEGACY_FRONTEND_URL=$NEXT_PUBLIC_LEGACY_FRONTEND_URL
+ENV NEXT_PUBLIC_CHAT_TRANSPORT=projects-new
+ENV AGENT_API_ORIGIN=$AGENT_API_ORIGIN
+# These values only make the fail-closed Next config verifiable during image
+# compilation. Deployments MUST inject real server-only values at runtime.
+ENV SKILL_MARKET_DAILY_ORIGIN=http://127.0.0.1:3001
+ENV SKILL_MARKET_GATEWAY_HMAC_SECRET=build-validation-only-secret-32-bytes
+ENV SKILL_MARKET_PRINCIPAL_ID=build-validation-operator
+ENV SKILL_MARKET_PRINCIPAL_ROLES=author
+ENV SKILL_MARKET_PRINCIPAL_MANAGED_SCENARIOS=daily
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /app/node_modules ./node_modules
