@@ -4,10 +4,15 @@ import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { ChatPage } from "@/components/chat/chat-page";
+import { DailySessionAuthGate } from "@/components/chat/daily-session-auth-gate";
+import { DailySessionView } from "@/components/chat/daily-session-view";
+import { AppShell } from "@/components/shell/app-shell";
 import { readPublicRuntimeConfig } from "@/config/env";
 import { parseMode } from "@/config/modes";
 import type { MockRunScenario } from "@/features/chat/fixtures/default-run";
+import { DailySessionAuthProvider } from "@/features/chat/session/daily-session-auth-provider";
 import { createChatTransport } from "@/features/chat/transports/create-transport";
+import { createDailySessionClient } from "@/features/chat/transports/daily-session-client";
 import { createMockTransport } from "@/features/chat/transports/mock-transport";
 import { createProjectsNewTransport } from "@/features/chat/transports/projects-new-transport";
 import { createXiaozhiTransport } from "@/features/chat/transports/xiaozhi-transport";
@@ -27,17 +32,19 @@ export default function ChatRoute() {
   const e2eScenariosEnabled =
     process.env.NODE_ENV !== "production" &&
     process.env.NEXT_PUBLIC_E2E_SCENARIOS === "1";
-  const conversation =
-    mode === "work" ? searchParams.get("conversation") || undefined : undefined;
+  const requestedConversation = searchParams.get("conversation") || undefined;
+  const workConversation = mode === "work" ? requestedConversation : undefined;
+  const dailyConversation = mode === "daily" ? requestedConversation : undefined;
   const draft = searchParams.get("draft") || undefined;
-  const routeKey = conversation
-    ? `${mode}:conversation:${conversation}`
+  const routeKey = workConversation
+    ? `${mode}:conversation:${workConversation}`
     : `${mode}:draft:${draft ?? "default"}`;
   const backendOverride = e2eScenariosEnabled ? searchParams.get("backend") : null;
   const requestedScenario = e2eScenariosEnabled ? searchParams.get("scenario") : null;
   const requestedDelay = e2eScenariosEnabled ? Number(searchParams.get("delay")) : NaN;
   const transport = useMemo(
     () => {
+      if (dailyConversation) return undefined;
       if (mode === "work") return createXiaozhiTransport();
       const config = readPublicRuntimeConfig();
       if (backendOverride === "real") {
@@ -54,7 +61,11 @@ export default function ChatRoute() {
       }
       return createChatTransport(config);
     },
-    [backendOverride, mode, requestedDelay, requestedScenario],
+    [backendOverride, dailyConversation, mode, requestedDelay, requestedScenario],
+  );
+  const dailySessionClient = useMemo(
+    () => (dailyConversation ? createDailySessionClient() : undefined),
+    [dailyConversation],
   );
   const onSessionResolved = useCallback(
     (sessionId: string) => {
@@ -68,9 +79,30 @@ export default function ChatRoute() {
     [mode, router, search],
   );
 
+  if (dailyConversation && dailySessionClient) {
+    return (
+      <AppShell title="历史会话">
+        <div className="chat-page">
+          <div className="chat-scroll-region daily-session-scroll-region">
+            <DailySessionAuthProvider client={dailySessionClient}>
+              <DailySessionAuthGate>
+                <DailySessionView
+                  client={dailySessionClient}
+                  conversationId={dailyConversation}
+                />
+              </DailySessionAuthGate>
+            </DailySessionAuthProvider>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!transport) return null;
+
   return (
     <ChatPage
-      initialSessionId={conversation}
+      initialSessionId={workConversation}
       key={mode}
       onSessionResolved={onSessionResolved}
       routeKey={routeKey}

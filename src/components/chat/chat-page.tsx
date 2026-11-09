@@ -55,7 +55,10 @@ export function ChatPage({
           ) : controller.state.messages.length === 0 ? (
             <ChatEmptyState mode={mode} onSelectPrompt={setInput} />
           ) : (
-            <MessageList state={controller.state} />
+            <MessageList
+              messages={controller.state.messages}
+              run={controller.state.run}
+            />
           )}
           <RunActions
             kind={transport.kind}
