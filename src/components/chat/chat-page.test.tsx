@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatStreamEvent } from "@/features/chat/contracts/events";
+import { SessionNotFoundError } from "@/features/chat/contracts/session";
 import type { ChatTransport } from "@/features/chat/contracts/transport";
 import { AuthProvider } from "@/providers/auth-provider";
 import { ModeProvider } from "@/providers/mode-provider";
@@ -9,14 +10,16 @@ import { ModeProvider } from "@/providers/mode-provider";
 import { ChatPage } from "./chat-page";
 import { MessageContent } from "./message-content";
 
+const navigation = vi.hoisted(() => ({ search: "mode=daily" }));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/chat",
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams("mode=daily"),
+  useSearchParams: () => new URLSearchParams(navigation.search),
 }));
 
 function makeTransport(
-  kind: "mock" | "projects-new",
+  kind: "mock" | "projects-new" | "xiaozhi",
   events: ChatStreamEvent[],
 ): ChatTransport & { createRun: ReturnType<typeof vi.fn> } {
   const createRun = vi.fn(async () => ({ runId: `${kind}-run` }));
@@ -52,7 +55,19 @@ function submit(text = "分析本周风险") {
   fireEvent.click(screen.getByRole("button", { name: "发送" }));
 }
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("ChatPage", () => {
+  beforeEach(() => {
+    navigation.search = "mode=daily";
+  });
+
   it("renders a minimal daily empty state with three prompts", () => {
     renderChat(makeTransport("mock", []));
 
@@ -122,6 +137,41 @@ describe("ChatPage", () => {
     expect(screen.getAllByTestId("activity-line")).toHaveLength(1);
   });
 
+  it("shows one current activity before replacing it with the final answer", async () => {
+    const releaseToolActivity = deferred();
+    const releaseFinalAnswer = deferred();
+    const transport: ChatTransport = {
+      kind: "projects-new",
+      capabilities: { selections: false, answerDeltas: false, resume: false },
+      createRun: vi.fn(async () => ({ runId: "task-controlled" })),
+      streamRun: async function* () {
+        yield { type: "activity.update", label: "正在处理请求" } as const;
+        await releaseToolActivity.promise;
+        yield { type: "activity.update", label: "正在调用风险分析" } as const;
+        await releaseFinalAnswer.promise;
+        yield { type: "answer.done", content: "**最终结论**：风险可控" } as const;
+      },
+      abortRun: vi.fn(async () => undefined),
+    };
+
+    renderChat(transport);
+    submit();
+
+    expect(await screen.findByText("正在处理请求")).toBeInTheDocument();
+    expect(screen.getAllByTestId("activity-line")).toHaveLength(1);
+
+    releaseToolActivity.resolve();
+    expect(await screen.findByText("正在调用风险分析")).toBeInTheDocument();
+    expect(screen.queryByText("正在处理请求")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("activity-line")).toHaveLength(1);
+
+    releaseFinalAnswer.resolve();
+    expect(await screen.findByText(/最终结论/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId("activity-line")).not.toBeInTheDocument();
+    });
+  });
+
   it("shows continue only for a stopped mock run", async () => {
     renderChat(
       makeTransport("mock", [
@@ -183,6 +233,42 @@ describe("ChatPage", () => {
       expect.any(AbortSignal),
     );
     expect(screen.getByRole("button", { name: "知识库 · 1" })).toBeInTheDocument();
+  });
+
+  it("shows work capabilities as server-preconfigured and not selectable", () => {
+    navigation.search = "mode=work";
+    renderChat(makeTransport("xiaozhi", []));
+
+    expect(
+      screen.getByText("办公智能体已预配置知识库、Skill 与 MCP"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^知识库/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Skill/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^MCP/ })).toBeDisabled();
+  });
+
+  it("shows a missing persisted session without offering a replacement send", async () => {
+    navigation.search = "mode=work";
+    const transport = {
+      ...makeTransport("xiaozhi", []),
+      sessions: {
+        listSessions: vi.fn(async () => []),
+        loadSession: vi.fn(async () => {
+          throw new SessionNotFoundError("missing");
+        }),
+      },
+    };
+    render(
+      <AuthProvider>
+        <ModeProvider>
+          <ChatPage initialSessionId="missing" transport={transport} />
+        </ModeProvider>
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByText("会话不存在或已删除")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "消息" })).not.toBeInTheDocument();
+    expect(transport.createRun).not.toHaveBeenCalled();
   });
 });
 

@@ -10,11 +10,13 @@ export interface CapabilityOption {
 
 export function CapabilitySelector({
   label,
+  disabled = false,
   options,
   selectedIds,
   onChange,
 }: {
   label: string;
+  disabled?: boolean;
   options: CapabilityOption[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
@@ -25,15 +27,16 @@ export function CapabilitySelector({
   return (
     <div className="capability-selector">
       <button
-        aria-expanded={open}
+        aria-expanded={disabled ? false : open}
         className={selectedIds.length > 0 ? "capability-trigger is-selected" : "capability-trigger"}
+        disabled={disabled}
         onClick={() => setOpen((value) => !value)}
         type="button"
       >
         {buttonLabel}
         <ChevronDown aria-hidden="true" size={12} />
       </button>
-      {open ? (
+      {open && !disabled ? (
         <div className="capability-menu">
           {options.map((option) => {
             const checked = selectedIds.includes(option.id);

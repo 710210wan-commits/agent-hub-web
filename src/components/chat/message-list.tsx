@@ -1,12 +1,19 @@
-import type { ChatState } from "@/features/chat/reducer/chat-state";
+import type { ChatMessage } from "@/features/chat/contracts/chat";
+import type { ChatRunView } from "@/features/chat/reducer/chat-state";
 
 import { ActivityLine } from "./activity-line";
 import { MessageContent } from "./message-content";
 
-export function MessageList({ state }: { state: ChatState }) {
+export function MessageList({
+  messages,
+  run,
+}: {
+  messages: ChatMessage[];
+  run?: ChatRunView;
+}) {
   return (
-    <div className="message-list">
-      {state.messages.map((message) => (
+    <div aria-label="会话消息" className="message-list">
+      {messages.map((message) => (
         <article className={`message message-${message.role}`} key={message.id}>
           {message.role === "assistant" ? (
             <div className="assistant-header">
@@ -15,8 +22,8 @@ export function MessageList({ state }: { state: ChatState }) {
             </div>
           ) : null}
           {message.content ? <MessageContent content={message.content} /> : null}
-          {message.role === "assistant" && message.id === state.run.assistantMessageId ? (
-            <ActivityLine run={state.run} />
+          {message.role === "assistant" && message.id === run?.assistantMessageId ? (
+            <ActivityLine run={run} />
           ) : null}
         </article>
       ))}

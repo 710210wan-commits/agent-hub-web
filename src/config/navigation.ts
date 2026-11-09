@@ -1,4 +1,5 @@
 import type { AppMode } from "./modes";
+import { readPublicRuntimeConfig } from "./env";
 import { withMode } from "./modes";
 
 export type NavigationIcon =
@@ -29,8 +30,9 @@ const navigationItems: NavigationItem[] = [
 ];
 
 export function getNavigation(mode: AppMode): NavigationItem[] {
+  const legacyFrontendUrl = readPublicRuntimeConfig().legacyFrontendUrl;
   return navigationItems.map((item) => ({
     ...item,
-    href: withMode(item.href, mode),
+    href: item.id === "gis" ? legacyFrontendUrl : withMode(item.href, mode),
   }));
 }

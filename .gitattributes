@@ -1,0 +1,2 @@
+src/features/skills/contracts/schema/*.json text eol=lf
+src/features/skills/contracts/generated/*.ts text eol=lf

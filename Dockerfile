@@ -9,6 +9,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
+ARG NEXT_PUBLIC_LEGACY_FRONTEND_URL
+ENV NEXT_PUBLIC_LEGACY_FRONTEND_URL=$NEXT_PUBLIC_LEGACY_FRONTEND_URL
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /app/node_modules ./node_modules

@@ -43,6 +43,28 @@ function NavigationLink({
   onNavigate: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const Icon = icons[item.icon];
+  const content = (
+    <>
+      <Icon aria-hidden="true" size={17} strokeWidth={1.8} />
+      <span className="sidebar-link-label">{item.label}</span>
+    </>
+  );
+
+  if (item.id === "gis") {
+    return (
+      <a
+        aria-label={item.label}
+        className="sidebar-link"
+        href={item.href}
+        onClick={onNavigate}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        {content}
+      </a>
+    );
+  }
+
   return (
     <Link
       aria-current={active ? "page" : undefined}
@@ -51,8 +73,7 @@ function NavigationLink({
       href={item.href}
       onClick={onNavigate}
     >
-      <Icon aria-hidden="true" size={17} strokeWidth={1.8} />
-      <span className="sidebar-link-label">{item.label}</span>
+      {content}
     </Link>
   );
 }
@@ -81,11 +102,11 @@ export function Sidebar({
       onNavigate={(event) => {
         if (item.id === "chat") {
           event.preventDefault();
-          const conversationId =
+          const draftId =
             typeof crypto.randomUUID === "function"
               ? crypto.randomUUID()
               : `${Date.now()}`;
-          router.push(`/chat?mode=${mode}&conversation=${conversationId}`);
+          router.push(`/chat?mode=${mode}&draft=${draftId}`);
         }
         onNavigate();
       }}

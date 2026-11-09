@@ -1,3 +1,4 @@
+import type { ChatTransport } from "@/features/chat/contracts/transport";
 import type { ChatRunView } from "@/features/chat/reducer/chat-state";
 
 import { InlineError } from "@/components/states/inline-error";
@@ -9,7 +10,7 @@ export function RunActions({
   onRegenerate,
 }: {
   run: ChatRunView;
-  kind: "mock" | "projects-new";
+  kind: ChatTransport["kind"];
   onContinue: () => void;
   onRegenerate: () => void;
 }) {

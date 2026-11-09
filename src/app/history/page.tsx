@@ -1,23 +1,29 @@
-import { Clock3 } from "lucide-react";
+"use client";
 
-import { AppShell } from "@/components/shell/app-shell";
-import { historyFixtures } from "@/config/resource-fixtures";
+import { useMemo } from "react";
+
+import { createDailySessionClient } from "@/features/chat/transports/daily-session-client";
+import { createXiaozhiTransport } from "@/features/chat/transports/xiaozhi-transport";
+import { useAppMode } from "@/providers/mode-provider";
+
+import { HistoryPageClient } from "./history-page-client";
 
 export default function HistoryPage() {
+  const { mode } = useAppMode();
+  const sessionTransport = useMemo(
+    () => (mode === "work" ? createXiaozhiTransport().sessions : undefined),
+    [mode],
+  );
+  const dailySessionClient = useMemo(
+    () => (mode === "daily" ? createDailySessionClient() : undefined),
+    [mode],
+  );
+
   return (
-    <AppShell title="历史对话">
-      <section className="resource-page">
-        <header className="page-heading"><div><h1>历史对话</h1><p>首版使用演示数据；会话服务待接入</p></div></header>
-        <div className="history-list">
-          {historyFixtures.map((item) => (
-            <article className="history-item" key={item.id}>
-              <Clock3 aria-hidden="true" size={17} />
-              <div><strong>{item.title}</strong><p>{item.summary}</p></div>
-              <time>{item.time}</time>
-            </article>
-          ))}
-        </div>
-      </section>
-    </AppShell>
+    <HistoryPageClient
+      dailySessionClient={dailySessionClient}
+      mode={mode}
+      sessionTransport={sessionTransport}
+    />
   );
 }
