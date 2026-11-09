@@ -395,6 +395,27 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - 新增独立 Skill Market CI：固定 Node/pnpm 版本，校验 Schema 来源、版本和 SHA，离线重生成 Zod/TypeScript 客户端并执行 `git diff --exit-code`，最后运行契约与非法响应测试；不在构建时读取 DSI 仓库或远端 `main`。
 - 实际验证：BFF 27/27、组件 68/68、契约 43/43、全量 Vitest 264/264、typecheck、lint、Schema 锁和生成物无漂移检查全部通过；Playwright、build 与 K-03 以后任务未在本轮执行。
 
+### 20. 完成 K-03～K-05 关键旅程、安全矩阵与真实生命周期
+
+提交：见本条所在提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T13`（来源细化模块 `K-03、K-04、K-05`）
+
+#### 问题
+
+- Draft、Creator、Review、Publication 和安装恢复缺少跨页浏览器级证据，work 零请求和 daily/work 状态隔离也尚未形成完整旅程。
+- 现有安全用例分散，缺少稳定命令汇总 BFF、Principal、scope、Artifact/hash、结构化错误与非法响应边界。
+- 新前端还没有与真实 PostgreSQL、Artifact Store、Catalog 和 Runtime 的最终闭环证据。
+
+#### 修改方案
+
+- 新增状态化 Playwright API fixture、完整生命周期 spec 和安全 spec，覆盖广场/详情/我的、Draft 409、Creator Smoke、Trigger 审核、Publication 启停/下架/修订、部分成功恢复与模式隔离。
+- 增加 `test:skill-market:security` 和 `test:e2e:skill-market` 稳定命令；市场 Catalog ID 进入详情页时在边界安全解码，修复含 `:` ID 查找失败。
+- 后端新增真实 E2E 脚本，使用 Docker PostgreSQL、Drizzle service/repository、LocalArtifactStore、Catalog 和 Runtime Provider；数据事务回滚且临时文件清理。
+- 验证：Playwright 12/12、安全聚焦 44/44、全量 Vitest 341/341、typecheck 和 lint 通过。真实链路保留 ID/revision/hash/状态证据并验证 disable/withdraw 退出。Trigger 使用明示的确定性测试判定器，不代表模型质量验证。
+
 ## 后续条目模板
 
 ```markdown

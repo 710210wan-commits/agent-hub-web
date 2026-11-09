@@ -33,7 +33,7 @@ function SkillCatalogDetailDaily({ client, id }: { client: SkillMarketClient; id
     return <SkillMarketErrorState error={state.error} onRecover={refresh} />;
   }
   if (!catalog && state.kind !== "empty") return <LoadingState label="正在加载 Skill 详情…" />;
-  const item = catalog?.items.find((entry) => entry.id === id);
+  const item = catalog?.items.find((entry) => entry.id === decodeCatalogId(id));
   if (!item) return <EmptyState title="未找到该 Skill" description="该 Skill 不存在或当前 Principal 不可见。" />;
 
   return (
@@ -51,4 +51,12 @@ function SkillCatalogDetailDaily({ client, id }: { client: SkillMarketClient; id
       </div>
     </ResourceDetailSlot>
   );
+}
+
+function decodeCatalogId(id: string): string {
+  try {
+    return decodeURIComponent(id);
+  } catch {
+    return id;
+  }
 }

@@ -16,10 +16,12 @@
     "test:skill-market:bff": "vitest run src/features/skills/api",
     "test:skill-market:components": "vitest run src/features/skills/authoring src/features/skills/catalog src/features/skills/components src/features/skills/creator src/features/skills/publication src/features/skills/review",
     "test:skill-market:contract": "vitest run scripts/skill-market-client-generator.test.ts scripts/skill-market-schema-lock.test.ts scripts/skill-market-sensitive-data.test.ts src/features/skills/contracts",
+    "test:skill-market:security": "vitest run src/features/skills/api src/features/skills/contracts/error.test.ts src/features/skills/components/skill-market-error-state.test.tsx src/features/skills/publication/artifact-download.test.ts src/features/skills/publication/skill-publication.test.tsx",
     "verify:skill-market-schema": "tsx scripts/verify-skill-market-schema.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:skill-market": "playwright test e2e/skill-catalog.spec.ts e2e/skill-market-lifecycle.spec.ts e2e/skill-market-security.spec.ts",
     "test:e2e:thin-loop": "playwright test --config=playwright.thin-loop.config.ts",
     "test:e2e:production": "playwright test --config=playwright.production.config.ts"
   },
