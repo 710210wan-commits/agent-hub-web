@@ -20,8 +20,3 @@ export const mcpFixtures: ResourceFixture[] = [
   { id: "weather", name: "天气数据", description: "查询指定地区的天气信息", meta: "MCP 服务" },
   { id: "internal-data", name: "内部数据服务", description: "访问受控的内部业务数据", meta: "MCP 服务" },
 ];
-
-export const historyFixtures = [
-  { id: "h-1", title: "项目周报整理", summary: "整理本周进展、风险与下周计划", time: "今天 10:24" },
-  { id: "h-2", title: "政策条款解释", summary: "结合知识库说明条款适用范围", time: "昨天 16:08" },
-] as const;

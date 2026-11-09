@@ -22,6 +22,9 @@ export interface ChatRunView {
 export interface ChatState {
   messages: ChatMessage[];
   draftSelection: ChatSelectionSnapshot;
+  sessionId: string | null;
+  sessionStatus: "idle" | "loading" | "ready" | "not-found" | "failed";
+  sessionError: string | null;
   run: ChatRunView;
 }
 
@@ -29,10 +32,13 @@ export function createEmptySelection(): ChatSelectionSnapshot {
   return { knowledgeBaseIds: [], skillIds: [], mcpIds: [] };
 }
 
-export function createInitialChatState(): ChatState {
+export function createInitialChatState(sessionId?: string): ChatState {
   return {
     messages: [],
     draftSelection: createEmptySelection(),
+    sessionId: sessionId ?? null,
+    sessionStatus: sessionId ? "loading" : "idle",
+    sessionError: null,
     run: {
       status: "idle",
       runId: null,

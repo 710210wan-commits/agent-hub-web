@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatStreamEvent } from "@/features/chat/contracts/events";
+import { SessionNotFoundError } from "@/features/chat/contracts/session";
 import type { ChatTransport } from "@/features/chat/contracts/transport";
 import { AuthProvider } from "@/providers/auth-provider";
 import { ModeProvider } from "@/providers/mode-provider";
@@ -9,14 +10,16 @@ import { ModeProvider } from "@/providers/mode-provider";
 import { ChatPage } from "./chat-page";
 import { MessageContent } from "./message-content";
 
+const navigation = vi.hoisted(() => ({ search: "mode=daily" }));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/chat",
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams("mode=daily"),
+  useSearchParams: () => new URLSearchParams(navigation.search),
 }));
 
 function makeTransport(
-  kind: "mock" | "projects-new",
+  kind: "mock" | "projects-new" | "xiaozhi",
   events: ChatStreamEvent[],
 ): ChatTransport & { createRun: ReturnType<typeof vi.fn> } {
   const createRun = vi.fn(async () => ({ runId: `${kind}-run` }));
@@ -61,6 +64,10 @@ function deferred() {
 }
 
 describe("ChatPage", () => {
+  beforeEach(() => {
+    navigation.search = "mode=daily";
+  });
+
   it("renders a minimal daily empty state with three prompts", () => {
     renderChat(makeTransport("mock", []));
 
@@ -226,6 +233,42 @@ describe("ChatPage", () => {
       expect.any(AbortSignal),
     );
     expect(screen.getByRole("button", { name: "知识库 · 1" })).toBeInTheDocument();
+  });
+
+  it("shows work capabilities as server-preconfigured and not selectable", () => {
+    navigation.search = "mode=work";
+    renderChat(makeTransport("xiaozhi", []));
+
+    expect(
+      screen.getByText("办公智能体已预配置知识库、Skill 与 MCP"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^知识库/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Skill/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^MCP/ })).toBeDisabled();
+  });
+
+  it("shows a missing persisted session without offering a replacement send", async () => {
+    navigation.search = "mode=work";
+    const transport = {
+      ...makeTransport("xiaozhi", []),
+      sessions: {
+        listSessions: vi.fn(async () => []),
+        loadSession: vi.fn(async () => {
+          throw new SessionNotFoundError("missing");
+        }),
+      },
+    };
+    render(
+      <AuthProvider>
+        <ModeProvider>
+          <ChatPage initialSessionId="missing" transport={transport} />
+        </ModeProvider>
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByText("会话不存在或已删除")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "消息" })).not.toBeInTheDocument();
+    expect(transport.createRun).not.toHaveBeenCalled();
   });
 });
 
