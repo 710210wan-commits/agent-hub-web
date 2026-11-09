@@ -454,6 +454,9 @@ a {
 .history-list {
   display: grid;
   gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .history-item {
@@ -464,16 +467,40 @@ a {
   border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 15px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.history-item:hover {
+  border-color: #d7d7dc;
+  background: var(--color-soft);
+}
+
+.history-item-copy {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
 }
 
 .history-item strong {
+  overflow: hidden;
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.history-item p {
-  margin: 3px 0 0;
+.history-pin {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  border-radius: 999px;
+  background: var(--color-soft);
+  padding: 3px 6px;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 9px;
 }
 
 .history-item time {

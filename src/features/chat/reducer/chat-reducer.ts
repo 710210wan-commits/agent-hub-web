@@ -1,6 +1,6 @@
 import type { ChatMessage, ChatSelectionSnapshot } from "../contracts/chat";
 import type { ChatStreamEvent } from "../contracts/events";
-import type { ChatState } from "./chat-state";
+import { createInitialChatState, type ChatState } from "./chat-state";
 
 export type ChatAction =
   | {
@@ -14,7 +14,17 @@ export type ChatAction =
   | { type: "selection.change"; selection: ChatSelectionSnapshot }
   | { type: "stream.event"; event: ChatStreamEvent }
   | { type: "run.retry" }
-  | { type: "run.continue" };
+  | { type: "run.continue" }
+  | { type: "session.reset"; sessionId?: string }
+  | { type: "session.load.start" }
+  | {
+      type: "session.load.success";
+      sessionId: string;
+      messages: ChatMessage[];
+    }
+  | { type: "session.load.not-found" }
+  | { type: "session.load.failed"; message: string }
+  | { type: "session.resolve"; sessionId: string };
 
 function cloneSelection(
   selection: ChatSelectionSnapshot,
@@ -121,6 +131,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         createdAt: action.userMessage.createdAt,
       };
       return {
+        ...state,
         messages: [...state.messages, userMessage, assistantMessage],
         draftSelection: cloneSelection(selection),
         run: {
@@ -163,6 +174,44 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           activity: null,
           notice: null,
         },
+      };
+    case "session.reset":
+      return createInitialChatState(action.sessionId);
+    case "session.load.start":
+      return {
+        ...state,
+        sessionStatus: "loading",
+        sessionError: null,
+      };
+    case "session.load.success":
+      return {
+        ...state,
+        messages: [...action.messages],
+        sessionId: action.sessionId,
+        sessionStatus: "ready",
+        sessionError: null,
+      };
+    case "session.load.not-found":
+      return {
+        ...state,
+        messages: [],
+        sessionId: null,
+        sessionStatus: "not-found",
+        sessionError: "会话不存在或已删除",
+      };
+    case "session.load.failed":
+      return {
+        ...state,
+        messages: [],
+        sessionStatus: "failed",
+        sessionError: action.message,
+      };
+    case "session.resolve":
+      return {
+        ...state,
+        sessionId: action.sessionId,
+        sessionStatus: "ready",
+        sessionError: null,
       };
   }
 }

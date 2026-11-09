@@ -102,11 +102,11 @@ export function Sidebar({
       onNavigate={(event) => {
         if (item.id === "chat") {
           event.preventDefault();
-          const conversationId =
+          const draftId =
             typeof crypto.randomUUID === "function"
               ? crypto.randomUUID()
               : `${Date.now()}`;
-          router.push(`/chat?mode=${mode}&conversation=${conversationId}`);
+          router.push(`/chat?mode=${mode}&draft=${draftId}`);
         }
         onNavigate();
       }}

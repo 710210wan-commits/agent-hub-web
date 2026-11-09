@@ -29,6 +29,48 @@ function emit(state: ReturnType<typeof submit>, event: ChatStreamEvent) {
 }
 
 describe("chatReducer", () => {
+  it("hydrates a persisted session in backend message order", () => {
+    const loading = chatReducer(createInitialChatState(), {
+      type: "session.load.start",
+    });
+    const messages = [
+      { id: "m1", role: "user" as const, content: "历史问题", createdAt: 1 },
+      { id: "m2", role: "assistant" as const, content: "历史回答", createdAt: 2 },
+    ];
+    const loaded = chatReducer(loading, {
+      type: "session.load.success",
+      sessionId: "thread-1",
+      messages,
+    });
+
+    expect(loading.sessionStatus).toBe("loading");
+    expect(loaded.sessionId).toBe("thread-1");
+    expect(loaded.sessionStatus).toBe("ready");
+    expect(loaded.messages).toEqual(messages);
+  });
+
+  it("tracks not-found and resolved session states without synthetic messages", () => {
+    const missing = chatReducer(createInitialChatState(), {
+      type: "session.load.not-found",
+    });
+    const resolved = chatReducer(createInitialChatState(), {
+      type: "session.resolve",
+      sessionId: "thread-new",
+    });
+
+    expect(missing).toMatchObject({
+      sessionId: null,
+      sessionStatus: "not-found",
+      sessionError: "会话不存在或已删除",
+      messages: [],
+    });
+    expect(resolved).toMatchObject({
+      sessionId: "thread-new",
+      sessionStatus: "ready",
+      sessionError: null,
+    });
+  });
+
   it("snapshots selections when a message is submitted", () => {
     const state = submit();
 
