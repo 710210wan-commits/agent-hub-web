@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 
+import { AuthBoundary } from "@/components/auth/auth-boundary";
 import { AuthProvider } from "@/providers/auth-provider";
 import { ModeProvider } from "@/providers/mode-provider";
 
@@ -17,7 +18,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <AuthProvider>
           <Suspense fallback={null}>
-            <ModeProvider>{children}</ModeProvider>
+            <ModeProvider>
+              <AuthBoundary>{children}</AuthBoundary>
+            </ModeProvider>
           </Suspense>
         </AuthProvider>
       </body>

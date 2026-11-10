@@ -33,9 +33,11 @@
 
 提交 `25a91c0` + `d3842be`，已推送。内容：从 DSI@0ce83e1 重新钉版、重新生成契约、`kb-api.ts` 适配框架错误信封 `{ code, message, data, details }`、补 `check:kb-client` 漂移检查、契约/生成物 LF 行尾固定、17 个新测试。
 
-## Task 2：全局 AuthProvider（真实实现）
+## Task 2：全局 AuthProvider（真实实现）✅ 已完成
 
-**文件**：改 `src/providers/auth-provider.tsx`（替换 demoUser）；复用 `src/features/chat/transports/daily-session-client.ts`。
+提交 `3933629`（2026-11-10，未推送）。13 个新测试，全量 376 测试 + lint + typecheck 通过。
+
+**文件**：改 `src/providers/auth-provider.tsx`（替换 demoUser）；新增 `src/features/auth/global-auth-client.ts`。
 
 **内容**：
 - 状态机 `checking | anonymous | demo | authenticated | error`，含 `identityGeneration`（登录/退出/失效时递增）。
