@@ -7,6 +7,9 @@
  *   原因：Node 端 fetch 没有"当前页面 origin"，相对路径无法解析；浏览器走代理则无跨域问题。
  *
  * 错误分类（与后端统一错误约定对齐，UI 只认 kind 不认文案）：
+ * - 4xx/5xx 错误响应为框架信封 { code, message, data: null, details }；
+ *   503 功能未启用时 details.kbUnavailable === true；5xx 的 message 带 "[kind] " 前缀
+ * - 401（requireDsiSession）为例外：{ error: string }，不带信封
  * - unauthorized  401 未登录
  * - kbUnavailable 503 知识库功能未启用（DSI_KB_ENABLED=false）
  * - unavailable   502/504 依赖服务不可用（存储服务故障/超时）
@@ -15,6 +18,66 @@
  * - network       连接失败（后端未启动/代理未配置）
  * - unknown       其他
  */
+
+import type {
+  KbAdditionalParams,
+  KbChunkPreset,
+  KbDatabase,
+  KbDatabaseDeleteResponse,
+  KbDatabaseDetail,
+  KbDatabaseListResponse,
+  KbDatabaseResponse,
+  KbDatabaseStats,
+  KbDatabaseUpdateResponse,
+  KbChunkPresetListResponse,
+  KbDocument,
+  KbDocumentChunk,
+  KbDocumentContent,
+  KbDocumentContentResponse,
+  KbDocumentDeleteResponse,
+  KbDocumentList,
+  KbDocumentStatus,
+  KbDocumentStatusResponse,
+  KbDocumentTaskResponse,
+  KbDocumentUploadResponse,
+  KbDocumentUploadResult,
+  KbDocumentsResponse,
+  KbEmbeddingModel,
+  KbEmbeddingModelListResponse,
+  KbFolderResponse,
+  KbIndexStatus,
+  KbParseStatus,
+  KbQueryHit,
+  KbQueryParamField,
+  KbQueryParamOption,
+  KbQueryParamsResponse,
+  KbQueryTestResponse,
+  KbSampleQuestions,
+  KbSampleQuestionsResponse,
+} from "@/features/knowledge/contracts/generated";
+
+// 数据模型类型统一来自 OpenAPI 契约生成物（api/openapi/kb.v1.json → src/features/knowledge/contracts/generated），
+// 这里只做再导出，保持既有引用路径与导出名不变。
+export type {
+  KbAdditionalParams,
+  KbChunkPreset,
+  KbDatabase,
+  KbDatabaseDetail,
+  KbDatabaseStats,
+  KbDocument,
+  KbDocumentChunk,
+  KbDocumentContent,
+  KbDocumentList,
+  KbDocumentStatus,
+  KbDocumentUploadResult,
+  KbEmbeddingModel,
+  KbIndexStatus,
+  KbParseStatus,
+  KbQueryHit,
+  KbQueryParamField,
+  KbQueryParamOption,
+  KbSampleQuestions,
+};
 
 export type KbApiErrorKind =
   | "unauthorized"
@@ -37,94 +100,9 @@ export class KbApiError extends Error {
   }
 }
 
-// ========== 数据模型（与 DSI /api/kb/* 返回对齐） ==========
-
-export interface KbDatabase {
-  kb_id: string;
-  name: string;
-  description: string;
-  type: string;
-  supports_documents: boolean;
-}
-
-interface KbDatabasesResponse {
-  success: boolean;
-  total: number;
-  databases: KbDatabase[];
-  message?: string;
-}
-
-export interface KbDatabaseStats {
-  file_count?: number;
-  chunk_count?: number;
-  total_size?: number;
-  row_count?: number;
-  folder_count?: number;
-}
-
-export interface KbAdditionalParams {
-  chunk_preset_id?: string | null;
-  auto_generate_questions?: boolean | null;
-  [key: string]: unknown;
-}
-
-export interface KbDatabaseDetail {
-  kb_id: string;
-  name: string;
-  description?: string | null;
-  kb_type?: string | null;
-  embedding_model_spec?: string | null;
-  additional_params?: KbAdditionalParams | null;
-  created_at?: string | null;
-  stats?: KbDatabaseStats | null;
-}
-
-export interface KbSampleQuestions {
-  kb_id: string;
-  questions: string[];
-  count: number;
-}
-
-/** 样例问题接口响应（GET / POST /api/kb/databases/{kb_id}/sample-questions） */
-interface KbSampleQuestionsResponse {
-  success?: boolean;
-  kb_id?: string;
-  questions?: string[];
-  count?: number;
-  message?: string;
-}
-
-export interface KbChunkPreset {
-  value: string;
-  label: string;
-  description: string;
-}
-
-export interface KbEmbeddingModel {
-  spec: string;
-  model_id: string;
-  display_name: string;
-  dimension: number | null;
-  provider: string;
-}
-
-export type KbParseStatus = "waiting" | "parsing" | "parsed" | "failed";
-
-export type KbIndexStatus = "waiting" | "indexing" | "indexed" | "failed";
-
-export interface KbDocument {
-  file_id: string;
-  filename: string;
-  file_type: string | null;
-  file_size: number;
-  is_folder: boolean;
-  parent_id?: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  status: string;
-  parse_status: KbParseStatus;
-  index_status: KbIndexStatus;
-}
+// ========== 数据模型 ==========
+// 字段定义见 api/openapi/kb.v1.json；运行时类型由 src/features/knowledge/contracts/generated 生成。
+// 这里只保留错误分类与文档状态判断等运行时逻辑。
 
 /** 可触发解析的 xiaozhi 原始状态（待解析 / 解析失败） */
 const KB_PARSEABLE_STATUSES = new Set(["uploaded", "error_parsing"]);
@@ -158,97 +136,12 @@ export function canDownloadKbDocument(document: KbDocument): boolean {
   );
 }
 
-export interface KbDocumentStatus {
-  status: string;
-  parse_status: KbParseStatus;
-  index_status: KbIndexStatus;
-  chunk_count: number;
-  error_message: string | null;
-  updated_at: string | null;
-}
-
-export interface KbDocumentList {
-  kb_id: string;
-  total: number;
-  page: number;
-  page_size: number;
-  has_more: boolean;
-  stats: KbDatabaseStats | null;
-  documents: KbDocument[];
-}
-
-export interface KbDocumentChunk {
-  id: string;
-  /** 分块在文档中的顺序号，从 0 开始 */
-  order: number;
-  content: string;
-}
-
-export interface KbDocumentContent {
-  kb_id: string;
-  file_id: string;
-  /** 解析后的 Markdown 全文；未解析完成时为空字符串 */
-  content: string;
-  chunk_count: number;
-  /** 入库后的分块内容；未入库时为空数组 */
-  chunks: KbDocumentChunk[];
-}
-
-export interface KbDocumentUploadResult {
-  kb_id: string;
-  file_name: string;
-  file_id: string;
-  status: string;
-  message: string;
-}
-
 export interface ListKbDocumentsOptions {
   page?: number;
   pageSize?: number;
   status?: string;
   /** 父文件夹 ID；不传表示根目录 */
   parentId?: string;
-}
-
-interface KbDatabaseResponse {
-  success: boolean;
-  database: KbDatabaseDetail;
-  message?: string;
-}
-
-interface KbDocumentsResponse {
-  success: boolean;
-  kb_id: string;
-  total: number;
-  page: number;
-  page_size: number;
-  has_more: boolean;
-  stats: KbDatabaseStats | null;
-  documents: KbDocument[];
-  message?: string;
-}
-
-interface KbDocumentStatusResponse extends KbDocumentStatus {
-  success: boolean;
-  kb_id?: string;
-  file_id?: string;
-  message?: string;
-}
-
-interface KbDocumentContentResponse extends KbDocumentContent {
-  success: boolean;
-  message?: string;
-}
-
-interface KbUploadResponse extends KbDocumentUploadResult {
-  success: boolean;
-}
-
-interface KbDeleteResponse {
-  success: boolean;
-  kb_id?: string;
-  file_id?: string;
-  message?: string;
 }
 
 // ========== 过渡登录（DSI 会话） ==========
@@ -328,9 +221,9 @@ async function kbFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new KbApiError("network", 0, "无法连接知识库服务，请确认后端已启动");
   }
 
-  let payload: { success?: boolean; error?: string; kbUnavailable?: boolean } = {};
+  let payload: KbErrorPayload = {};
   try {
-    payload = (await response.json()) as typeof payload;
+    payload = (await response.json()) as KbErrorPayload;
   } catch {
     // 非 JSON 响应（如代理空响应），按空对象处理，走状态码分类
   }
@@ -341,20 +234,51 @@ async function kbFetch<T>(path: string, init?: RequestInit): Promise<T> {
   throw classifyFailure(response.status, payload);
 }
 
+/**
+ * 错误响应载体（契约 §三，DSI api/src/modules/kb/_shared.ts）：
+ * - 业务失败（4xx/5xx）：框架信封 { code, message, data: null, details }
+ * - 401（requireDsiSession）：{ error }，不带信封
+ */
+interface KbErrorPayload {
+  code?: number;
+  message?: string;
+  data?: unknown;
+  details?: unknown;
+  error?: string;
+}
+
+/** 从信封或 401 响应中提取可读原因 */
+function errorDetail(payload: KbErrorPayload): string | undefined {
+  const raw = payload.message ?? payload.error;
+  if (typeof raw !== "string") return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/** 503 功能未启用标记位于信封 details 内 */
+function hasKbUnavailableFlag(payload: KbErrorPayload): boolean {
+  const details = payload.details;
+  return (
+    typeof details === "object" &&
+    details !== null &&
+    (details as Record<string, unknown>).kbUnavailable === true
+  );
+}
+
 function classifyFailure(
   status: number,
-  payload: { success?: boolean; error?: string; kbUnavailable?: boolean },
+  payload: KbErrorPayload,
 ): KbApiError {
-  const detail = payload.error?.trim();
+  const detail = errorDetail(payload);
   if (status === 401) {
     return new KbApiError("unauthorized", status, "请先登录后再访问知识库");
   }
-  if (status === 503 && payload.kbUnavailable) {
+  if (status === 503 && hasKbUnavailableFlag(payload)) {
     return new KbApiError("kbUnavailable", status, "知识库功能未启用");
   }
   if (status === 502 || status === 504) {
-    // 502 常是上游 xiaozhi 的具体失败（如模型未配置凭证），有原因就透出，
-    // 否则用户只看到「暂不可用」无法定位问题。
+    // 502 常是上游 xiaozhi 的具体失败（如模型未配置凭证），message 带 "[kind] " 前缀，
+    // 剥掉前缀透出原因，否则用户只看到「暂不可用」无法定位问题。
     const reason = detail?.replace(/^\[\w+\]\s*/, "");
     return new KbApiError(
       "unavailable",
@@ -385,22 +309,14 @@ export function kbErrorMessage(error: unknown): string {
 
 /** 获取可用分块策略（GET /api/kb/chunk-presets） */
 export async function listKbChunkPresets(): Promise<KbChunkPreset[]> {
-  const data = await kbFetch<{
-    success: boolean;
-    chunk_presets?: KbChunkPreset[];
-    message?: string;
-  }>("/api/kb/chunk-presets");
+  const data = await kbFetch<KbChunkPresetListResponse>("/api/kb/chunk-presets");
   assertSuccess(data, "获取分块策略失败");
   return data.chunk_presets ?? [];
 }
 
 /** 获取可用嵌入模型（GET /api/kb/models/embedding） */
 export async function listKbEmbeddingModels(): Promise<KbEmbeddingModel[]> {
-  const data = await kbFetch<{
-    success: boolean;
-    models?: KbEmbeddingModel[];
-    message?: string;
-  }>("/api/kb/models/embedding");
+  const data = await kbFetch<KbEmbeddingModelListResponse>("/api/kb/models/embedding");
   assertSuccess(data, "获取嵌入模型失败");
   return data.models ?? [];
 }
@@ -438,7 +354,7 @@ export async function updateKbDatabase(
     autoGenerateQuestions?: boolean;
   },
 ): Promise<void> {
-  const data = await kbFetch<KbDatabaseResponse>(
+  const data = await kbFetch<KbDatabaseUpdateResponse>(
     `/api/kb/databases/${encodeURIComponent(kbId)}`,
     {
       method: "PUT",
@@ -458,7 +374,7 @@ export async function updateKbDatabase(
 
 /** 删除知识库（DELETE /api/kb/databases/{kb_id}） */
 export async function deleteKbDatabase(kbId: string): Promise<void> {
-  const data = await kbFetch<KbDeleteResponse>(
+  const data = await kbFetch<KbDatabaseDeleteResponse>(
     `/api/kb/databases/${encodeURIComponent(kbId)}`,
     { method: "DELETE" },
   );
@@ -470,7 +386,7 @@ export async function createKbFolder(
   kbId: string,
   input: { name: string; parentId?: string },
 ): Promise<void> {
-  const data = await kbFetch<{ success: boolean; message?: string }>(
+  const data = await kbFetch<KbFolderResponse>(
     `/api/kb/databases/${encodeURIComponent(kbId)}/folders`,
     {
       method: "POST",
@@ -486,7 +402,7 @@ export async function createKbFolder(
 
 /** 获取知识库列表（GET /api/kb/databases） */
 export async function listKbDatabases(): Promise<KbDatabase[]> {
-  const data = await kbFetch<KbDatabasesResponse>("/api/kb/databases");
+  const data = await kbFetch<KbDatabaseListResponse>("/api/kb/databases");
   if (!data.success) {
     throw new KbApiError("unknown", 200, data.message ?? "获取知识库列表失败");
   }
@@ -535,56 +451,10 @@ export async function generateKbSampleQuestions(
 
 // ========== 检索测试 ==========
 
-export interface KbQueryParamOption {
-  value: string;
-  label?: string;
-}
-
-/** xiaozhi 检索参数定义（GET /api/kb/databases/{kb_id}/query-params 透传） */
-export interface KbQueryParamField {
-  key: string;
-  label?: string;
-  type?: string;
-  default?: string | number | boolean | null;
-  description?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-  options?: KbQueryParamOption[];
-  depend_on?: Record<string, unknown> | null;
-}
-
-export interface KbQueryHit {
-  content: string;
-  file_id?: string;
-  file_name?: string;
-  chunk_id?: string;
-  chunk_index?: number;
-  similarity?: number;
-  score?: number;
-  distance?: number;
-  rerank_score?: number;
-}
-
 export interface KbQueryTestResult {
   status: string;
   message: string;
   results: KbQueryHit[];
-}
-
-interface KbQueryParamsResponse {
-  success?: boolean;
-  params?: KbQueryParamField[];
-  error?: string;
-  message?: string;
-}
-
-interface KbQueryTestResponse {
-  success?: boolean;
-  status?: string;
-  message?: string;
-  results?: KbQueryHit[];
-  error?: string;
 }
 
 /** 读取检索参数定义（GET /api/kb/databases/{kb_id}/query-params） */
@@ -642,13 +512,9 @@ export async function exportKbDatabase(
   }
 
   if (!response.ok) {
-    let payload: {
-      success?: boolean;
-      error?: string;
-      kbUnavailable?: boolean;
-    } = {};
+    let payload: KbErrorPayload = {};
     try {
-      payload = (await response.json()) as typeof payload;
+      payload = (await response.json()) as KbErrorPayload;
     } catch {
       // 非 JSON 错误响应，走状态码分类
     }
@@ -745,14 +611,6 @@ export interface KbDocumentTaskResult {
   queued_count: number;
 }
 
-interface KbDocumentTaskResponse {
-  success?: boolean;
-  message?: string;
-  status?: string;
-  task_id?: string;
-  queued_count?: number;
-}
-
 /** 手动解析（POST /api/kb/documents/parse），适用待解析/解析失败文档 */
 export async function parseKbDocuments(
   kbId: string,
@@ -812,13 +670,9 @@ export async function downloadKbDocument(
   }
 
   if (!response.ok) {
-    let payload: {
-      success?: boolean;
-      error?: string;
-      kbUnavailable?: boolean;
-    } = {};
+    let payload: KbErrorPayload = {};
     try {
-      payload = (await response.json()) as typeof payload;
+      payload = (await response.json()) as KbErrorPayload;
     } catch {
       // 非 JSON 错误响应，走状态码分类
     }
@@ -850,7 +704,7 @@ export async function uploadKbDocument(
   }
 
   // 不手动设置 Content-Type，由浏览器自动补 multipart boundary
-  const data = await kbFetch<KbUploadResponse>("/api/kb/documents", {
+  const data = await kbFetch<KbDocumentUploadResponse>("/api/kb/documents", {
     method: "POST",
     body: formData,
   });
@@ -870,7 +724,7 @@ export async function deleteKbDocument(
   kbId: string,
   fileId: string,
 ): Promise<string> {
-  const data = await kbFetch<KbDeleteResponse>(
+  const data = await kbFetch<KbDocumentDeleteResponse>(
     `/api/kb/documents/${encodeURIComponent(fileId)}?kb_id=${encodeURIComponent(kbId)}`,
     { method: "DELETE" },
   );

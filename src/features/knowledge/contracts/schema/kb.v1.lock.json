@@ -1,0 +1,10 @@
+{
+  "artifact": "kb.v1.json",
+  "contractId": "kb.v1",
+  "operationCount": 23,
+  "schemaVersion": "1.0.0",
+  "sha256": "61a62bc5fe722ced10a835c6f0f69a88c2043d7280cf36083fe5eb7b902d8f3d",
+  "sourceCommit": "0ce83e1899a626306223d1e291fa422e89df91fd",
+  "sourcePath": "api/openapi/kb.v1.json",
+  "sourceRepository": "DSI"
+}
