@@ -101,6 +101,16 @@ describe("AuthBoundary（统一登录边界）", () => {
     );
   });
 
+  it("预填 xiaozhi 本地部署默认账号 admin/admin123", async () => {
+    renderBoundary(createClientStub());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument(),
+    );
+
+    expect(screen.getByLabelText("用户名")).toHaveValue("admin");
+    expect(screen.getByLabelText("密码")).toHaveValue("admin123");
+  });
+
   it("完整登录流程：提交账号密码 → 登录成功 → 自动渲染业务内容", async () => {
     const client = createClientStub();
     renderBoundary(client);
@@ -132,6 +142,9 @@ describe("AuthBoundary（统一登录边界）", () => {
       expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument(),
     );
 
+    // 登录页预填了默认账号，先清空再校验
+    fireEvent.change(screen.getByLabelText("用户名"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("密码"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "登录" }));
 
     expect(screen.getByText("请输入用户名和密码")).toBeInTheDocument();
@@ -174,7 +187,7 @@ describe("AuthBoundary（统一登录边界）", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /暂不登录，进入演示模式/ }),
+      screen.getByRole("button", { name: /暂不登录，不使用知识库/ }),
     );
 
     await waitFor(() =>

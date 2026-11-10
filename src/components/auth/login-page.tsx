@@ -16,8 +16,9 @@ import { useAuth } from "@/providers/auth-provider";
  */
 export function LoginPage() {
   const { login, loginDemo, status, errorMessage } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  // 预填 xiaozhi 本地部署默认账号（seed_admin：uid=admin / admin123），便于一键登录
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("admin123");
   const [localError, setLocalError] = useState("");
 
   const busy = status === "checking";
@@ -97,12 +98,10 @@ export function LoginPage() {
           onClick={() => void handleDemo()}
           type="button"
         >
-          暂不登录，进入演示模式
+          暂不登录，不使用知识库
         </button>
 
-        <p className="kb-login-hint">
-          演示模式无需账号：Skill、MCP、办公模式可正常使用；对话与知识库需要登录后启用。
-        </p>
+        <p className="kb-login-hint">不使用知识库功能可不登录，无需账号。</p>
       </form>
     </div>
   );
