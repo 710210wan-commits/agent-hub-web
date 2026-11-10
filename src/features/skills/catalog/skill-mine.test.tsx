@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SkillMarketClient } from "../api/client";
@@ -13,8 +13,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(`mode=${mockMode}`),
 }));
 
-function clientStub(query: ReturnType<typeof vi.fn>): SkillMarketClient {
-  return { query } as unknown as SkillMarketClient;
+function clientStub(query: ReturnType<typeof vi.fn>, mutate = vi.fn()): SkillMarketClient {
+  return { mutate, query } as unknown as SkillMarketClient;
 }
 
 describe("SkillMine", () => {
@@ -70,11 +70,13 @@ describe("SkillMine", () => {
     render(<ModeProvider><SkillMine client={clientStub(query)} /></ModeProvider>);
 
     expect(await screen.findByRole("heading", { name: "我的 Skill" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /my-draft/ })).toHaveAttribute(
-      "href",
-      "/skills/drafts/draft-1?mode=daily",
+    const draft = screen.getByRole("article", { name: "草稿 my-draft" });
+    expect(within(draft).getByRole("link", { name: "编辑" })).toHaveAttribute(
+      "href", "/skills/drafts/draft-1?mode=daily",
     );
-    expect(screen.getByRole("link", { name: "上传草稿" })).toHaveAttribute(
+    expect(within(draft).getByRole("button", { name: "提交审核" })).toBeInTheDocument();
+    expect(within(draft).getByRole("button", { name: "删除" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "上传 Skill ZIP 或目录" })).toHaveAttribute(
       "href",
       "/skills/drafts/new?mode=daily",
     );
@@ -96,10 +98,34 @@ describe("SkillMine", () => {
     render(<ModeProvider><SkillMine client={clientStub(query)} /></ModeProvider>);
 
     expect(await screen.findByRole("heading", { name: "我的 Skill" })).toBeInTheDocument();
-    for (const name of ["发布管理", "审核", "Creator", "上传草稿", "返回广场"]) {
+    for (const name of ["发布管理", "审核", "Creator", "返回广场"]) {
       expect(screen.getByRole("link", { name })).toHaveClass("skill-page-action");
     }
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
+  });
+
+  it("submits and deletes editing drafts from the workspace", async () => {
+    const query = vi.fn(async (input: { operation: string }) => input.operation === "listDrafts"
+      ? [{ id: "draft-1", name: "my-draft", revision: 2, status: "editing", fileCount: 3 }]
+      : { generatedAt: "2026-11-07T00:00:00.000Z", total: 0, items: [] });
+    const mutate = vi.fn(async (input: { operation: string }) => input.operation === "submitDraft"
+      ? { ok: true, value: { id: "submission-1", revision: 2, status: "pending_review" } }
+      : { ok: true, value: undefined });
+    render(<ModeProvider><SkillMine client={clientStub(query, mutate)} /></ModeProvider>);
+    const draft = await screen.findByRole("article", { name: "草稿 my-draft" });
+
+    fireEvent.click(within(draft).getByRole("button", { name: "提交审核" }));
+    await waitFor(() => expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      mode: "daily", operation: "submitDraft", pathParameters: { id: "draft-1" },
+    }), expect.anything()));
+    expect(await screen.findByText(/已提交审核/)).toBeInTheDocument();
+
+    const refreshedDraft = await screen.findByRole("article", { name: "草稿 my-draft" });
+    fireEvent.click(within(refreshedDraft).getByRole("button", { name: "删除" }));
+    fireEvent.click(within(refreshedDraft).getByRole("button", { name: "确认删除" }));
+    await waitFor(() => expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({
+      mode: "daily", operation: "deleteDraft", pathParameters: { id: "draft-1" },
+    }), expect.anything()));
   });
 
   it("does not query either endpoint in work mode", async () => {

@@ -135,7 +135,6 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
       <Link className="back-link" href="/skills/review?mode=daily">← 返回审核队列</Link>
       <header className="page-heading">
         <div><h1>{submission.name}</h1><p>状态：{submission.status} · 修订 r{submission.revision} · 提交 {submission.id}</p></div>
-        <button disabled={Boolean(action)} type="button" onClick={refresh}>刷新</button>
       </header>
       {error ? <SkillMarketErrorState error={error} onRecover={error.recovery === "refresh" ? refresh : undefined} /> : null}
       {validation ? <p className="skill-draft-validation" role="alert">{validation}</p> : null}
@@ -143,7 +142,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
 
       <section className="creator-section">
         <h2>Trigger Test</h2>
-        <p>结果仅绑定当前提交修订 r{submission.revision}；刷新时重新读取服务端记录。</p>
+        <p>结果仅绑定当前提交修订 r{submission.revision}，并以服务端记录为准。</p>
         <TriggerCases submission={submission} />
         <label>触发查询<input aria-label="触发查询" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         <label className="skill-review-inline"><input checked={expectedTrigger} type="checkbox" onChange={(event) => setExpectedTrigger(event.target.checked)} />期望触发</label>

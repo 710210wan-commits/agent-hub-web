@@ -100,7 +100,10 @@ function SkillCatalogPlazaDaily({
     <section className="resource-page skill-catalog-plaza">
       <header className="page-heading">
         <div>
-          <h1>Skill 广场</h1>
+          <div className="skill-page-title-row">
+            <h1>Skill 广场</h1>
+            {catalog ? <span className="skill-count-badge">共 {catalog.total} 个</span> : null}
+          </div>
           <p>浏览日常后端返回的内置与市场 Skill</p>
         </div>
         <div className="skill-page-actions skill-catalog-actions">

@@ -10,6 +10,8 @@ import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
+import { ReviewEvidence } from "./review-evidence";
+import type { ReviewSubmissionViewModel } from "./review-view-model";
 import { useReviewQueue } from "./use-review-queue";
 
 export function SkillReviewQueue({ client }: { client?: SkillMarketClient }) {
@@ -26,25 +28,48 @@ function SkillReviewQueueDaily({ client }: { client: SkillMarketClient }) {
   return (
     <section className="resource-page skill-review-queue">
       <header className="page-heading">
-        <div><h1>Skill 审核</h1><p>仅展示后端授权给当前 Principal 的提交</p></div>
+        <div><h1>Skill 审核队列</h1><p>审查冻结快照、Tool 事实、Validator、Diff、Smoke 与 Trigger 证据</p></div>
         <div className="skill-page-actions skill-catalog-actions">
           <Link className="skill-page-action" href="/skills?mode=daily">返回广场</Link>
         </div>
       </header>
       {state.submissions.length ? (
-        <div className="resource-grid">
+        <div className="skill-review-queue-list">
           {state.submissions.map((submission) => (
-            <Link className="resource-card" href={`/skills/review/${encodeURIComponent(submission.id)}?mode=daily`} key={submission.id}>
-              <span className="resource-card-copy">
-                <strong>{submission.name}</strong>
-                <span>状态：{submission.status}</span>
-                <small>r{submission.revision} · {new Date(submission.submittedAt).toLocaleString("zh-CN")}</small>
-              </span>
-              <span className="skill-badge">{submission.triggerRuns.length} 次 Trigger</span>
-            </Link>
+            <article className="skill-review-queue-card" key={submission.id}>
+              <div className="skill-review-queue-heading">
+                <div>
+                  <h2>{submission.name}</h2>
+                  <p>作者 {submission.authorId} · 修订 r{submission.revision} · {submission.status}</p>
+                  <code>Artifact SHA-256 {submission.contentHash}</code>
+                </div>
+                <div className="skill-review-queue-actions skill-catalog-actions">
+                  <span className="skill-badge">{submission.triggerRuns.length} 次 Trigger</span>
+                  <Link
+                    aria-label={`进入审核 ${submission.name}`}
+                    className="skill-page-action skill-page-action-primary"
+                    href={`/skills/review/${encodeURIComponent(submission.id)}?mode=daily`}
+                  >
+                    {reviewActionLabel(submission)}
+                  </Link>
+                </div>
+              </div>
+              <details className="skill-review-snapshot" open>
+                <summary>冻结审核快照</summary>
+                <ReviewEvidence submission={submission} />
+              </details>
+            </article>
           ))}
         </div>
       ) : <EmptyState title="当前没有可审核的提交" description="队列由后端按当前 Principal 权限返回。" />}
     </section>
   );
+}
+
+function reviewActionLabel(submission: ReviewSubmissionViewModel): string {
+  return submission.status === "pending_review"
+    ? "进入审核"
+    : submission.status === "approved"
+      ? "发布"
+      : "查看详情";
 }

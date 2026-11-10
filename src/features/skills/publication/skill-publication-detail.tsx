@@ -134,7 +134,6 @@ function SkillPublicationDetailDaily({ client, id }: { client: SkillMarketClient
       <Link className="back-link" href="/skills/manage?mode=daily">← 返回发布管理</Link>
       <header className="page-heading">
         <div><h1>{publication.skillName}</h1><p>Publication {publication.id} · 修订 r{publication.revision}</p></div>
-        <button disabled={Boolean(action)} type="button" onClick={refreshAuthoritative}>刷新</button>
       </header>
       {error ? <SkillMarketErrorState error={error} onRecover={error.recovery === "refresh" ? refreshAuthoritative : error.recovery === "retry" ? () => void retryRef.current?.() : undefined} /> : null}
       {message ? <div className="skill-draft-notice" role="status">{message}</div> : null}

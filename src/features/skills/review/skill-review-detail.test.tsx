@@ -24,6 +24,7 @@ describe("SkillReviewDetail", () => {
     render(<ModeProvider><SkillReviewDetail client={{ query } as unknown as SkillMarketClient} id="submission-1" /></ModeProvider>);
     expect(await screen.findByRole("heading", { name: "demo-skill" })).toBeInTheDocument();
     expect(screen.getAllByText("后端未提供").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
   });
 
   it("allows only one trigger mutation while the request is pending", async () => {

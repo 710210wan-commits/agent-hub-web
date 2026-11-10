@@ -1,6 +1,8 @@
 "use client";
 
+import { FileUp, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRef, useState } from "react";
 
 import { EmptyState } from "@/components/states/empty-state";
 import { LoadingState } from "@/components/states/loading-state";
@@ -9,6 +11,12 @@ import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
+import {
+  draftDeleteAdapter,
+  submissionViewModelAdapter,
+} from "../contracts/authoring-view-model";
+import type { SkillMarketError } from "../contracts/error";
+import type { SkillDraftSummaryViewModel } from "../contracts/skill-mine-view-model";
 import { EMPTY_SKILL_CATALOG_FILTER } from "./catalog-filter";
 import { catalogDetailHref } from "./catalog-navigation";
 import { SkillCatalogCard } from "./skill-catalog-card";
@@ -23,34 +31,116 @@ export function SkillMine({ client }: { client?: SkillMarketClient }) {
 
 function SkillMineDaily({ client }: { client: SkillMarketClient }) {
   const { refresh, state } = useSkillMine(client);
+  const busyRef = useRef<string | undefined>(undefined);
+  const [busyId, setBusyId] = useState<string>();
+  const [confirmDelete, setConfirmDelete] = useState<string>();
+  const [error, setError] = useState<SkillMarketError>();
+  const [message, setMessage] = useState<string>();
   if (state.kind === "loading") return <LoadingState label="正在加载我的 Skill…" />;
   if (state.kind === "error") {
     return <SkillMarketErrorState error={state.error} onRecover={refresh} />;
   }
 
   const { drafts, enabled, available } = state.data;
+
+  function begin(id: string): boolean {
+    if (busyRef.current) return false;
+    busyRef.current = id;
+    setBusyId(id);
+    setError(undefined);
+    setMessage(undefined);
+    return true;
+  }
+
+  function finish() {
+    busyRef.current = undefined;
+    setBusyId(undefined);
+  }
+
+  function refreshWorkspace() {
+    setConfirmDelete(undefined);
+    setError(undefined);
+    setMessage(undefined);
+    refresh();
+  }
+
+  async function submitDraft(draft: SkillDraftSummaryViewModel) {
+    if (draft.status !== "editing" || !begin(draft.id)) return;
+    const result = await client.mutate({
+      mode: "daily",
+      operation: "submitDraft",
+      pathParameters: { id: draft.id },
+    }, submissionViewModelAdapter);
+    if (result.ok) {
+      setMessage(`${draft.name} 已提交审核 · Submission ${result.value.id}`);
+      refresh();
+    } else setError(result.error);
+    finish();
+  }
+
+  async function deleteDraft(draft: SkillDraftSummaryViewModel) {
+    if (draft.status !== "editing" || !begin(draft.id)) return;
+    const result = await client.mutate({
+      mode: "daily",
+      operation: "deleteDraft",
+      pathParameters: { id: draft.id },
+    }, draftDeleteAdapter);
+    if (result.ok) {
+      setConfirmDelete(undefined);
+      setMessage(`${draft.name} 已删除。`);
+      refresh();
+    } else setError(result.error);
+    finish();
+  }
+
   return (
     <section className="resource-page skill-mine">
       <header className="page-heading">
-        <div><h1>我的 Skill</h1><p>仅展示日常后端与当前 Principal 正式关联的数据</p></div>
+        <div><h1>我的 Skill</h1><p>管理草稿、上传目录或 ZIP，并提交审核</p></div>
         <div className="skill-page-actions skill-catalog-actions">
           <Link className="skill-page-action" href="/skills/manage?mode=daily">发布管理</Link>
           <Link className="skill-page-action" href="/skills/review?mode=daily">审核</Link>
           <Link className="skill-page-action" href="/skills/creator?mode=daily">Creator</Link>
-          <Link className="skill-page-action" href="/skills/drafts/new?mode=daily">上传草稿</Link>
           <Link className="skill-page-action" href="/skills?mode=daily">返回广场</Link>
         </div>
       </header>
 
-      <MineSection title="我创建" empty="当前账号没有草稿。">
+      <Link className="skill-mine-upload" href="/skills/drafts/new?mode=daily">
+        <FileUp aria-hidden="true" size={20} />
+        <span>上传 Skill ZIP 或目录</span>
+      </Link>
+
+      {error ? <SkillMarketErrorState error={error} onRecover={error.recovery === "back" ? undefined : refreshWorkspace} /> : null}
+      {message ? <div className="skill-draft-notice" role="status">{message}</div> : null}
+
+      <MineSection title="我创建" empty="当前账号没有草稿。" layout="list">
         {drafts.map((draft) => (
-          <Link className="resource-card" href={`/skills/drafts/${encodeURIComponent(draft.id)}?mode=daily`} key={draft.id}>
-            <span className="resource-card-copy">
+          <article aria-label={`草稿 ${draft.name}`} className="skill-mine-draft" key={draft.id}>
+            <span className="skill-mine-draft-copy">
               <strong>{draft.name}</strong>
               <span>状态：{draft.status}</span>
               <small>r{draft.revision} · {draft.fileCount} 个文件 · 更新时间未提供</small>
             </span>
-          </Link>
+            {draft.status === "editing" ? (
+              <div className="skill-mine-draft-actions">
+                <Link href={`/skills/drafts/${encodeURIComponent(draft.id)}?mode=daily`}>编辑</Link>
+                <button disabled={Boolean(busyId)} onClick={() => void submitDraft(draft)} type="button">
+                  {busyId === draft.id ? "处理中…" : "提交审核"}
+                </button>
+                <button
+                  className="skill-mine-delete"
+                  disabled={Boolean(busyId)}
+                  onClick={() => confirmDelete === draft.id
+                    ? void deleteDraft(draft)
+                    : setConfirmDelete(draft.id)}
+                  type="button"
+                >
+                  <Trash2 aria-hidden="true" size={14} />
+                  {confirmDelete === draft.id ? "确认删除" : "删除"}
+                </button>
+              </div>
+            ) : null}
+          </article>
         ))}
       </MineSection>
 
@@ -77,12 +167,17 @@ function SkillMineDaily({ client }: { client: SkillMarketClient }) {
   );
 }
 
-function MineSection({ children, empty, title }: { children: React.ReactNode; empty: string; title: string }) {
+function MineSection({ children, empty, layout = "grid", title }: {
+  children: React.ReactNode;
+  empty: string;
+  layout?: "grid" | "list";
+  title: string;
+}) {
   const hasItems = Array.isArray(children) ? children.length > 0 : Boolean(children);
   return (
     <section className="skill-mine-section">
       <h2>{title}</h2>
-      {hasItems ? <div className="resource-grid">{children}</div> : <EmptyState title={empty} />}
+      {hasItems ? <div className={layout === "list" ? "skill-mine-draft-list" : "resource-grid"}>{children}</div> : <EmptyState title={empty} />}
     </section>
   );
 }

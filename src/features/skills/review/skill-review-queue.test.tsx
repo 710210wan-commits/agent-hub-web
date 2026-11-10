@@ -25,9 +25,13 @@ describe("SkillReviewQueue", () => {
     const client = { query } as unknown as SkillMarketClient;
     render(<ModeProvider><SkillReviewQueue client={client} /></ModeProvider>);
 
-    expect(await screen.findByRole("link", { name: /demo-skill/ })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "进入审核 demo-skill" })).toHaveAttribute(
       "href", "/skills/review/submission-1?mode=daily",
     );
+    expect(screen.getByText(/作者 author-1 · 修订 r2 · pending_review/)).toBeInTheDocument();
+    expect(screen.getByText(`Artifact SHA-256 ${"a".repeat(64)}`)).toBeInTheDocument();
+    expect(screen.getByText("冻结审核快照")).toBeInTheDocument();
+    expect(screen.getAllByText("后端未提供").length).toBeGreaterThan(0);
     expect(query).toHaveBeenCalledTimes(1);
   });
 
@@ -35,7 +39,8 @@ describe("SkillReviewQueue", () => {
     const query = vi.fn().mockResolvedValue([]);
     render(<ModeProvider><SkillReviewQueue client={{ query } as unknown as SkillMarketClient} /></ModeProvider>);
 
-    expect(await screen.findByRole("heading", { name: "Skill 审核" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Skill 审核队列" })).toBeInTheDocument();
+    expect(screen.getByText("审查冻结快照、Tool 事实、Validator、Diff、Smoke 与 Trigger 证据")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "返回广场" })).toHaveClass("skill-page-action");
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
   });

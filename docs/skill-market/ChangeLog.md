@@ -462,7 +462,7 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 ### 23. 收口 Skill 页面操作区与 Creator 高效创建流程
 
-提交：见本条所在提交
+提交：`e9a2288`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
@@ -483,6 +483,29 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - Bundle 无 error 后即可保存草稿；未运行 Smoke 时明确标记 Soft Gate，但不阻止保存或之后提交审核。
 - Creator 不再调用 Draft submit；保存成功后引导用户前往作者工作台，由草稿编辑页完成提交审核。
 - 验证：Creator/作者工作台聚焦测试 6/6、前端全量 Vitest 450/450、typecheck、lint 和 diff check 通过；Playwright 场景已同步，因现有 Next 开发进程占用 `.next/dev/lock` 未在本轮重跑。
+
+### 24. 对齐 Skill 管理页面与旧前端关键操作
+
+提交：见本条所在提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8、T9、T11、T12`（Skill 广场、作者工作台、审核、Publication 与 Installation 管理）
+
+#### 问题
+
+- 新前端发布管理仍使用双列跳转卡片，无法像旧前端一样在列表中直接查看 Publication 元数据、下载制品并执行 daily 安装/启用、停用、下架和 withdrawn 新修订操作。
+- 审核队列缺少旧前端的作者、修订、Artifact hash、Trigger 次数和冻结审核证据概览；作者工作台缺少醒目的 ZIP/目录上传入口及草稿行内编辑、提交和删除动作。
+- Skill 广场没有展示后端权威总数；新增业务区的默认字号与其他资源页不一致，多个详情页仍保留与自动加载和错误恢复重复的手动刷新按钮。
+
+#### 修改方案
+
+- 将发布管理改为单列操作行：published 项提供查看详情、下载制品、安装/启用、停用和二次确认下架；withdrawn 项保留详情、历史制品下载和创建新修订。安装目标继续固定为 `scenario:daily`，下载继续执行响应头、实际字节与 Publication hash 三方校验。
+- 审核队列直接展示作者、修订、状态、完整 Artifact SHA-256、Trigger 次数和可折叠冻结证据；审核详情继续承载 Trigger、批准/驳回、删除、仅发布与发布并启用完整操作。
+- 作者工作台增加大幅 ZIP/目录上传入口，并为 editing 草稿增加编辑、提交审核和二次确认删除；保留后端数据驱动的“我创建、已安装/启用、可用未安装”分组。
+- Skill 广场在标题旁显示 `catalog.total` 权威总数；搜索和筛选只改变可见列表，不改写总数。
+- 统一 Skill 业务区标题、正文、字段标签的字号、字重和行高，并移除 Skill 模块全部手动刷新按钮；错误重试和写操作成功后的自动权威同步保持不变。
+- 验证：相关组件聚焦测试、前端全量 Vitest 460/460、TypeScript strict、全仓 ESLint、diff check 及桌面/窄屏浏览器核验通过；源码扫描确认 Skill 模块不存在剩余手动刷新按钮。
 
 ## 后续条目模板
 

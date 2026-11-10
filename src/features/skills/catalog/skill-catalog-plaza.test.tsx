@@ -138,6 +138,17 @@ describe("SkillCatalogPlaza", () => {
     expect(within(gammaCard).getByText("不可用")).toBeInTheDocument();
   });
 
+  it("shows the authoritative Skill total beside the plaza title", async () => {
+    const query = vi.fn(async () => mixedCatalog);
+    renderPlaza(clientStub(query));
+
+    expect(await screen.findByText("共 3 个")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox", { name: "搜索 Skill" }), {
+      target: { value: "beta" },
+    });
+    expect(screen.getByText("共 3 个")).toBeInTheDocument();
+  });
+
   it("opens card details in a dismissible right-side dialog", async () => {
     const query = vi.fn(async () => mixedCatalog);
     renderPlaza(clientStub(query));
