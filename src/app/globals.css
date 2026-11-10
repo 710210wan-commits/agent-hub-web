@@ -504,6 +504,14 @@ a {
   background: #35363b;
 }
 
+.skill-catalog-actions .skill-page-action-primary {
+  background: var(--color-accent);
+}
+
+.skill-catalog-actions .skill-page-action-primary:hover {
+  background: color-mix(in srgb, var(--color-accent), black 14%);
+}
+
 .skill-detail-drawer-layer {
   position: fixed;
   z-index: 60;

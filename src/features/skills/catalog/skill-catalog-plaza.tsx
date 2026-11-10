@@ -94,6 +94,7 @@ function SkillCatalogPlazaDaily({
           <p>浏览日常后端返回的内置与市场 Skill</p>
         </div>
         <div className="skill-page-actions skill-catalog-actions">
+          <Link className="skill-page-action skill-page-action-primary" href="/skills/creator?mode=daily">创建 Skill</Link>
           <Link className="skill-page-action" href="/skills/manage?mode=daily">发布管理</Link>
           <Link className="skill-page-action" href="/skills/review?mode=daily">审核</Link>
           <Link className="skill-page-action" href="/skills/mine?mode=daily">我的</Link>

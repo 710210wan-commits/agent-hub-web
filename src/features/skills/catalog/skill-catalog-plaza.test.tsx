@@ -157,14 +157,19 @@ describe("SkillCatalogPlaza", () => {
     expect(cardTrigger).toHaveFocus();
   });
 
-  it("styles the three page actions as buttons and omits manual refresh", async () => {
+  it("styles the page actions as buttons, leads creation to the Creator and omits manual refresh", async () => {
     const query = vi.fn(async () => mixedCatalog);
     renderPlaza(clientStub(query));
     await screen.findByRole("heading", { name: "Alpha Query" });
 
-    for (const name of ["发布管理", "审核", "我的"]) {
+    for (const name of ["创建 Skill", "发布管理", "审核", "我的"]) {
       expect(screen.getByRole("link", { name })).toHaveClass("skill-page-action");
     }
+    expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveAttribute(
+      "href",
+      "/skills/creator?mode=daily",
+    );
+    expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveClass("skill-page-action-primary");
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
   });
 
