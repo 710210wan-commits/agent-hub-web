@@ -4,6 +4,7 @@ import {
   BookOpen,
   Clock3,
   DatabaseZap,
+  LogOut,
   Map,
   MessageSquarePlus,
   Settings,
@@ -110,7 +111,7 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { mode } = useAppMode();
-  const { user, status } = useAuth();
+  const { user, status, logout } = useAuth();
   const items = getNavigation(mode);
   const primary = items.filter((item) => item.section === "primary");
   const capabilities = items.filter((item) => item.section === "capabilities");
@@ -157,6 +158,17 @@ export function Sidebar({
               <strong>{user?.displayName ?? "未登录"}</strong>
               <small>{authStatusLabel(status)}</small>
             </span>
+            {status === "authenticated" || status === "demo" ? (
+              <button
+                aria-label="退出登录"
+                className="sidebar-logout"
+                onClick={() => void logout()}
+                title="退出登录"
+                type="button"
+              >
+                <LogOut aria-hidden size={14} />
+              </button>
+            ) : null}
           </div>
         </div>
       </nav>

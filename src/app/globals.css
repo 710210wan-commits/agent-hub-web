@@ -2503,3 +2503,26 @@ a {
   width: 120px;
   height: 36px;
 }
+
+/* 侧栏退出按钮（Task 4） */
+.sidebar-user-copy {
+  flex: 1;
+}
+
+.sidebar-logout {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.sidebar-logout:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--color-text);
+}
