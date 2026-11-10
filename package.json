@@ -24,8 +24,10 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:skill-market": "playwright test e2e/skill-catalog.spec.ts e2e/skill-market-lifecycle.spec.ts e2e/skill-market-security.spec.ts",
+    "test:e2e:daily-session": "playwright test --config=playwright.daily-session.config.ts",
     "test:e2e:thin-loop": "playwright test --config=playwright.thin-loop.config.ts",
     "test:e2e:production": "playwright test --config=playwright.production.config.ts",
+    "smoke:daily-session-j1": "node scripts/daily-session-j1-smoke.mjs",
     "verify:skill-market:release": "pnpm run verify:skill-market-schema && pnpm run check:skill-market-client && pnpm run test:skill-market:database-boundary && pnpm run test:skill-market:independence && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:e2e && pnpm run build && pnpm run check:skill-market-sensitive-data"
   },
   "dependencies": {

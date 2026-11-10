@@ -9,12 +9,34 @@ import HistoryPage from "./page";
 const mocks = vi.hoisted(() => {
   const listSessions = vi.fn();
   const loadSession = vi.fn();
+  const getAuthStatus = vi.fn();
+  const logout = vi.fn();
+  const listConversations = vi.fn();
+  const createConversation = vi.fn();
+  const renameConversation = vi.fn();
+  const dailyClient = {
+    getAuthStatus,
+    login: vi.fn(),
+    logout,
+    listConversations,
+    createConversation,
+    loadSnapshot: vi.fn(),
+    loadMessages: vi.fn(),
+    renameConversation,
+  };
   return {
     search: "mode=work",
     push: vi.fn(),
     replace: vi.fn(),
     listSessions,
     loadSession,
+    getAuthStatus,
+    logout,
+    listConversations,
+    createConversation,
+    renameConversation,
+    dailyClient,
+    createDailySessionClient: vi.fn(() => dailyClient),
     createXiaozhiTransport: vi.fn(() => ({
       kind: "xiaozhi" as const,
       capabilities: { selections: false, answerDeltas: true, resume: false },
@@ -35,6 +57,13 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/features/chat/transports/xiaozhi-transport", () => ({
   createXiaozhiTransport: mocks.createXiaozhiTransport,
 }));
+
+vi.mock("@/features/chat/transports/daily-session-client", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/features/chat/transports/daily-session-client")
+  >();
+  return { ...actual, createDailySessionClient: mocks.createDailySessionClient };
+});
 
 function renderPage() {
   return render(
@@ -64,6 +93,23 @@ describe("HistoryPage", () => {
     mocks.listSessions.mockReset();
     mocks.loadSession.mockReset();
     mocks.createXiaozhiTransport.mockClear();
+    mocks.getAuthStatus.mockReset().mockResolvedValue({
+      enabled: true,
+      xiaozhiUrl: "http://xiaozhi.local",
+      user: {
+        id: "daily-user",
+        displayName: "日常用户",
+        sessionExpiresAt: "2026-11-10T00:00:00.000Z",
+      },
+    });
+    mocks.logout.mockReset().mockResolvedValue(undefined);
+    mocks.listConversations.mockReset().mockResolvedValue({
+      conversations: [],
+      nextCursor: null,
+    });
+    mocks.createConversation.mockReset();
+    mocks.renameConversation.mockReset();
+    mocks.createDailySessionClient.mockClear();
   });
 
   it("shows work sessions pinned first then newest and links encoded thread ids", async () => {
@@ -131,7 +177,7 @@ describe("HistoryPage", () => {
     expect(screen.queryByText(/upstream secret detail/)).not.toBeInTheDocument();
   });
 
-  it("keeps daily mode isolated from Xiaozhi history", () => {
+  it("shows authenticated daily history without touching Xiaozhi", async () => {
     mocks.search = "mode=daily";
     mocks.listSessions.mockResolvedValue([
       {
@@ -144,10 +190,12 @@ describe("HistoryPage", () => {
 
     renderPage();
 
-    expect(screen.getByText("日常历史待 session 接入")).toBeInTheDocument();
+    expect(await screen.findByText("暂无日常历史会话")).toBeInTheDocument();
+    expect(screen.getByText("日常用户")).toBeInTheDocument();
     expect(screen.queryByText("不应出现的办公记录")).not.toBeInTheDocument();
     expect(mocks.createXiaozhiTransport).not.toHaveBeenCalled();
     expect(mocks.listSessions).not.toHaveBeenCalled();
+    expect(mocks.listConversations).toHaveBeenCalledOnce();
   });
 
   it("aborts the old work request and ignores its result after switching daily", async () => {
@@ -188,7 +236,7 @@ describe("HistoryPage", () => {
       ]);
       await pending.promise;
     });
-    expect(screen.getByText("日常历史待 session 接入")).toBeInTheDocument();
+    expect(await screen.findByText("暂无日常历史会话")).toBeInTheDocument();
     expect(screen.queryByText("迟到的办公记录")).not.toBeInTheDocument();
   });
 });
