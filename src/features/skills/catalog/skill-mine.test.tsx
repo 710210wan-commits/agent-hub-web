@@ -87,6 +87,21 @@ describe("SkillMine", () => {
     expect(query).toHaveBeenCalledTimes(2);
   });
 
+  it("styles page actions like the plaza and omits manual refresh", async () => {
+    const query = vi.fn(async (input: { operation: string }) =>
+      input.operation === "listDrafts"
+        ? []
+        : { generatedAt: "2026-11-07T00:00:00.000Z", total: 0, items: [] },
+    );
+    render(<ModeProvider><SkillMine client={clientStub(query)} /></ModeProvider>);
+
+    expect(await screen.findByRole("heading", { name: "我的 Skill" })).toBeInTheDocument();
+    for (const name of ["发布管理", "审核", "Creator", "上传草稿", "返回广场"]) {
+      expect(screen.getByRole("link", { name })).toHaveClass("skill-page-action");
+    }
+    expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
+  });
+
   it("does not query either endpoint in work mode", async () => {
     mockMode = "work";
     const query = vi.fn();

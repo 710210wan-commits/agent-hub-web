@@ -43,6 +43,15 @@ describe("Skill publication management", () => {
     await waitFor(() => expect(query).not.toHaveBeenCalled());
   });
 
+  it("styles the list page actions like the plaza and omits manual refresh", async () => {
+    const query = vi.fn().mockResolvedValue([]);
+    render(<ModeProvider><SkillPublicationList client={{ query } as unknown as SkillMarketClient} /></ModeProvider>);
+
+    expect(await screen.findByRole("heading", { name: "发布管理" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回广场" })).toHaveClass("skill-page-action");
+    expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
+  });
+
   it("does not allow URL parameters to expand the managed daily scope", async () => {
     const mutate = vi.fn().mockResolvedValue({ ok: true, value: {
       id: "installation-1", publicationId: "pub-1", scopeId: "daily", scopeType: "scenario", status: "enabled",

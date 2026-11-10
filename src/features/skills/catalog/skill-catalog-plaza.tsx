@@ -15,6 +15,7 @@ import type { SkillMarketClient } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
 import type { CatalogItemViewModel, SkillCatalogViewModel } from "../contracts/catalog-view-model";
 import {
+  areSkillCatalogCategoriesRedundant,
   buildSkillCatalogSearchIndex,
   EMPTY_SKILL_CATALOG_FILTER,
   filterSkillCatalogEntries,
@@ -74,12 +75,21 @@ function SkillCatalogPlazaDaily({
     () => (catalog ? listSkillCatalogCategories(catalog.items) : []),
     [catalog],
   );
+  const categoriesRedundant = useMemo(
+    () => (catalog ? areSkillCatalogCategoriesRedundant(catalog.items) : false),
+    [catalog],
+  );
+  // 分类只是来源的换名时,忽略分类维度(包括 URL 带入的分类参数)。
+  const effectiveFilter = useMemo(
+    () => (categoriesRedundant ? { ...filter, category: "all" as const } : filter),
+    [categoriesRedundant, filter],
+  );
   if (catalog && filter.category !== "all" && !categories.includes(filter.category)) {
     setFilter({ ...filter, category: "all" });
   }
   const visibleItems = useMemo(
-    () => filterSkillCatalogEntries(searchIndex, filter),
-    [searchIndex, filter],
+    () => filterSkillCatalogEntries(searchIndex, effectiveFilter),
+    [searchIndex, effectiveFilter],
   );
 
   const patchFilter = (patch: Partial<SkillCatalogFilter>) => {
@@ -114,16 +124,18 @@ function SkillCatalogPlazaDaily({
                 value={filter.search}
               />
             </label>
-            <select
-              aria-label="分类"
-              onChange={(event) => patchFilter({ category: event.target.value })}
-              value={filter.category}
-            >
-              <option value="all">全部分类</option>
-              {categories.map((label) => (
-                <option key={label} value={label}>{label}</option>
-              ))}
-            </select>
+            {categoriesRedundant ? null : (
+              <select
+                aria-label="分类"
+                onChange={(event) => patchFilter({ category: event.target.value })}
+                value={filter.category}
+              >
+                <option value="all">全部分类</option>
+                {categories.map((label) => (
+                  <option key={label} value={label}>{label}</option>
+                ))}
+              </select>
+            )}
             <select
               aria-label="来源"
               onChange={(event) =>
@@ -144,7 +156,7 @@ function SkillCatalogPlazaDaily({
               <option value="available">可用</option>
               <option value="conflict">名称冲突</option>
             </select>
-            {isSkillCatalogFilterActive(filter) ? (
+            {isSkillCatalogFilterActive(effectiveFilter) ? (
               <button
                 className="skill-catalog-clear"
                 onClick={() => setFilter(EMPTY_SKILL_CATALOG_FILTER)}

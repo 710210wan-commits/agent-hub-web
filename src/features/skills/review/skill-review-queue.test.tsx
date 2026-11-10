@@ -31,6 +31,15 @@ describe("SkillReviewQueue", () => {
     expect(query).toHaveBeenCalledTimes(1);
   });
 
+  it("styles page actions like the plaza and omits manual refresh", async () => {
+    const query = vi.fn().mockResolvedValue([]);
+    render(<ModeProvider><SkillReviewQueue client={{ query } as unknown as SkillMarketClient} /></ModeProvider>);
+
+    expect(await screen.findByRole("heading", { name: "Skill 审核" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回广场" })).toHaveClass("skill-page-action");
+    expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
+  });
+
   it("does not query the review queue in work mode", async () => {
     mockMode = "work";
     const query = vi.fn();

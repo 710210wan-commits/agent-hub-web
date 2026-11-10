@@ -27,9 +27,8 @@ function SkillReviewQueueDaily({ client }: { client: SkillMarketClient }) {
     <section className="resource-page skill-review-queue">
       <header className="page-heading">
         <div><h1>Skill 审核</h1><p>仅展示后端授权给当前 Principal 的提交</p></div>
-        <div className="skill-page-actions">
-          <Link href="/skills?mode=daily">返回广场</Link>
-          <button type="button" onClick={refresh}>刷新</button>
+        <div className="skill-page-actions skill-catalog-actions">
+          <Link className="skill-page-action" href="/skills?mode=daily">返回广场</Link>
         </div>
       </header>
       {state.submissions.length ? (

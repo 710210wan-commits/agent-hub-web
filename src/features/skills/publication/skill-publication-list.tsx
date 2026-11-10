@@ -29,9 +29,8 @@ function SkillPublicationListDaily({ client }: { client: SkillMarketClient }) {
     <section className="resource-page skill-publication-list">
       <header className="page-heading">
         <div><h1>发布管理</h1><p>Publication、Artifact 与 daily 安装状态</p></div>
-        <div className="skill-page-actions">
-          <Link href="/skills?mode=daily">返回广场</Link>
-          <button type="button" onClick={refresh}>刷新</button>
+        <div className="skill-page-actions skill-catalog-actions">
+          <Link className="skill-page-action" href="/skills?mode=daily">返回广场</Link>
         </div>
       </header>
       {state.publications.length ? <div className="resource-grid">{state.publications.map((publication) => (

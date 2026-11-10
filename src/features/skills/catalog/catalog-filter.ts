@@ -74,3 +74,28 @@ export function listSkillCatalogCategories(
   for (const item of items) labels.add(item.categoryLabel);
   return [...labels].sort((left, right) => left.localeCompare(right, "zh-Hans-CN"));
 }
+
+/**
+ * The unified Catalog currently infers `categoryLabel` from the item origin
+ * (内置 Skill / 市场发布). While every label maps 1:1 onto a source, the
+ * category filter restates the source filter and carries no extra
+ * information, so the plaza hides it until the backend provides real
+ * categories.
+ */
+export function areSkillCatalogCategoriesRedundant(
+  items: readonly CatalogItemViewModel[],
+): boolean {
+  if (items.length === 0) return false;
+  const labelSources = new Map<string, CatalogItemViewModel["source"]>();
+  const sources = new Set<CatalogItemViewModel["source"]>();
+  for (const item of items) {
+    sources.add(item.source);
+    const mapped = labelSources.get(item.categoryLabel);
+    if (mapped === undefined) {
+      labelSources.set(item.categoryLabel, item.source);
+    } else if (mapped !== item.source) {
+      return false;
+    }
+  }
+  return labelSources.size === sources.size;
+}

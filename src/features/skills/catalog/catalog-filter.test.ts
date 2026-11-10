@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { CatalogItemViewModel } from "../contracts/catalog-view-model";
 import {
+  areSkillCatalogCategoriesRedundant,
   buildSkillCatalogSearchIndex,
   EMPTY_SKILL_CATALOG_FILTER,
   filterSkillCatalogEntries,
@@ -140,5 +141,31 @@ describe("listSkillCatalogCategories", () => {
       item({ id: "c", categoryLabel: "市场发布" }),
     ]);
     expect(labels).toEqual(["内置 Skill", "市场发布"]);
+  });
+});
+
+describe("areSkillCatalogCategoriesRedundant", () => {
+  it("is true while every label only restates a single source", () => {
+    expect(areSkillCatalogCategoriesRedundant([
+      item({ id: "a", source: "built-in", categoryLabel: "内置 Skill" }),
+      item({ id: "b", source: "built-in", categoryLabel: "内置 Skill" }),
+      item({ id: "c", source: "market", publicationId: "p", categoryLabel: "市场发布" }),
+    ])).toBe(true);
+  });
+
+  it("is false once a label crosses sources or refines a source", () => {
+    expect(areSkillCatalogCategoriesRedundant([
+      item({ id: "a", source: "built-in", categoryLabel: "GIS 分析" }),
+      item({ id: "b", source: "market", publicationId: "p", categoryLabel: "GIS 分析" }),
+    ])).toBe(false);
+
+    expect(areSkillCatalogCategoriesRedundant([
+      item({ id: "a", source: "built-in", categoryLabel: "内置 Skill" }),
+      item({ id: "b", source: "built-in", categoryLabel: "数据分析" }),
+    ])).toBe(false);
+  });
+
+  it("is false for an empty catalog", () => {
+    expect(areSkillCatalogCategoriesRedundant([])).toBe(false);
   });
 });

@@ -57,19 +57,18 @@ test("runs Creator from Requirement through Smoke and saves a Draft", async ({ p
   await page.getByLabel("需求描述").fill("Create deterministic lifecycle evidence for the daily scenario.");
   await page.getByRole("button", { name: "分析需求" }).click();
   await expect(page.getByText("需求边界已提取。")).toBeVisible();
-  await page.getByRole("button", { name: "确认 Spec" }).click();
-  await expect(page.getByRole("button", { name: "获取服务端推荐" })).toBeVisible();
-  await page.getByRole("button", { name: "获取服务端推荐" }).click();
+  await page.getByRole("button", { name: "确认 Spec 并推荐工具" }).click();
   await expect(page.getByText(/Reads the lifecycle input/)).toBeVisible();
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "确认工具方案" }).click();
-  await page.getByRole("button", { name: "生成 Bundle" }).click();
+  await page.getByRole("button", { name: "确认工具并生成 Bundle" }).click();
   await expect(page.getByText("2 个文件，0 条 diagnostics。")).toBeVisible();
   await page.getByRole("button", { name: "建议 Smoke Cases" }).click();
   await page.getByRole("button", { name: "执行 Smoke" }).click();
   await expect(page.getByLabel("Smoke Evidence")).toContainText("smoke-1：passed");
   await page.getByRole("button", { name: "保存草稿" }).click();
   await expect(page.getByText(/草稿 draft-k03 已保存/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "提交审核" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "前往作者工作台提交审核" })).toHaveAttribute("href", "/skills/mine?mode=daily");
 });
 
 test("runs Trigger Test, approves, and restores authoritative review state after refresh", async ({ page }) => {

@@ -8,12 +8,12 @@ import { ModeProvider } from "@/providers/mode-provider";
 
 import { SkillCatalogPlaza } from "./skill-catalog-plaza";
 
-let mockMode = "daily";
+let mockSearch = "mode=daily";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/skills",
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(`mode=${mockMode}`),
+  useSearchParams: () => new URLSearchParams(mockSearch),
 }));
 
 function catalogItem(overrides: Partial<CatalogItemViewModel> = {}): CatalogItemViewModel {
@@ -88,7 +88,7 @@ const mixedCatalog = catalog([
     source: "market",
     publicationId: "pub-2",
     revision: 1,
-    categoryLabel: "市场发布",
+    categoryLabel: "GIS 分析",
     installState: "blocked",
     conflict: { reasonCode: "skill.protected_name_conflict" },
     tools: [],
@@ -97,11 +97,11 @@ const mixedCatalog = catalog([
 
 describe("SkillCatalogPlaza", () => {
   beforeEach(() => {
-    mockMode = "daily";
+    mockSearch = "mode=daily";
   });
 
   it("shows the work placeholder without requesting the catalog", async () => {
-    mockMode = "work";
+    mockSearch = "mode=work";
     const query = vi.fn();
     renderPlaza(clientStub(query));
 
@@ -253,7 +253,32 @@ describe("SkillCatalogPlaza", () => {
 
     const category = screen.getByRole("combobox", { name: "分类" });
     const options = Array.from(category.querySelectorAll("option")).map((option) => option.value);
-    expect(options).toEqual(["all", "内置 Skill", "市场发布"]);
+    expect(options).toEqual(["all", "内置 Skill", "市场发布", "GIS 分析"]);
+  });
+
+  it("hides the category filter while labels only restate the source", async () => {
+    mockSearch = "mode=daily&category=市场发布";
+    const sourceRestating = catalog([
+      catalogItem({ id: "built-in:alpha", title: "Alpha Query" }),
+      catalogItem({
+        id: "market:beta",
+        name: "beta-report",
+        title: "Beta Report",
+        source: "market",
+        publicationId: "pub-1",
+        revision: 2,
+        categoryLabel: "市场发布",
+        installState: "enabled",
+      }),
+    ]);
+    const query = vi.fn(async () => sourceRestating);
+    renderPlaza(clientStub(query));
+    await screen.findByRole("heading", { name: "Alpha Query" });
+
+    expect(screen.queryByRole("combobox", { name: "分类" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "来源" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "清除筛选" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Beta Report" })).toBeInTheDocument();
   });
 
   it("filters 500 catalog entries per keystroke with a single catalog load", async () => {

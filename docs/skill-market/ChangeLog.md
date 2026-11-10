@@ -437,6 +437,53 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 - K-07 比较两个 BFF 的同一 14 项 Catalog，验证旧四个 Skill 页面、work 零请求、旧停新存和新停旧存；证据写入 `docs/skill-market/evidence/2026-11-09-parallel-run.json`。
 - 冻结后端兼容优先、旧前端先回归、新前端后发布和独立回滚规则；本轮未执行生产发布、流量切换或数据库变更。
 
+## 2026-11-10
+
+### 22. 补充 Skill 广场直达 Creator 的创建入口
+
+提交：`538ca9e`
+
+分支同步：`584b077`（仅将 `origin/main` 合入 `skill-creator`，不计入本条功能实现）
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8、T10`（衔接已完成的 Skill 广场与 Creator 流程）
+
+#### 问题
+
+- daily Skill 广场已有发布管理、审核和“我的”入口，但缺少直接进入 Creator 的创建入口；用户需要绕行“我的 Skill”才能开始创建。
+- 新入口需要保持 `mode=daily`，并沿用现有页面操作区和全局设计 token，不能引入独立样式体系。
+
+#### 修改方案
+
+- 在 daily Skill 广场操作区增加主操作“创建 Skill”，固定跳转到 `/skills/creator?mode=daily`，直接衔接既有 Creator 全流程。
+- 使用现有 `skill-page-action` 按钮样式，并以全局 accent token 增加主操作及 hover 状态；其他发布管理、审核和“我的”入口保持不变。
+- 扩展广场组件测试，覆盖四个页面操作入口、Creator 跳转地址和主操作样式，同时继续确认页面不显示手动刷新按钮。
+
+### 23. 收口 Skill 页面操作区与 Creator 高效创建流程
+
+提交：见本条所在提交
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8、T10～T12`（Skill 广场、Creator、审核与发布管理交互收口）
+
+#### 问题
+
+- Catalog 的推断分类在仅复述“内置 Skill/市场发布”来源时与来源筛选重复，URL 中遗留的分类参数还会产生无意义的筛选状态。
+- “我的 Skill”、审核队列和发布管理的页面操作区未复用广场按钮样式，并保留了与自动加载/权威状态恢复重复的手动刷新入口。
+- Creator 将内部八步状态机完整暴露为八个视觉步骤，确认 Spec、获取推荐、确认工具和生成 Bundle 需要连续机械点击；同时 Smoke 虽定义为 Soft Gate，却阻止用户先保存已通过 Validator 的 Bundle。
+- Creator 保存后可直接提交审核，与旧版“Creator 保存草稿、作者工作台负责提交”的职责分工不一致。
+
+#### 修改方案
+
+- 当 Catalog 分类与来源一一对应时隐藏分类筛选并忽略分类 URL 参数；后端提供真实细分类别时自动恢复分类控件。
+- “我的 Skill”、审核队列和发布管理统一复用广场操作按钮样式，移除列表页手动刷新按钮；错误恢复和详情页权威刷新能力保持不变。
+- 保留内部 Creator 状态机和 daily 安全边界，将用户可见流程归纳为“需求定义、工具与生成、验证、保存与提交”四段；确认 Spec 后自动获取工具推荐，确认工具后直接生成 Bundle。
+- Bundle 无 error 后即可保存草稿；未运行 Smoke 时明确标记 Soft Gate，但不阻止保存或之后提交审核。
+- Creator 不再调用 Draft submit；保存成功后引导用户前往作者工作台，由草稿编辑页完成提交审核。
+- 验证：Creator/作者工作台聚焦测试 6/6、前端全量 Vitest 450/450、typecheck、lint 和 diff check 通过；Playwright 场景已同步，因现有 Next 开发进程占用 `.next/dev/lock` 未在本轮重跑。
+
 ## 后续条目模板
 
 ```markdown

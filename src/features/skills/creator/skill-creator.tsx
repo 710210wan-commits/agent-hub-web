@@ -10,9 +10,9 @@ import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient, SkillMarketMutationResult } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
-import { draftMutationAdapter, draftUpdateAdapter, submissionViewModelAdapter, type SubmissionViewModel } from "../contracts/authoring-view-model";
+import { draftMutationAdapter, draftUpdateAdapter } from "../contracts/authoring-view-model";
 import { SkillMarketError } from "../contracts/error";
-import type { CreatorToolListResponse, RequirementSpecV1, SkillDiagnostic, ToolResolutionResponse } from "../contracts/generated";
+import type { CreatorGenerateResponse, CreatorToolListResponse, RequirementSpecV1, SkillDiagnostic, ToolResolutionResponse } from "../contracts/generated";
 import {
   analyzeRequirementAdapter,
   confirmRequirementAdapter,
@@ -36,7 +36,17 @@ import {
   type CreatorState,
 } from "./creator-state";
 
-type PendingAction = "analyze" | "revise" | "confirm-requirement" | "recommend" | "confirm-tools" | "generate" | "suggest" | "smoke" | "save" | "submit";
+type PendingAction = "analyze" | "revise" | "confirm-requirement" | "recommend" | "generate" | "suggest" | "smoke" | "save";
+
+interface ConfirmAndRecommendResult {
+  requirement: RequirementSpecV1;
+  resolution: ToolResolutionResponse;
+}
+
+interface ConfirmAndGenerateResult {
+  bundle: CreatorGenerateResponse;
+  requirement: RequirementSpecV1;
+}
 
 export function SkillCreator({ client, draftId }: { client?: SkillMarketClient; draftId?: string }) {
   const { mode } = useAppMode();
@@ -58,7 +68,6 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
   const [loadingDraft, setLoadingDraft] = useState(Boolean(draftId));
   const [draftGeneration, setDraftGeneration] = useState(0);
   const [toolGeneration, setToolGeneration] = useState(0);
-  const [submission, setSubmission] = useState<SubmissionViewModel>();
   const [generationMs, setGenerationMs] = useState<number>();
 
   useEffect(() => {
@@ -133,7 +142,6 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
   function updateBasic(field: keyof CreatorState["basic"], value: string) {
     setState((current) => invalidateAfterBasic(current, { ...current.basic, [field]: value }));
     setResolution(undefined);
-    setSubmission(undefined);
   }
 
   function analyze() {
@@ -163,14 +171,33 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
     });
   }
 
-  function confirmRequirement() {
+  function confirmRequirementAndRecommend() {
     if (!state.interview) return;
     const interview = state.interview;
-    run("confirm-requirement", () => client.mutate({
-      body: { requirement: interview.requirement }, mode: "daily", operation: "confirmRequirement",
-    }, confirmRequirementAdapter), (response) => {
-      setResolution(undefined);
-      setState((current) => ({ ...current, confirmedRequirement: response.requirement, confirmedToolNames: undefined, selectedToolNames: [] }));
+    const scenarioId = state.basic.scenarioId;
+    run("confirm-requirement", async (): Promise<SkillMarketMutationResult<ConfirmAndRecommendResult>> => {
+      const confirmed = await client.mutate({
+        body: { requirement: interview.requirement }, mode: "daily", operation: "confirmRequirement",
+      }, confirmRequirementAdapter);
+      if (!confirmed.ok) return confirmed;
+      const recommended = await client.mutate({
+        body: { requirement: confirmed.value.requirement, scenarioId },
+        mode: "daily", operation: "recommendToolResolution",
+      }, recommendToolsAdapter);
+      if (!recommended.ok) return recommended;
+      return { ok: true, value: { requirement: confirmed.value.requirement, resolution: recommended.value } };
+    }, ({ requirement, resolution }) => {
+      setResolution(resolution);
+      setState((current) => ({
+        ...current,
+        bundle: undefined,
+        confirmedRequirement: requirement,
+        confirmedToolNames: undefined,
+        draftSaved: current.draft ? false : undefined,
+        selectedToolNames: resolution.recommendations.map((item) => item.name),
+        smokeCases: undefined,
+        smokeResult: undefined,
+      }));
     });
   }
 
@@ -191,34 +218,33 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
     setState((current) => invalidateAfterTools(current, next));
   }
 
-  function confirmTools() {
+  function confirmToolsAndGenerate() {
     if (!state.confirmedRequirement || !state.selectedToolNames) return;
-    run("confirm-tools", () => client.mutate({
-      body: { confirmedToolNames: state.selectedToolNames, requirement: state.confirmedRequirement, scenarioId: state.basic.scenarioId },
-      mode: "daily", operation: "confirmToolResolution",
-    }, confirmToolsAdapter), (response) => {
-      setState((current) => ({
-        ...current, bundle: undefined, confirmedRequirement: response.requirement,
-        confirmedToolNames: current.selectedToolNames ?? [], draftSaved: current.draft ? false : undefined,
-        smokeCases: undefined, smokeResult: undefined,
-      }));
-    });
-  }
-
-  function generate() {
-    if (!state.confirmedRequirement || state.confirmedToolNames === undefined) return;
+    const basic = state.basic;
+    const selectedToolNames = state.selectedToolNames;
+    const requirement = state.confirmedRequirement;
     const startedAt = performance.now();
-    run("generate", () => client.mutate({
-      body: {
-        name: state.basic.name, requirement: state.confirmedRequirement,
-        scenarioIds: [state.basic.scenarioId], title: state.basic.title, version: state.basic.version,
-      },
-      mode: "daily", operation: "generateSkillBundle",
-    }, generateBundleAdapter), (bundle) => {
+    run("generate", async (): Promise<SkillMarketMutationResult<ConfirmAndGenerateResult>> => {
+      const confirmed = await client.mutate({
+        body: { confirmedToolNames: selectedToolNames, requirement, scenarioId: basic.scenarioId },
+        mode: "daily", operation: "confirmToolResolution",
+      }, confirmToolsAdapter);
+      if (!confirmed.ok) return confirmed;
+      const generated = await client.mutate({
+        body: {
+          name: basic.name, requirement: confirmed.value.requirement,
+          scenarioIds: [basic.scenarioId], title: basic.title, version: basic.version,
+        },
+        mode: "daily", operation: "generateSkillBundle",
+      }, generateBundleAdapter);
+      if (!generated.ok) return generated;
+      return { ok: true, value: { bundle: generated.value, requirement: confirmed.value.requirement } };
+    }, ({ bundle, requirement }) => {
       setGenerationMs(Math.round(performance.now() - startedAt));
       setState((current) => ({
-        ...current, bundle: { diagnostics: bundle.diagnostics, files: bundle.files },
-        draftSaved: current.draft ? false : undefined, smokeCases: undefined, smokeResult: undefined,
+        ...current, bundle: { diagnostics: bundle.diagnostics, files: bundle.files }, confirmedRequirement: requirement,
+        confirmedToolNames: selectedToolNames, draftSaved: current.draft ? false : undefined,
+        smokeCases: undefined, smokeResult: undefined,
       }));
     });
   }
@@ -251,7 +277,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
   }
 
   function saveDraft() {
-    if (!state.bundle || !state.smokeResult || hasErrors(state)) return;
+    if (!state.bundle || hasErrors(state)) return;
     const bundle = state.bundle;
     if (state.draft) {
       const draft = state.draft;
@@ -275,21 +301,11 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
     })));
   }
 
-  function submitDraft() {
-    if (!state.draft || !state.draftSaved) return;
-    run("submit", () => client.mutate({
-      mode: "daily", operation: "submitDraft", pathParameters: { id: state.draft?.id },
-    }, submissionViewModelAdapter), (response) => {
-      setSubmission(response);
-      setState((current) => current.draft ? ({ ...current, draft: { ...current.draft, status: "submitted" } }) : current);
-    });
-  }
-
   if (loadingDraft) return <LoadingState label="正在恢复 Creator 草稿…" />;
   if (state.draft && state.draft.status !== "editing") {
     return <section className="resource-page skill-creator-page">
       <Link className="back-link" href={`/skills/drafts/${encodeURIComponent(state.draft.id)}?mode=daily`}>← 返回草稿</Link>
-      <div className="skill-draft-notice" role="status">该草稿状态为 {state.draft.status}，Creator 不再发起变更。{submission ? ` 已进入审核：${submission.id}。` : ""}</div>
+      <div className="skill-draft-notice" role="status">该草稿状态为 {state.draft.status}，Creator 不再发起变更。</div>
     </section>;
   }
   const step = creatorStep(state);
@@ -301,7 +317,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
       <header className="page-heading"><div><h1>Skill Creator</h1><p>当前阶段：{stepLabel(step)}。服务端结果优先，本地仅短期保留基本进度。</p></div></header>
       <nav className="creator-steps" aria-label="Creator 流程">
         {[
-          "基本信息", "Requirement", "Spec 确认", "Tool Resolution", "Bundle", "Diagnostics", "Smoke", "保存草稿",
+          "需求定义", "工具与生成", "验证", "保存与提交",
         ].map((label, index) => <span key={label}>{index + 1}. {label}</span>)}
       </nav>
 
@@ -325,7 +341,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
         }} /></label>)}
         <div className="skill-draft-actions">
           {state.interview.questions.length ? <button disabled={Boolean(pending) || !answers.some((item) => item.trim())} type="button" onClick={revise}>{pending === "revise" ? "正在修订…" : "提交回答并修订"}</button> : null}
-          <button disabled={Boolean(pending)} type="button" onClick={confirmRequirement}>{pending === "confirm-requirement" ? "正在确认…" : "确认 Spec"}</button>
+          <button disabled={Boolean(pending)} type="button" onClick={confirmRequirementAndRecommend}>{pending === "confirm-requirement" ? "正在确认并推荐…" : "确认 Spec 并推荐工具"}</button>
         </div>
       </CreatorSection> : null}
 
@@ -333,7 +349,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
         <div className="skill-draft-actions">
           <input aria-label="搜索工具" placeholder="搜索工具" value={toolSearch} onChange={(event) => setToolSearch(event.target.value)} />
           <select aria-label="风险筛选" value={toolRisk} onChange={(event) => setToolRisk(event.target.value)}><option value="all">全部风险</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="input-dependent">input-dependent</option></select>
-          <button disabled={Boolean(pending)} type="button" onClick={recommendTools}>{pending === "recommend" ? "正在推荐…" : "获取服务端推荐"}</button>
+          <button disabled={Boolean(pending)} type="button" onClick={recommendTools}>{pending === "recommend" ? "正在推荐…" : resolution ? "重新获取服务端推荐" : "获取服务端推荐"}</button>
         </div>
         {resolution ? <div className="creator-recommendations"><strong>推荐理由</strong>{resolution.recommendations.map((item) => <p key={item.name}>{item.name}：{item.reason}</p>)}{resolution.missingCapabilities.map((item) => <p key={item}>缺少能力：{item}</p>)}<Diagnostics diagnostics={resolution.diagnostics} /></div> : null}
         <div className="creator-tool-grid">{filteredTools.map(({ diagnostics, manifest }) => <label className="creator-tool-card" key={manifest.name}>
@@ -343,11 +359,10 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
           <span>访问：读 {String(manifest.access.read)} / 写 {String(manifest.access.write)} / 破坏性 {String(manifest.access.destructive)}</span>
           {diagnostics.map((item, index) => <span key={`${item.code}-${index}`}>{item.severity}：{item.message}</span>)}
         </label>)}</div>
-        <button disabled={Boolean(pending) || state.selectedToolNames === undefined} type="button" onClick={confirmTools}>{pending === "confirm-tools" ? "正在确认…" : "确认工具方案"}</button>
+        <button disabled={Boolean(pending) || state.selectedToolNames === undefined} type="button" onClick={confirmToolsAndGenerate}>{pending === "generate" ? "正在确认并生成…" : state.bundle ? "重新确认工具并生成 Bundle" : "确认工具并生成 Bundle"}</button>
       </CreatorSection> : null}
 
       {state.confirmedToolNames !== undefined ? <CreatorSection title="5–6. Bundle 与 Diagnostics">
-        <button disabled={Boolean(pending)} type="button" onClick={generate}>{pending === "generate" ? "正在生成…" : state.bundle ? "重新生成 Bundle" : "生成 Bundle"}</button>
         {pending === "generate" ? <small>Bundle 生成请求已发送；当前后端契约不提供可确认的取消结果。</small> : null}
         {generationMs !== undefined ? <small>最近一次生成耗时：{generationMs} ms</small> : null}
         {state.bundle ? <><p>{Object.keys(state.bundle.files).length} 个文件，{state.bundle.diagnostics.length} 条 diagnostics。</p><Diagnostics diagnostics={state.bundle.diagnostics} /></> : null}
@@ -364,14 +379,14 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
         {state.smokeResult ? <div aria-label="Smoke Evidence"><p>质量门：{state.smokeResult.qualityGate}</p>{state.smokeResult.evidence.map((item) => <article key={item.case.id}><strong>{item.case.id}：{item.status}{item.errorType ? `（${item.errorType}）` : ""}</strong><p>{item.output ?? item.errorMessage ?? "后端未提供摘要"}</p><small>{item.durationMs} ms</small></article>)}</div> : null}
       </CreatorSection> : null}
 
-      {state.smokeResult ? <CreatorSection title="8. 保存草稿与提交审核">
+      {state.bundle && !errors.length ? <CreatorSection title="8. 保存草稿与提交审核">
         <p>{state.draftSaved && state.draft ? `草稿 ${state.draft.id} 已保存（r${state.draft.revision}）。` : "当前 Creator 结果尚未保存。"}</p>
+        {!state.smokeResult ? <p className="skill-draft-notice">Smoke 尚未运行；这是 Soft Gate，不阻止保存，也不会阻止之后从作者工作台提交审核。</p> : null}
         <div className="skill-draft-actions">
           <button disabled={Boolean(pending) || hasErrors(state)} type="button" onClick={saveDraft}>{pending === "save" ? "正在保存…" : "保存草稿"}</button>
-          {state.draftSaved && state.draft?.status === "editing" ? <button disabled={Boolean(pending) || hasErrors(state)} type="button" onClick={submitDraft}>{pending === "submit" ? "正在提交…" : "提交审核"}</button> : null}
+          {state.draftSaved && state.draft?.status === "editing" ? <Link href="/skills/mine?mode=daily">前往作者工作台提交审核</Link> : null}
           {state.draft ? <Link href={`/skills/drafts/${encodeURIComponent(state.draft.id)}?mode=daily`}>打开草稿</Link> : null}
         </div>
-        {submission ? <p role="status">已进入审核：{submission.id}</p> : null}
       </CreatorSection> : null}
 
       {error ? <SkillMarketErrorState error={error} onRecover={() => retryRef.current?.()} /> : null}
