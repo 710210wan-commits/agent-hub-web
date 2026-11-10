@@ -486,7 +486,7 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 ### 24. 对齐 Skill 管理页面与旧前端关键操作
 
-提交：见本条所在提交
+提交：`f527acc`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
