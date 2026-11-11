@@ -753,6 +753,30 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 2. `contracts.ts` 补充 `isSafeWorkSkillFilePath` 与 BFF 错误体 `{code,error}` 解析。
 3. 聚焦测试 49/49、现有 Work Agent BFF 测试 34/34 无回归；typecheck 与 ESLint 通过。
 
+### 29. Work Skill Market 前端（Task 3）
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 3`
+
+#### 问题
+
+- `/skills?mode=work` 需要在浏览器侧完整复现原 Xiaozhi Skill Market：搜索、推荐/内置/上传分组、居中预览、启停、上传、远程安装、草稿确认和批量删除，并保持按钮区域与顺序契约。
+
+#### 修改方案
+
+- 新增 Work 专用 API client（`/api/work-skills/*` 同源 BFF）、useReducer 列表状态钩子（取消/代际防护、identityGeneration 重载）与推荐安装目录常量（与原 Vue RECOMMENDED_SKILLS 一致）。
+- 实现 Market 页面与组件：`work-skills-page`、`skill-card`（含推荐卡片）、`skill-preview-dialog`（react-markdown 渲染 SKILL.md）、`remote-install-dialog`（仓库/全局搜索两页签 + localStorage 历史）、`install-draft-dialog`（来源→解析项→生效范围，§6.1 单选提交语义）、`work-confirm-dialog`。
+- 按 §4.2 冻结 DOM 顺序：工具栏、批量模式完整替换、分组顺序、卡片操作位、预览弹窗 footer、草稿与远程弹窗按钮顺序；批量上限 50、`can_manage === false` 只读、内置不可删除/不显示卸载。
+
+#### **代码变更：**
+
+1. 新增 `src/features/skills/work/` 下 8 个组件/模块与 7 个测试文件，聚焦测试 101 例全部通过。
+2. `globals.css` 追加 `work-*` 样式块（页面、卡片、弹窗、开关、toast 与移动端适配）。
+3. 路由接入（Task 5）前，页面经 `api` / `identityGeneration` / `onManageSkill` 注入，与 daily 完全隔离。
+
 ## 后续条目模板
 
 ```markdown
