@@ -662,7 +662,7 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 ### 25. 批准单用户 Work Skill Market / Editor 设计与实施计划
 
-提交：未提交
+提交：39814c9
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -687,7 +687,7 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 ### 26. 记录 Work 共享范围选择器的实施范围取舍
 
-提交：未提交
+提交：39814c9
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -708,11 +708,9 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 1. `docs/skill-market/2026-11-11-work-skill-frontend-implementation.md` 新增 §6.1，Task 4 步骤与 Decision log 同步登记。
 2. 本条仅澄清已批准范围，不改变能力地图、白名单或 daily 边界。
 
-## 2026-11-11
-
 ### 27. Work Skill 接口契约冻结（Task 1）
 
-提交：未提交
+提交：b4b12fb
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -732,11 +730,9 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 1. 新增 `src/features/skills/work/contracts.ts`、`contracts.test.ts` 与 `fixtures/`（13 个样本），聚焦测试 41 例全部通过。
 2. `pnpm typecheck`、ESLint 与全量 Vitest（554 例）无回归。
 
-## 2026-11-11
-
 ### 28. Work Skill 独立安全 BFF（Task 2）
 
-提交：未提交
+提交：b4b12fb
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
