@@ -1,5 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/agent-api/auth/xiaozhi-status", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        enabled: true,
+        xiaozhiUrl: "http://xiaozhi.test",
+        user: { id: "chat-mock-user", displayName: "Mock 用户" },
+      }),
+    }),
+  );
+});
+
 test("minimal chat streams final text and keeps selection defaults", async ({ page }) => {
   await page.goto("/chat?mode=daily&scenario=completed&delay=600");
   await expect(page.getByRole("heading", { name: "今天想聊些什么？" })).toBeVisible();
@@ -20,7 +33,7 @@ test("minimal chat streams final text and keeps selection defaults", async ({ pa
 });
 
 test("manual stop preserves partial text and offers mock continuation", async ({ page }) => {
-  await page.goto("/chat?mode=daily");
+  await page.goto("/chat?mode=daily&scenario=completed&delay=800");
   await page.getByRole("textbox", { name: "消息" }).fill("生成一段回答");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("综合现有资料，")).toBeVisible();

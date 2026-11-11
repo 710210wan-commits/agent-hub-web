@@ -35,6 +35,7 @@ export function Composer({
   onSelectionChange,
   onSend,
   onStop,
+  capabilityMode,
 }: {
   input: string;
   mode: AppMode;
@@ -44,9 +45,12 @@ export function Composer({
   onSelectionChange: (selection: ChatSelectionSnapshot) => void;
   onSend: () => void;
   onStop: () => void;
+  capabilityMode?: "selectable" | "preconfigured" | "unavailable";
 }) {
   const running = isRunning(status);
-  const workCapabilitiesPreconfigured = mode === "work";
+  const resolvedCapabilityMode =
+    capabilityMode ?? (mode === "work" ? "preconfigured" : "selectable");
+  const capabilitiesDisabled = resolvedCapabilityMode !== "selectable";
   return (
     <div className="composer-dock">
       <div className="composer">
@@ -76,7 +80,7 @@ export function Composer({
             附件
           </button>
           <CapabilitySelector
-            disabled={workCapabilitiesPreconfigured}
+            disabled={capabilitiesDisabled}
             label="知识库"
             onChange={(knowledgeBaseIds) =>
               onSelectionChange({ ...selection, knowledgeBaseIds })
@@ -85,22 +89,26 @@ export function Composer({
             selectedIds={selection.knowledgeBaseIds}
           />
           <CapabilitySelector
-            disabled={workCapabilitiesPreconfigured}
+            disabled={capabilitiesDisabled}
             label="Skill"
             onChange={(skillIds) => onSelectionChange({ ...selection, skillIds })}
             options={skillOptions}
             selectedIds={selection.skillIds}
           />
           <CapabilitySelector
-            disabled={workCapabilitiesPreconfigured}
+            disabled={capabilitiesDisabled}
             label="MCP"
             onChange={(mcpIds) => onSelectionChange({ ...selection, mcpIds })}
             options={mcpOptions}
             selectedIds={selection.mcpIds}
           />
-          {workCapabilitiesPreconfigured ? (
+          {resolvedCapabilityMode === "preconfigured" ? (
             <span className="composer-capability-note">
               办公智能体已预配置知识库、Skill 与 MCP
+            </span>
+          ) : resolvedCapabilityMode === "unavailable" ? (
+            <span className="composer-capability-note">
+              当前持久会话暂未支持能力组合
             </span>
           ) : null}
           <button

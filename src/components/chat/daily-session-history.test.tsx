@@ -134,48 +134,13 @@ describe("DailySessionHistory", () => {
     );
   });
 
-  it("creates an untitled persistent conversation and navigates to it", async () => {
+  it("opens a fresh daily route without creating an empty conversation", async () => {
     const client = createClient();
-    vi.mocked(client.createConversation).mockResolvedValue({
-      conversation: conversation(FIRST_ID, { title: "新会话" }),
-      reused: false,
-    });
     renderHistory(client);
 
-    fireEvent.click(await screen.findByRole("button", { name: "新建持久会话" }));
-    await waitFor(() =>
-      expect(push).toHaveBeenCalledWith(
-        `/chat?mode=daily&conversation=${FIRST_ID}`,
-      ),
-    );
-    expect(client.createConversation).toHaveBeenCalledWith(
-      { clientRequestId: expect.any(String) },
-      expect.any(AbortSignal),
-    );
-  });
-
-  it("offers a stable retry when the create result is unknown", async () => {
-    const client = createClient();
-    vi.mocked(client.createConversation)
-      .mockRejectedValueOnce(
-        new DailySessionClientError({ code: "NETWORK_ERROR", message: "secret" }),
-      )
-      .mockResolvedValueOnce({
-        conversation: conversation(FIRST_ID),
-        reused: true,
-      });
-    renderHistory(client);
-
-    fireEvent.click(await screen.findByRole("button", { name: "新建持久会话" }));
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("创建结果暂未确认");
-    expect(alert).not.toHaveTextContent("secret");
-
-    fireEvent.click(screen.getByRole("button", { name: "重试创建" }));
-    await waitFor(() => expect(push).toHaveBeenCalledOnce());
-    expect(
-      vi.mocked(client.createConversation).mock.calls[0]?.[0].clientRequestId,
-    ).toBe(vi.mocked(client.createConversation).mock.calls[1]?.[0].clientRequestId);
+    fireEvent.click(await screen.findByRole("button", { name: "新对话" }));
+    expect(push).toHaveBeenCalledWith("/chat?mode=daily");
+    expect(client.createConversation).not.toHaveBeenCalled();
   });
 
   it("renames inline and refreshes the visible title after a conflict", async () => {

@@ -53,17 +53,6 @@ function AuthenticatedDailySessionHistory({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
 
-  const navigateAfterCreate = async (retry: boolean) => {
-    const result = retry
-      ? await store.retryCreate()
-      : await store.createConversation();
-    if (result.status === "created") {
-      router.push(
-        `/chat?mode=daily&conversation=${encodeURIComponent(result.conversationId)}`,
-      );
-    }
-  };
-
   const startRename = (conversation: ConversationMetadata) => {
     store.clearRenameError();
     setEditingId(conversation.conversationId);
@@ -85,27 +74,12 @@ function AuthenticatedDailySessionHistory({
       <div className="daily-history-toolbar">
         <button
           className="primary-button"
-          disabled={store.createStatus === "creating"}
-          onClick={() => void navigateAfterCreate(false)}
+          onClick={() => router.push("/chat?mode=daily")}
           type="button"
         >
-          {store.createStatus === "creating" ? "正在创建…" : "新建持久会话"}
+          新对话
         </button>
       </div>
-
-      {store.createError ? (
-        <div className="inline-error daily-history-feedback" role="alert">
-          <span>{store.createError}</span>
-          <button
-            className="text-button"
-            disabled={store.createStatus === "creating"}
-            onClick={() => void navigateAfterCreate(true)}
-            type="button"
-          >
-            重试创建
-          </button>
-        </div>
-      ) : null}
 
       {store.renameError ? (
         <div className="inline-error daily-history-feedback" role="alert">
@@ -159,7 +133,7 @@ function renderHistoryContent(input: {
     <>
       {store.conversations.length === 0 ? (
         <EmptyState
-          description="新建持久会话后，会话将显示在这里"
+          description="首次发送消息后，会话将显示在这里"
           title="暂无日常历史会话"
         />
       ) : (

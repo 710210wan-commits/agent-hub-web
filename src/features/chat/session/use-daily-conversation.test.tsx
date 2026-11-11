@@ -426,6 +426,45 @@ describe("useDailyConversation", () => {
     unmount();
   });
 
+  it("does not let route catch-up suppress an identity generation reset", async () => {
+    const loadSnapshot = vi.fn(async () => snapshot());
+    const client = makeClient({
+      createConversation: vi.fn(async () => ({
+        conversation: metadata(),
+        reused: false,
+      })),
+      submitTurn: vi.fn(async () => accepted()),
+      loadSnapshot,
+    });
+    const ids = [createKey, turnKey];
+    const onConversationResolved = vi.fn();
+    const { result, rerender, unmount } = renderHook(
+      ({ routeConversationId, generation }) =>
+        useDailyConversation({
+          client,
+          conversationId: routeConversationId,
+          identityGeneration: generation,
+          idFactory: () => ids.shift() ?? turnKey,
+          onConversationResolved,
+        }),
+      {
+        initialProps: {
+          routeConversationId: undefined as string | undefined,
+          generation: 1,
+        },
+      },
+    );
+
+    await act(async () => void (await result.current.submit("首轮问题")));
+    await waitFor(() => expect(loadSnapshot).toHaveBeenCalledOnce());
+    expect(onConversationResolved).toHaveBeenCalledWith(conversationId);
+
+    rerender({ routeConversationId: conversationId, generation: 2 });
+
+    await waitFor(() => expect(loadSnapshot).toHaveBeenCalledTimes(2));
+    unmount();
+  });
+
   it("keeps the draft when the backend reports TURN_IN_PROGRESS", async () => {
     const client = makeClient({
       submitTurn: vi.fn(async () => {

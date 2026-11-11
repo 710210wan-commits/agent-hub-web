@@ -208,7 +208,9 @@ export function dailyConversationReducer(
     case "messages.merge": {
       const messagesById = { ...state.messagesById };
       for (const message of action.messages) {
-        messagesById[message.messageId] = message;
+        if (!messagesById[message.messageId]) {
+          messagesById[message.messageId] = message;
+        }
       }
       return { ...state, messagesById, nextCursor: action.nextCursor };
     }

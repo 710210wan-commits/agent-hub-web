@@ -330,6 +330,15 @@ export function useDailyConversation({
   );
 
   useEffect(() => {
+    if (
+      conversationId &&
+      generationRef.current === identityGeneration &&
+      pendingRouteConversationRef.current === conversationId &&
+      activeConversationRef.current === conversationId
+    ) {
+      pendingRouteConversationRef.current = null;
+      return;
+    }
     generationRef.current = identityGeneration;
     workflowControllerRef.current?.abort();
     mutationControllerRef.current?.abort();
@@ -432,7 +441,6 @@ export function useDailyConversation({
           startInitialization(id, generation, epoch);
         }
         if (pendingRouteConversationRef.current === id) {
-          pendingRouteConversationRef.current = null;
           onResolvedRef.current?.(id);
         }
       } catch (error) {
@@ -630,5 +638,7 @@ function isNetworkUnknown(error: unknown): boolean {
 }
 
 function safeMessage(error: unknown, fallback: string): string {
-  return error instanceof DailySessionClientError ? error.message : fallback;
+  if (!(error instanceof DailySessionClientError)) return fallback;
+  if (error.status === 404) return "会话不存在、已删除或不属于当前用户";
+  return error.message;
 }
