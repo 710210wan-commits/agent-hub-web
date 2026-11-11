@@ -119,7 +119,7 @@ describe("路径契约", () => {
   });
 
   it("文件读取路径拒绝越界与空路径", () => {
-    for (const path of ["", "../SKILL.md", "a//b", "a/./b", ".", ".."]) {
+    for (const path of ["", "../SKILL.md", "a//b", "a/./b", "a\\..\\b", "C:\\secret", ".", ".."]) {
       expect(() => buildSkillFileUrlPath("mysql-reporter", path)).toThrow(WorkSkillContractError);
     }
   });

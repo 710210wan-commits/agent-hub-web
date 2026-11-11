@@ -5,9 +5,11 @@ import confirmResultsFixture from "./fixtures/confirm-results.json";
 import installDraftUploadFixture from "./fixtures/install-draft-upload.json";
 import remoteListFixture from "./fixtures/remote-list.json";
 import remoteSearchFixture from "./fixtures/remote-search.json";
+import dependencyOptionsFixture from "./fixtures/dependency-options.json";
 import skillFileFixture from "./fixtures/skill-file.json";
 import skillListFixture from "./fixtures/skill-list.json";
 import skillMutationFixture from "./fixtures/skill-mutation.json";
+import skillTreeFixture from "./fixtures/skill-tree.json";
 import type { WorkSkillShareConfig } from "./contracts";
 import {
   createWorkSkillsApi,
@@ -68,6 +70,81 @@ describe("createWorkSkillsApi", () => {
     expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/enabled`);
     expect(calls[0].init?.method).toBe("PUT");
     expect(calls[0].init?.body).toBe(JSON.stringify({ enabled: false }));
+  });
+
+  it("Editor 文件、范围与依赖 API 使用冻结路径和请求体", async () => {
+    const { calls, fetchImpl } = createFetchStub((call) => {
+      if (call.input.includes("/tree")) return jsonResponse(skillTreeFixture);
+      if (call.input.includes("dependency-options")) return jsonResponse(dependencyOptionsFixture);
+      if (call.input.includes("share-config") || call.input.includes("dependencies")) {
+        return jsonResponse(skillMutationFixture);
+      }
+      return jsonResponse({ success: true });
+    });
+    const api = createWorkSkillsApi({ fetchImpl });
+
+    await api.getSkillTree("mysql-reporter");
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/tree`);
+
+    await api.createSkillNode("mysql-reporter", {
+      content: "print('ok')",
+      is_dir: false,
+      path: "scripts/new.py",
+    });
+    expect(calls[1].init?.method).toBe("POST");
+    expect(calls[1].init?.body).toBe(
+      JSON.stringify({ content: "print('ok')", is_dir: false, path: "scripts/new.py" }),
+    );
+
+    await api.updateSkillFile("mysql-reporter", "SKILL.md", "# updated");
+    expect(calls[2].init?.method).toBe("PUT");
+    expect(calls[2].init?.body).toBe(JSON.stringify({ content: "# updated", path: "SKILL.md" }));
+
+    await api.deleteSkillNode("mysql-reporter", "scripts/new.py");
+    expect(calls[3].input).toBe(
+      `${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/file?path=scripts%2Fnew.py`,
+    );
+    expect(calls[3].init?.method).toBe("DELETE");
+
+    const options = await api.getDependencyOptions("mysql-reporter");
+    expect(options.tools[0].slug).toBe("terminal");
+    expect(calls[4].input).toBe(
+      `${WORK_SKILLS_BFF_BASE}/api/system/skills/dependency-options?slug=mysql-reporter`,
+    );
+
+    const shareConfig: WorkSkillShareConfig = {
+      access_level: "department",
+      department_ids: [7, 9],
+      user_uids: [],
+    };
+    await api.updateSkillShareConfig("mysql-reporter", shareConfig);
+    expect(calls[5].init?.body).toBe(JSON.stringify({ share_config: shareConfig }));
+
+    await api.updateSkillDependencies("mysql-reporter", {
+      mcp_dependencies: ["mysql-mcp"],
+      skill_dependencies: ["workspace-files"],
+      tool_dependencies: ["terminal"],
+    });
+    expect(calls[6].init?.body).toBe(
+      JSON.stringify({
+        mcp_dependencies: ["mysql-mcp"],
+        skill_dependencies: ["workspace-files"],
+        tool_dependencies: ["terminal"],
+      }),
+    );
+  });
+
+  it("Editor 写 API 在 fetch 前拒绝越界文件路径", async () => {
+    const { calls, fetchImpl } = createFetchStub(() => jsonResponse({ success: true }));
+    const api = createWorkSkillsApi({ fetchImpl });
+    await expect(api.createSkillNode("mysql-reporter", {
+      content: "secret",
+      is_dir: false,
+      path: "../secret",
+    })).rejects.toMatchObject({ code: "WORK_SKILL_FILE_PATH_INVALID" });
+    await expect(api.updateSkillFile("mysql-reporter", "scripts/../secret", "secret"))
+      .rejects.toMatchObject({ code: "WORK_SKILL_FILE_PATH_INVALID" });
+    expect(calls).toHaveLength(0);
   });
 
   it("deleteSkill 与 deleteSkillsBatch：路径与请求体", async () => {

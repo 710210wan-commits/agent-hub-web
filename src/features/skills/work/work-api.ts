@@ -3,25 +3,30 @@ import {
   buildInstallDraftPath,
   buildSkillFileUrlPath,
   buildSkillPath,
+  isSafeWorkSkillFilePath,
   parseBatchDeleteResults,
   parseInstallConfirmResults,
   parseInstallDraft,
   parseRemoteSkillList,
   parseRemoteSearchResults,
+  parseDependencyOptions,
   parseSimpleSuccess,
   parseWorkErrorDetail,
   parseWorkSkillFile,
   parseWorkSkillListEnvelope,
   parseWorkSkillMutation,
+  parseWorkSkillTree,
   WORK_SKILL_API_PATHS,
   type RemoteSearchResult,
   type RemoteSkillOption,
   type WorkSkill,
   type WorkSkillBatchResultItem,
+  type WorkSkillDependencyOptions,
   type WorkSkillFile,
   type WorkSkillInstallDraft,
   type WorkSkillListEnvelope,
   type WorkSkillShareConfig,
+  type WorkSkillTreeNode,
 } from "./contracts";
 
 /** 同源 Work Skill BFF 路径（浏览器只访问这个前缀）。 */
@@ -51,7 +56,22 @@ export class WorkSkillsApiError extends Error {
 
 export interface WorkSkillsApi {
   listSkills(signal?: AbortSignal): Promise<WorkSkillListEnvelope>;
+  getSkillTree(slug: string, signal?: AbortSignal): Promise<WorkSkillTreeNode[]>;
   getSkillFile(slug: string, path: string, signal?: AbortSignal): Promise<WorkSkillFile>;
+  createSkillNode(slug: string, input: WorkSkillNodeInput, signal?: AbortSignal): Promise<void>;
+  updateSkillFile(slug: string, path: string, content: string, signal?: AbortSignal): Promise<void>;
+  deleteSkillNode(slug: string, path: string, signal?: AbortSignal): Promise<void>;
+  getDependencyOptions(slug: string, signal?: AbortSignal): Promise<WorkSkillDependencyOptions>;
+  updateSkillDependencies(
+    slug: string,
+    dependencies: WorkSkillDependencies,
+    signal?: AbortSignal,
+  ): Promise<WorkSkill>;
+  updateSkillShareConfig(
+    slug: string,
+    shareConfig: WorkSkillShareConfig,
+    signal?: AbortSignal,
+  ): Promise<WorkSkill>;
   setSkillEnabled(slug: string, enabled: boolean, signal?: AbortSignal): Promise<WorkSkill>;
   deleteSkill(slug: string, signal?: AbortSignal): Promise<void>;
   deleteSkillsBatch(slugs: string[], signal?: AbortSignal): Promise<WorkSkillBatchResultItem[]>;
@@ -71,6 +91,18 @@ export interface WorkSkillsApi {
   discardInstallDraft(draftId: string, signal?: AbortSignal): Promise<void>;
   /** 导出 ZIP：返回二进制与文件名（由页面触发浏览器下载）。 */
   exportSkill(slug: string, signal?: AbortSignal): Promise<{ blob: Blob; filename: string }>;
+}
+
+export interface WorkSkillNodeInput {
+  content: string;
+  is_dir: boolean;
+  path: string;
+}
+
+export interface WorkSkillDependencies {
+  mcp_dependencies: string[];
+  skill_dependencies: string[];
+  tool_dependencies: string[];
 }
 
 export interface WorkSkillsApiOptions {
@@ -120,8 +152,78 @@ export function createWorkSkillsApi(
     listSkills: (signal) =>
       send(WORK_SKILL_API_PATHS.list, { headers: { accept: "application/json" }, signal }, parseWorkSkillListEnvelope),
 
+    getSkillTree: (slug, signal) =>
+      send(
+        buildSkillPath(slug, "/tree"),
+        { headers: { accept: "application/json" }, signal },
+        parseWorkSkillTree,
+      ),
+
     getSkillFile: (slug, path, signal) =>
       send(buildSkillFileUrlPath(slug, path), { headers: { accept: "application/json" }, signal }, parseWorkSkillFile),
+
+    createSkillNode: (slug, input, signal) =>
+      isSafeWorkSkillFilePath(input.path)
+        ? sendVoid(buildSkillPath(slug, "/file"), {
+            body: JSON.stringify(input),
+            headers: JSON_HEADERS,
+            method: "POST",
+            signal,
+          })
+        : Promise.reject(new WorkSkillsApiError({
+            code: "WORK_SKILL_FILE_PATH_INVALID",
+            message: "文件路径不合法",
+            retryable: false,
+            status: 400,
+            userMessage: "文件路径不合法",
+          })),
+
+    updateSkillFile: (slug, path, content, signal) =>
+      isSafeWorkSkillFilePath(path)
+        ? sendVoid(buildSkillPath(slug, "/file"), {
+            body: JSON.stringify({ content, path }),
+            headers: JSON_HEADERS,
+            method: "PUT",
+            signal,
+          })
+        : Promise.reject(new WorkSkillsApiError({
+            code: "WORK_SKILL_FILE_PATH_INVALID",
+            message: "文件路径不合法",
+            retryable: false,
+            status: 400,
+            userMessage: "文件路径不合法",
+          })),
+
+    deleteSkillNode: (slug, path, signal) =>
+      sendVoid(buildSkillFileUrlPath(slug, path), { method: "DELETE", signal }),
+
+    getDependencyOptions: (slug, signal) => {
+      buildSkillPath(slug);
+      return send(
+        `${WORK_SKILL_API_PATHS.dependencyOptions}?slug=${encodeURIComponent(slug)}`,
+        { headers: { accept: "application/json" }, signal },
+        parseDependencyOptions,
+      );
+    },
+
+    updateSkillDependencies: (slug, dependencies, signal) =>
+      send(
+        buildSkillPath(slug, "/dependencies"),
+        { body: JSON.stringify(dependencies), headers: JSON_HEADERS, method: "PUT", signal },
+        parseWorkSkillMutation,
+      ),
+
+    updateSkillShareConfig: (slug, shareConfig, signal) =>
+      send(
+        buildSkillPath(slug, "/share-config"),
+        {
+          body: JSON.stringify({ share_config: shareConfig }),
+          headers: JSON_HEADERS,
+          method: "PUT",
+          signal,
+        },
+        parseWorkSkillMutation,
+      ),
 
     setSkillEnabled: (slug, enabled, signal) =>
       send(

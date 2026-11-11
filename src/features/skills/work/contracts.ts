@@ -78,6 +78,7 @@ export function buildSkillPath(
 }
 
 export function isSafeWorkSkillFilePath(filePath: string): boolean {
+  if (filePath.includes("\\")) return false;
   const parts = filePath.split("/");
   return Boolean(filePath) && !parts.some((part) => part === "" || part === "." || part === "..");
 }
