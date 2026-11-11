@@ -4,6 +4,7 @@ import type { ConversationMessage } from "@/features/chat/transports/daily-sessi
 
 import {
   adaptDailySessionMessage,
+  projectDailySessionMessages,
   mergeDailySessionMessages,
 } from "./daily-session-adapter";
 
@@ -116,5 +117,67 @@ describe("daily Session message adapter", () => {
     ]);
     expect(merged[1]?.content).toBe("当前副本");
     expect(merged.map((item) => item.ordinal)).toEqual(["1", "3", "4"]);
+  });
+
+  it("sorts ordinals with BigInt precision instead of Number coercion", () => {
+    const projected = projectDailySessionMessages(
+      [
+        message("40000000-0000-4000-8000-000000000011", {
+          ordinal: "9007199254740993",
+        }),
+        message("40000000-0000-4000-8000-000000000012", {
+          ordinal: "9007199254740992",
+        }),
+      ],
+      null,
+    );
+
+    expect(projected.map((item) => item.ordinal)).toEqual([
+      "9007199254740992",
+      "9007199254740993",
+    ]);
+  });
+
+  it("shows one optimistic user message until its canonical message arrives", () => {
+    const pending = {
+      clientRequestId: "50000000-0000-4000-8000-000000000005",
+      content: "待确认问题",
+      status: "unknown" as const,
+      userMessageId: "40000000-0000-4000-8000-000000000013",
+    };
+
+    const optimistic = projectDailySessionMessages([], pending);
+    const canonical = projectDailySessionMessages(
+      [
+        message(pending.userMessageId, {
+          role: "user",
+          ordinal: "1",
+          content: { kind: "text", text: "待确认问题" },
+        }),
+      ],
+      pending,
+    );
+
+    expect(optimistic).toEqual([
+      expect.objectContaining({
+        id: `pending:${pending.clientRequestId}`,
+        role: "user",
+        content: "待确认问题",
+        pending: true,
+      }),
+    ]);
+    expect(canonical).toHaveLength(1);
+    expect(canonical[0]).toMatchObject({ id: pending.userMessageId });
+    expect(canonical[0]).not.toHaveProperty("pending");
+  });
+
+  it("keeps a TURN_IN_PROGRESS draft out of the sent message list", () => {
+    const projected = projectDailySessionMessages([], {
+      clientRequestId: "50000000-0000-4000-8000-000000000005",
+      content: "仍在编辑器中的草稿",
+      status: "blocked",
+    });
+
+    expect(projected).toEqual([]);
   });
 });
