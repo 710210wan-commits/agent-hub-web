@@ -84,7 +84,9 @@
 
 **测试**：请求路径/参数与桥接契约一致；空模型列表不发送创建请求。
 
-## Task 6：知识库页面接入全局登录态
+## Task 6：知识库页面接入全局登录态 ✅ 已完成
+
+提交 `8dcd44c`（2026-11-11，未推送）。10 个新测试，全量 399 测试 + lint + typecheck 通过。401 分流按调用时刻状态判断（ref 规避挂载竞态）：authenticated → invalidate；demo/checking → 页面内引导。
 
 **文件**：`src/app/knowledge/page.tsx`、`src/app/knowledge/[id]/page.tsx`、`src/lib/kb-api.ts`、删 `src/components/knowledge/kb-login-gate.tsx`
 
