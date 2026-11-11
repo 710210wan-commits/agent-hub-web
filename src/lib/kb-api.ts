@@ -144,50 +144,22 @@ export interface ListKbDocumentsOptions {
   parentId?: string;
 }
 
-// ========== 过渡登录（DSI 会话） ==========
+// ========== 401 钩子（统一登录收口） ==========
 //
-// 统一登录方案尚未与同事确定（计划 T2.3）。在确定前，知识库页面用 DSI 自己的
-// 会话登录：POST /auth/login 成功后由 DSI 下发 HttpOnly cookie，后续 /api/kb/*
-// 请求自动携带。统一单点登录接入后，只需替换本函数的实现。
+// 知识库不再自行处理登录：任何接口 401（会话失效）时通知全局登录层，
+// 由 useKbAuthBridge 决定 invalidate（完整态）还是页面内引导（演示态）。
 
-export interface KbSessionUser {
-  id: string;
-  name?: string;
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setKbUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
 }
 
-interface KbLoginResponse {
-  success?: boolean;
-  user?: KbSessionUser;
-  error?: string;
-}
-
-export async function loginKbSession(
-  username: string,
-  password: string,
-): Promise<KbSessionUser> {
-  let response: Response;
-  try {
-    response = await fetch(`${resolveBase()}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-  } catch {
-    throw new KbApiError("network", 0, "无法连接登录服务，请确认后端已启动");
+function notifyUnauthorized(error: KbApiError): KbApiError {
+  if (error.kind === "unauthorized") {
+    unauthorizedHandler?.();
   }
-
-  const payload = (await response.json().catch(() => ({}))) as KbLoginResponse;
-
-  if (response.status === 401) {
-    throw new KbApiError("unauthorized", 401, payload.error ?? "用户名或密码错误");
-  }
-  if (!response.ok) {
-    throw classifyFailure(response.status, payload);
-  }
-  if (!payload.success || !payload.user?.id) {
-    throw new KbApiError("unknown", 200, payload.error ?? "登录失败，请稍后重试");
-  }
-  return payload.user;
+  return error;
 }
 
 // ========== 内部实现 ==========
@@ -216,7 +188,11 @@ async function kbFetch<T>(path: string, init?: RequestInit): Promise<T> {
     if (!headers.has("Accept")) {
       headers.set("Accept", "application/json");
     }
-    response = await fetch(`${resolveBase()}${path}`, { ...init, headers });
+    response = await fetch(`${resolveBase()}${path}`, {
+      ...init,
+      credentials: "same-origin",
+      headers,
+    });
   } catch {
     throw new KbApiError("network", 0, "无法连接知识库服务，请确认后端已启动");
   }
@@ -231,7 +207,7 @@ async function kbFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (response.ok) {
     return payload as T;
   }
-  throw classifyFailure(response.status, payload);
+  throw notifyUnauthorized(classifyFailure(response.status, payload));
 }
 
 /**
@@ -505,6 +481,7 @@ export async function exportKbDatabase(
   let response: Response;
   try {
     response = await fetch(`${resolveBase()}${path}`, {
+      credentials: "same-origin",
       headers: { Accept: "application/octet-stream" },
     });
   } catch {
@@ -518,7 +495,7 @@ export async function exportKbDatabase(
     } catch {
       // 非 JSON 错误响应，走状态码分类
     }
-    throw classifyFailure(response.status, payload);
+    throw notifyUnauthorized(classifyFailure(response.status, payload));
   }
 
   const blob = await response.blob();
@@ -663,6 +640,7 @@ export async function downloadKbDocument(
   let response: Response;
   try {
     response = await fetch(`${resolveBase()}${path}`, {
+      credentials: "same-origin",
       headers: { Accept: "application/octet-stream" },
     });
   } catch {
@@ -676,7 +654,7 @@ export async function downloadKbDocument(
     } catch {
       // 非 JSON 错误响应，走状态码分类
     }
-    throw classifyFailure(response.status, payload);
+    throw notifyUnauthorized(classifyFailure(response.status, payload));
   }
 
   const blob = await response.blob();

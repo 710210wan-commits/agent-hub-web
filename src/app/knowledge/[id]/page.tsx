@@ -9,12 +9,13 @@ import remarkGfm from "remark-gfm";
 
 import { KbDialog } from "@/components/knowledge/kb-dialog";
 import { KbDocumentTable } from "@/components/knowledge/kb-document-table";
-import { KbLoginGate } from "@/components/knowledge/kb-login-gate";
+import { KbAuthNotice } from "@/components/knowledge/kb-auth-notice";
 import { AppShell } from "@/components/shell/app-shell";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { withMode } from "@/config/modes";
+import { useKbAuthBridge } from "@/features/knowledge/use-kb-auth-bridge";
 import { useAppMode } from "@/providers/mode-provider";
 import {
   KbApiError,
@@ -183,6 +184,8 @@ function isPendingDocument(document: KbDocument): boolean {
 }
 
 export default function KnowledgeDetailPage() {
+  // 401 分流：完整态自动 invalidate 回登录页；演示态页面内引导
+  useKbAuthBridge();
   const routeParams = useParams<{ id: string }>();
   const kbId = typeof routeParams?.id === "string" ? routeParams.id : "";
   const { mode } = useAppMode();
@@ -1285,7 +1288,7 @@ export default function KnowledgeDetailPage() {
         ) : null}
 
         {kbId && phase === "error" ? (
-          needLogin ? <KbLoginGate /> : <ErrorState message={loadError} />
+          needLogin ? <KbAuthNotice /> : <ErrorState message={loadError} />
         ) : null}
 
         {phase === "ready" && detail ? (

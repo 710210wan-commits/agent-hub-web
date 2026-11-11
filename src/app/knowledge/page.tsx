@@ -4,12 +4,13 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 
+import { KbAuthNotice } from "@/components/knowledge/kb-auth-notice";
 import { KbDialog } from "@/components/knowledge/kb-dialog";
-import { KbLoginGate } from "@/components/knowledge/kb-login-gate";
 import { ResourcePageTemplate } from "@/components/resources/resource-page-template";
 import { AppShell } from "@/components/shell/app-shell";
 import { ErrorState } from "@/components/states/error-state";
 import { knowledgeFixtures } from "@/config/resource-fixtures";
+import { useKbAuthBridge } from "@/features/knowledge/use-kb-auth-bridge";
 import {
   KbApiError,
   createKbDatabase,
@@ -59,6 +60,8 @@ function toListItem(db: KbDatabase): KnowledgeListItem {
 type PageState = "loading" | "error" | "ready";
 
 export default function KnowledgePage() {
+  // 401 分流：完整态自动 invalidate 回登录页；演示态页面内引导
+  useKbAuthBridge();
   const [items, setItems] = useState<KnowledgeListItem[]>([]);
   const [state, setState] = useState<PageState>("loading");
   const [isDemo, setIsDemo] = useState(false);
@@ -297,7 +300,7 @@ export default function KnowledgePage() {
         errorSlot={
           state === "error" ? (
             needLogin ? (
-              <KbLoginGate />
+              <KbAuthNotice />
             ) : (
               <ErrorState message={errorMessage} />
             )
