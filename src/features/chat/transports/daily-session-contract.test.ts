@@ -4,11 +4,11 @@ import {
   ConversationListSchema,
   ConversationMessagePageSchema,
   ConversationMetadataSchema,
+  ConversationPublicEventSchema,
+  ConversationSequenceSchema,
   ConversationSnapshotSchema,
   CreatedConversationSchema,
-  DailySessionAuthStatusSchema,
   DailySessionErrorEnvelopeSchema,
-  DailySessionLoginResponseSchema,
   RenamedConversationSchema,
 } from "./daily-session-contract";
 
@@ -44,7 +44,7 @@ const message = {
   createdAt: "2026-11-09T01:03:04.000Z",
 } as const;
 
-describe("daily Session C01-A contract", () => {
+describe("generated conversation.v1 contract", () => {
   it("accepts the exact metadata and list response shapes", () => {
     expect(ConversationMetadataSchema.parse(metadata)).toEqual(metadata);
     expect(
@@ -133,54 +133,51 @@ describe("daily Session C01-A contract", () => {
       }).success,
     ).toBe(false);
   });
-});
 
-describe("daily Session auth and error contracts", () => {
-  const user = {
-    id: "user-7",
-    displayName: "测试用户",
-    sessionExpiresAt: "2026-11-09T09:02:03.000Z",
-  };
-
-  it("accepts verified and anonymous auth status responses", () => {
+  it("validates known message kinds while allowing unknown kinds for safe fallback", () => {
+    const page = {
+      messages: [message],
+      nextCursor: null,
+      lastEventSeq: "2",
+    };
     expect(
-      DailySessionAuthStatusSchema.parse({
-        enabled: true,
-        xiaozhiUrl: "http://127.0.0.1:5050/xiaozhi",
-        user,
-      }),
-    ).toMatchObject({ enabled: true, user });
-    expect(
-      DailySessionAuthStatusSchema.parse({
-        enabled: false,
-        xiaozhiUrl: "http://127.0.0.1:5050/xiaozhi",
-      }),
-    ).toEqual({
-      enabled: false,
-      xiaozhiUrl: "http://127.0.0.1:5050/xiaozhi",
-    });
-  });
-
-  it("accepts full and basic login responses without widening them", () => {
-    expect(
-      DailySessionLoginResponseSchema.parse({ success: true, user }),
-    ).toEqual({ success: true, user });
-    expect(
-      DailySessionLoginResponseSchema.parse({
-        success: true,
-        user,
-        kbUnavailable: true,
-      }),
-    ).toEqual({ success: true, user, kbUnavailable: true });
-    expect(
-      DailySessionLoginResponseSchema.safeParse({
-        success: true,
-        user,
-        accessToken: "must-not-cross-browser-boundary",
+      ConversationMessagePageSchema.safeParse({
+        ...page,
+        messages: [{ ...message, content: { kind: "text" } }],
       }).success,
     ).toBe(false);
+    expect(
+      ConversationMessagePageSchema.safeParse({
+        ...page,
+        messages: [
+          { ...message, content: { kind: "future_kind", opaque: "safe" } },
+        ],
+      }).success,
+    ).toBe(true);
   });
 
+  it("enforces PostgreSQL bigint bounds and exposes public event validation", () => {
+    expect(ConversationSequenceSchema.safeParse("9223372036854775807").success).toBe(
+      true,
+    );
+    expect(
+      ConversationSequenceSchema.safeParse("9223372036854775808").success,
+    ).toBe(false);
+    expect(
+      ConversationPublicEventSchema.parse({
+        eventId: "50000000-0000-4000-8000-000000000005",
+        eventSeq: "1",
+        conversationId,
+        schemaVersion: 1,
+        type: "conversation.created",
+        occurredAt: "2026-11-09T01:03:04.000Z",
+        payload: { version: 1 },
+      }),
+    ).toMatchObject({ type: "conversation.created", eventSeq: "1" });
+  });
+});
+
+describe("conversation error contract", () => {
   it("accepts only the current conversation error envelope", () => {
     expect(
       DailySessionErrorEnvelopeSchema.parse({

@@ -112,12 +112,12 @@ describe("daily Session client", () => {
     expect(request.init).toMatchObject({
       method: "POST",
       credentials: "same-origin",
-      body: JSON.stringify({
-        clientRequestId: requestId,
-        scenarioId: "daily",
-        agentKey: "agent-loop",
-        title: "新的持久会话",
-      }),
+    });
+    expect(JSON.parse(String(request.init.body))).toEqual({
+      clientRequestId: requestId,
+      scenarioId: "daily",
+      agentKey: "agent-loop",
+      title: "新的持久会话",
     });
   });
 
@@ -177,8 +177,11 @@ describe("daily Session client", () => {
       init: {
         method: "PATCH",
         credentials: "same-origin",
-        body: JSON.stringify({ title: "重命名", expectedVersion: 1 }),
       },
+    });
+    expect(JSON.parse(String(requestAt(fetchFn).init.body))).toEqual({
+      title: "重命名",
+      expectedVersion: 1,
     });
   });
 

@@ -2,8 +2,13 @@ import { readFile, readdir, rm, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { verifyPinnedKbSchema } from "./kb-schema-lock";
-
-type JsonObject = Record<string, unknown>;
+import {
+  asObject,
+  renderZodSchema,
+  requiredIdentifier,
+  requiredString,
+  type JsonObject,
+} from "./openapi-zod-generator";
 
 export interface GeneratedKbClient {
   files: ReadonlyMap<string, string>;
@@ -356,126 +361,6 @@ function assertNoLocalDefinitions(components: JsonObject): void {
   }
 }
 
-function renderZodSchema(schema: JsonObject): string {
-  if (Object.keys(schema).length === 0) return "z.unknown()";
-  if (schema.$ref) return renderReference(schema.$ref);
-  if (Object.hasOwn(schema, "const")) return `z.literal(${renderLiteral(schema.const)})`;
-  if (Array.isArray(schema.enum)) {
-    const values = schema.enum;
-    if (values.length === 0) throw new Error("Schema enum must not be empty.");
-    if (values.every((value) => typeof value === "string")) {
-      return `z.enum(${JSON.stringify(values)})`;
-    }
-    const literals = values.map((value) => `z.literal(${renderLiteral(value)})`);
-    return literals.length === 1 ? literals[0] : `z.union([${literals.join(", ")}])`;
-  }
-  if (Array.isArray(schema.anyOf)) {
-    const variants = schema.anyOf.map((value, index) =>
-      renderZodSchema(asObject(value, `anyOf variant ${index}`))
-    );
-    if (variants.length === 0) throw new Error("Schema anyOf must not be empty.");
-    return variants.length === 1 ? variants[0] : `z.union([${variants.join(", ")}])`;
-  }
-
-  let expression: string;
-  switch (schema.type) {
-    case "string":
-      expression = "z.string()";
-      if (typeof schema.minLength === "number") expression += `.min(${schema.minLength})`;
-      if (typeof schema.maxLength === "number") expression += `.max(${schema.maxLength})`;
-      if (typeof schema.pattern === "string") {
-        expression += `.regex(new RegExp(${JSON.stringify(schema.pattern)}))`;
-      }
-      if (schema.format === "date-time") expression += ".datetime({ offset: true })";
-      break;
-    case "integer":
-      expression = renderNumberConstraints("z.int()", schema);
-      break;
-    case "number":
-      expression = renderNumberConstraints("z.number()", schema);
-      break;
-    case "boolean":
-      expression = "z.boolean()";
-      break;
-    case "null":
-      expression = "z.null()";
-      break;
-    case "array": {
-      const items = asObject(schema.items, "array items");
-      expression = `z.array(${renderZodSchema(items)})`;
-      if (typeof schema.minItems === "number") expression += `.min(${schema.minItems})`;
-      if (typeof schema.maxItems === "number") expression += `.max(${schema.maxItems})`;
-      break;
-    }
-    case "object":
-      expression = renderZodObject(schema);
-      break;
-    default:
-      throw new Error(`Unsupported JSON Schema type: ${String(schema.type)}`);
-  }
-  return expression;
-}
-
-function renderZodObject(schema: JsonObject): string {
-  const properties = schema.properties
-    ? asObject(schema.properties, "object properties")
-    : {};
-  const required = new Set(
-    Array.isArray(schema.required)
-      ? schema.required.map((value) => requiredString(value, "required property"))
-      : [],
-  );
-  const entries = Object.keys(properties).sort().map((name) => {
-    const property = asObject(properties[name], `property ${name}`);
-    let expression = renderZodSchema(property);
-    if (!required.has(name) && !Object.hasOwn(property, "default")) expression += ".optional()";
-    return `${JSON.stringify(name)}: ${expression}`;
-  });
-  const additional = schema.additionalProperties;
-  if (entries.length === 0 && additional && typeof additional === "object") {
-    const keySchema = schema.propertyNames
-      ? renderZodSchema(asObject(schema.propertyNames, "propertyNames"))
-      : "z.string()";
-    return `z.record(${keySchema}, ${renderZodSchema(asObject(additional, "additionalProperties"))})`;
-  }
-  const shape = `{ ${entries.join(", ")} }`;
-  if (additional === false) return `z.strictObject(${shape})`;
-  if (additional && typeof additional === "object") {
-    return `z.object(${shape}).catchall(${renderZodSchema(asObject(additional, "additionalProperties"))})`;
-  }
-  return `z.looseObject(${shape})`;
-}
-
-function renderNumberConstraints(expression: string, schema: JsonObject): string {
-  if (typeof schema.minimum === "number") expression += `.min(${schema.minimum})`;
-  if (typeof schema.maximum === "number") expression += `.max(${schema.maximum})`;
-  if (typeof schema.exclusiveMinimum === "number") expression += `.gt(${schema.exclusiveMinimum})`;
-  if (typeof schema.exclusiveMaximum === "number") expression += `.lt(${schema.exclusiveMaximum})`;
-  return expression;
-}
-
-function renderReference(value: unknown): string {
-  if (typeof value === "string" && value.startsWith("#/components/schemas/")) {
-    const name = requiredIdentifier(
-      value.slice("#/components/schemas/".length),
-      "component reference",
-    );
-    return `${name}Schema`;
-  }
-  throw new Error(`Unsupported JSON Schema reference: ${String(value)}`);
-}
-
-function renderLiteral(value: unknown): string {
-  const serialized = JSON.stringify(value);
-  if (serialized === undefined) throw new Error("Schema literal must be JSON-serializable.");
-  return serialized;
-}
-
-function requiredString(value: unknown, label: string): string {
-  if (typeof value !== "string") throw new Error(`${label} must be a string.`);
-  return value;
-}
-
 function componentName(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("#/components/schemas/")) {
     throw new Error("Operation Schema must reference a local component.");
@@ -483,22 +368,8 @@ function componentName(value: unknown): string {
   return requiredIdentifier(value.slice("#/components/schemas/".length), "component reference");
 }
 
-function requiredIdentifier(value: unknown, label: string): string {
-  if (typeof value !== "string" || !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value)) {
-    throw new Error(`${label} is not a safe TypeScript identifier.`);
-  }
-  return value;
-}
-
 function pascalCase(value: string): string {
   return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
-}
-
-function asObject(value: unknown, label: string): JsonObject {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be an object.`);
-  }
-  return value as JsonObject;
 }
 
 function assertSafeGeneratedDirectory(directory: string): void {
