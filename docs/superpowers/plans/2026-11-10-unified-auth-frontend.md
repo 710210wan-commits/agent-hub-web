@@ -48,9 +48,11 @@
 
 **测试（先写）**：状态迁移全路径（含 anonymous↔demo↔authenticated）、并发竞态、invalidate 递增代次、401 vs 网络错误分流。
 
-## Task 3：AuthBoundary + 统一登录页
+## Task 3：AuthBoundary + 统一登录页 ✅ 已完成
 
-**文件**：`src/app/layout.tsx`、`src/components/auth/auth-boundary.tsx`（新）、`src/components/auth/login-page.tsx`（新）
+提交 `5e00bd4`（2026-11-10，未推送）。9 个新测试，全量 385 测试 + lint + typecheck 通过。
+
+**文件**：`src/app/layout.tsx`、`src/components/auth/auth-boundary.tsx`（新）、`src/components/auth/login-page.tsx`（新）、`src/app/globals.css`（auth 样式）
 
 **内容**：
 - 根布局 `<AuthProvider><AuthBoundary>`；`anonymous` 只渲染登录页，不渲染 AppShell/导航/业务路由。
@@ -59,7 +61,9 @@
 
 **测试**：匿名访问 chat/history/knowledge 只见登录页；演示入口进入 demo 态可访问 Skill/MCP 页；登录后回原 URL；error 态不渲染业务数据。
 
-## Task 4：侧栏真实身份与统一退出
+## Task 4：侧栏真实身份与统一退出 ✅ 已完成
+
+提交 `dffb634`（2026-11-10，未推送）。3 个新测试，全量 388 测试 + lint + typecheck 通过。
 
 **文件**：`src/components/shell/sidebar.tsx`、`src/components/shell/topbar.tsx`
 
