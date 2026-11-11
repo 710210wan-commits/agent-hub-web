@@ -4,7 +4,7 @@
 >
 > 起始提交：A-01 所在提交。
 >
-> 维护方式：按日期正序追加；每项简要记录关联 Plan、对应模块序号、问题和修改方案。存在对应模块时，Git 提交使用 `<type>(<module-id>): <description>`；仅完成方案、尚未修改生产代码的事项必须明确标注，不得与已落地功能混淆。
+> 维护方式：按日期正序追加；每项简要记录关联 Plan、对应模块序号、问题、修改方案、代码变更和真实提交号。不得写“本次提交”，并须在 Push、Pull Request 或 Merge 前补齐。存在对应模块时，Git 提交使用 `<type>(<module-id>): <description>`；仅完成方案、尚未修改生产代码的事项必须明确标注，不得与已落地功能混淆。
 
 ## 2026-11-05
 
@@ -24,10 +24,15 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 将 `mode=daily` 的 Skill 页面扩展为 Skill 广场、作者工作台、Creator、审核、发布和安装完整生命周期。
-- 将 `mode=work` 冻结为未接入占位：不发送 Skill Market 请求，不回退到日常后端，不复用 daily 状态。
-- 明确同源 BFF、HMAC Principal、Schema 生成、运行时校验、受保护名称和 daily Runtime 准入规则。
-- 将批准后的扩展设计写入 `docs/skill-market/2026-10-27-agent-hub-web-design.md`，原始 V1 绑定设计保持不变；生产代码仍以关联 Plan 为实施门禁。
+- 将 Skill 从 fixture 驱动的占位资源扩展为 daily 模式下的完整生命周期，范围覆盖发现、创作、审核、发布、安装和 Runtime 准入；页面只负责流程编排，业务状态继续以后端返回为准。
+- work 模式保持未接入占位，不能请求或回退到 daily 后端；跨仓数据通过固定 Schema 和同源 BFF 传递，Principal、受保护名称及 Runtime 准入均在可信边界处理。
+
+#### **代码变更：**
+
+1. 更新 `docs/skill-market/2026-10-27-agent-hub-web-design.md`，补充 daily Skill 广场、作者工作台、Creator、审核、发布、安装和 Runtime 准入的完整信息架构与状态边界。
+2. 在设计中冻结 work 模式零请求、零回退和 daily/work 状态隔离规则，避免办公模式复用日常模式的数据或权限。
+3. 明确同源 BFF、HMAC Principal、固定 Schema、运行时校验和受保护名称的跨仓责任分工。
+4. 本条仅批准并落盘设计文档，未修改生产代码；后续实现继续受关联 Plan 各模块门禁约束。
 
 ### 2. 增加 Skill Market 服务端目标与请求门禁
 
@@ -43,9 +48,15 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增服务端专用 `SKILL_MARKET_DAILY_ORIGIN`，在 Next 启动/构建边界校验必填项、HTTP(S) 协议和纯 Origin 格式。
-- 仅允许 `daily` 解析到固定目标；`work`、非法 mode、目标覆盖、绝对 URL、编码路径和未登记 Skill Market operation 均在上游调用前失败。
-- 本模块只提供 B-01 目标与路径门禁；Principal 签名和实际 BFF 转发分别留给 B-02、B-03。
+- 以单一 server-only Origin 作为 daily Skill Market 的唯一上游，浏览器和请求参数都不能覆盖目标地址；请求路径只能由已登记 operation 解析产生。
+- 配置和路径校验采用 fail closed：work、非法 mode、绝对 URL、编码绕过或未知 operation 均在发起网络请求前失败，避免把 BFF 变成开放代理。
+
+#### **代码变更：**
+
+1. 新增 `src/config/skill-market-targets.ts`，读取并校验 `SKILL_MARKET_DAILY_ORIGIN`，要求值为 HTTP(S) 纯 Origin，且仅允许 `daily` 解析到该目标。
+2. 在 `next.config.ts` 的启动/构建边界执行配置校验，并在 `.env.example` 增加 server-only 配置示例。
+3. 为目标覆盖、绝对 URL、编码路径、未知 operation、非法 mode 和 work 模式增加上游前置拦截。
+4. 新增 `src/config/skill-market-targets.test.ts`，验证合法目标和所有 fail-closed 分支，确保失败场景不会产生上游请求。
 
 ## 2026-11-06
 
@@ -63,9 +74,15 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增服务端单操作员 Principal 配置，校验 Secret 长度、身份、角色和列表字段，并在启动/构建边界 fail closed。
-- 按 `skill-market-principal-v1` 对最终 HTTP 方法和 `originalUrl` 生成六个 Header，固定向量与后端 I-01 基线一致。
-- 增加过期及方法、路径、身份、角色、managed scenarios、permissions 篡改测试；错误不包含 Secret、签名原文或业务路径。
+- 由 BFF 使用 server-only 配置构造并签名单操作员 Principal，浏览器不得提交或覆盖身份、角色、权限、managed scenarios 和 Secret。
+- 签名绑定最终 HTTP 方法与 `originalUrl`，并使用冻结的 `skill-market-principal-v1` 格式；配置非法、签名过期或任一字段被篡改时统一拒绝。
+
+#### **代码变更：**
+
+1. 新增 `src/config/skill-market-principal.ts`，校验 Principal Secret、身份、角色、permissions 和 managed scenarios，并生成六个受控签名 Header。
+2. 更新 `next.config.ts` 和 `.env.example`，把 Principal 配置纳入启动/构建期校验，同时保持所有字段仅在服务端可见。
+3. 按最终 HTTP 方法和 `originalUrl` 生成 `skill-market-principal-v1` 签名，固定向量与后端 I-01 基线对齐。
+4. 新增 `src/config/skill-market-principal.test.ts`，覆盖过期以及方法、路径、身份、角色、作用域和权限篡改，并断言错误不泄漏 Secret、签名原文或业务路径。
 
 ### 4. 增加同源 Skill Market BFF 代理
 
@@ -81,9 +98,16 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增 `/api/skill-market/[...path]` Node.js Route Handler，复用 B-01 目标门禁和 B-02 Principal 签名，不复制业务 DTO 或生命周期逻辑。
-- 流式转发请求与响应，保留 JSON 状态、204 和下载的类型、文件名、长度、hash；清理 hop-by-hop、Cookie、Host、Origin 和客户端 Principal Header。
-- 增加可配置超时、客户端取消传播及稳定的 502/504/499 网关错误；work、非法 mode 和目标覆盖保持零上游请求。
+- 为 Skill Market 建立独立同源 BFF，浏览器只访问本站 `/api/skill-market`；BFF 负责目标门禁、Principal 注入和传输语义，不复制后端 DTO 或生命周期规则。
+- 请求和响应采用流式转发，保留 JSON、204 和 Artifact 下载语义；同时清理不可信 Header，并统一处理超时、客户端取消和上游故障。
+
+#### **代码变更：**
+
+1. 新增 `src/app/api/skill-market/[...path]/route.ts`，提供 Node.js Route Handler，并复用 B-01 目标门禁和 B-02 Principal 签名。
+2. 新增 `src/features/skills/api/gateway.ts` 与 `src/config/skill-market-gateway.ts`，实现请求/响应流式转发、可配置超时和取消传播。
+3. 清理 hop-by-hop、Cookie、Host、Origin 及客户端伪造的 Principal Header；下载响应保留 Content-Type、文件名、长度和 hash。
+4. 将超时、上游失败和客户端取消稳定映射为 504、502 和 499；work、非法 mode 和目标覆盖继续保持零上游请求。
+5. 新增 `src/features/skills/api/gateway.test.ts`，覆盖 JSON、204、下载、Header 清理、超时、取消和负向门禁。
 
 ### 5. 固定跨仓 Skill Market Schema
 
@@ -99,9 +123,16 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 将 `DSI-agent-loop@7ba2dc6821feb3054eebe955038e81a8a9fd6577` 的 `skill-market.v1.json` 字节级固定到前端仓库，记录版本 `1.0.0`、来源路径、28 个 operation 和 SHA-256。
-- 新增离线校验命令和漂移测试；字节、版本、hash、来源元数据或 Skill Market 路径范围不符时 fail closed。
-- 构建和校验只读取前端仓库内固定制品，不读取本机后端目录或网络分支。
+- 将后端 OpenAPI/JSON Schema 以来源 commit、契约版本和 SHA-256 三重钉定到前端仓库，前端构建只消费本地固定制品。
+- 任何字节、版本、来源元数据、hash 或允许路径范围漂移都应立即失败，避免开发机上的后端目录、网络分支或浮动 main 影响构建结果。
+
+#### **代码变更：**
+
+1. 新增 `src/features/skills/contracts/schema/skill-market.v1.json`，固定 `DSI-agent-loop@7ba2dc6821feb3054eebe955038e81a8a9fd6577` 的 v1 Schema 和 28 个 operation。
+2. 新增 `skill-market.v1.lock.json`，记录来源仓库、commit、路径、版本和 SHA-256，作为可审计锁文件。
+3. 新增 `scripts/skill-market-schema-lock.ts` 与 `scripts/verify-skill-market-schema.ts`，离线验证字节、版本、hash、来源元数据和 Skill Market 路径范围。
+4. 新增 `scripts/skill-market-schema-lock.test.ts`，覆盖 Schema 或锁文件被修改时的 fail-closed 行为。
+5. 更新 `package.json`、`pnpm-lock.yaml` 和 `tsconfig.json`，注册校验命令及脚本运行依赖。
 
 ### 6. 生成 Skill Market 前端契约
 
@@ -117,9 +148,16 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增 `generate:skill-market-client`，从 B-04 固定制品生成 40 个组件及 28 个 operation 的请求体、路径参数、查询参数和响应 Zod 契约。
-- 生成物记录来源 commit、契约版本、Schema hash 和固定生成器版本并纳入版本控制；`check:skill-market-client` 检查漏生成或手改漂移。
-- 测试覆盖删除后完整恢复、非法响应拒绝、签名 Header 隔离和禁止导入后端源码或 monorepo shared 包。
+- 由 B-04 固定 Schema 单向生成 TypeScript 类型和 Zod 运行时校验器，页面与 API client 不再维护手写 DTO。
+- 生成过程必须离线、确定且可重复；生成物记录完整来源信息，并通过重新生成后 diff 检查阻止漏提交或人工修改。
+
+#### **代码变更：**
+
+1. 新增 `scripts/skill-market-client-generator.ts` 和 `scripts/generate-skill-market-client.ts`，从固定 Schema 生成 40 个组件及 28 个 operation 的请求、路径、查询和响应契约。
+2. 生成 `src/features/skills/contracts/generated/index.ts`、`operations.ts` 和 `schemas.ts`，同时记录来源 commit、契约版本、Schema hash 和生成器版本。
+3. 新增 `scripts/check-skill-market-client.ts`，通过离线重新生成和 diff 检查识别漏生成或手改漂移。
+4. 新增生成器与生成契约测试，覆盖删除后恢复、非法响应拒绝、签名 Header 隔离，以及禁止导入后端源码或 monorepo shared 包。
+5. 更新 `package.json` 和 `pnpm-lock.yaml`，注册 `generate:skill-market-client` 与 `check:skill-market-client` 命令。
 
 ### 7. 冻结 Skill Market 信任边界测试矩阵
 
@@ -136,9 +174,15 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增信任边界矩阵，明确每一层的可信/非可信输入、鉴权点、授权点和审计责任。
-- 将七类威胁映射到现有自动化负向测试或明确人工步骤，并标明 H-03、B-06、H-04/I-05 和 K-04/K-05 的后续责任。
-- H-01 聚焦边界和证据，不在前端复制后端权限规则，也不提前宣称日志扫描或 API client 缓存门禁完成。
+- 用一份可追溯矩阵明确浏览器、BFF、daily 后端、Artifact Store、数据库和 Runtime 各自信任什么、在哪里鉴权授权、由谁审计。
+- 矩阵只描述边界与验证证据，不把后端权限规则复制到前端，也不把尚未完成的日志扫描、缓存门禁或生命周期 E2E 标记为已交付。
+
+#### **代码变更：**
+
+1. 新增 `docs/skill-market/2026-11-06-skill-market-trust-boundary-matrix.md`，逐层记录可信输入、非可信输入、鉴权点、授权点和审计责任。
+2. 将 Origin/Principal 注入、重放、过期签名、跨 scope、跨 mode、Artifact 篡改和缓存泄漏七类威胁映射到自动化测试或人工验证步骤。
+3. 在矩阵中标注 H-03、B-06、H-04/I-05 和 K-04/K-05 的后续责任与证据状态，避免将计划项误记为已完成。
+4. 本条仅新增边界文档，没有修改生产代码或前端权限判断。
 
 ### 8. 建立统一 Skill Market 前端错误模型
 
@@ -155,9 +199,16 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 固定 `DSI-agent-loop@076c4951bd0adb97b104e82f595b099c691a4226` 的兼容 v1 Schema 并重新生成类型/Zod 契约。
-- 新增 `SkillMarketError` 解码与安全文案映射，未知 code 或非法 envelope 不展示后端原始消息，并保留排障 ID。
-- 新增持久错误组件，按 401/403/404/409/422/504 提供不同说明和恢复动作，diagnostics 可标记业务区域、字段和行号。
+- 以 I-06 稳定错误 code、diagnostics 和 requestId 为唯一可展示错误边界，前端不直接渲染后端自由文本。
+- 已知状态提供针对性的恢复动作；未知 code、非法 envelope 或敏感消息退化为安全通用文案，同时保留经过校验的排障 ID。
+
+#### **代码变更：**
+
+1. 更新固定 Schema 和锁文件到 `DSI-agent-loop@076c4951bd0adb97b104e82f595b099c691a4226`，并重新生成 `contracts/generated` 下的类型与 Zod 契约。
+2. 新增 `src/features/skills/contracts/error.ts`，实现 `SkillMarketError` 解码、安全文案映射和 requestId/diagnostics 归一化。
+3. 新增 `src/features/skills/components/skill-market-error-state.tsx`，按 401、403、404、409、422 和 504 展示不同说明与恢复动作。
+4. 让 422 diagnostics 能定位到 Creator、Draft 等业务区域以及具体字段和行号，未知或非法错误不展示后端原始消息。
+5. 增加错误契约、生成契约和错误组件测试，并同步更新信任边界矩阵中的 H-02 证据。
 
 ### 9. 建立 Skill Market API client 与 ViewModel 边界
 
@@ -174,9 +225,16 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增 operation 驱动的 API client，先校验请求和响应，再调用 ViewModel adapter。
-- 统一取消、超时、错误解码、下载校验和 mutation 结果；`work` 在 fetch 前 fail-closed。
-- query key 包含 mode、资源类型和资源标识，并固定契约文件 LF 行尾。
+- 把请求参数、响应体、错误、取消、超时和下载语义集中到 operation 驱动的 API client，页面不能绕过运行时 Schema 直接消费原始 JSON。
+- client 只向 ViewModel adapter 传递已校验结果；query key 必须包含 mode 和资源身份，work 模式在调用 fetch 前直接失败。
+
+#### **代码变更：**
+
+1. 新增 `src/features/skills/api/client.ts`，按 operation 校验路径、查询、请求体和响应，再把结果交给 ViewModel adapter。
+2. 在 client 中统一处理 AbortSignal、超时、`SkillMarketError` 解码、下载响应和 mutation 返回值；work 模式在 fetch 前 fail closed。
+3. 新增 `src/features/skills/contracts/view-models.ts`，定义页面可消费的稳定 ViewModel 边界，避免组件直接依赖生成 DTO。
+4. 规范 query key，使其包含 mode、资源类型和资源标识，阻止 daily/work 或不同资源之间复用缓存。
+5. 新增 `src/features/skills/api/client.test.ts`，覆盖请求/响应校验、非法响应、取消、错误、下载、mutation 和 work 零请求；通过 `.gitattributes` 固定契约文件 LF 行尾。
 
 ### 10. 收口 Skill Market 日志与敏感信息检查
 
@@ -193,9 +251,16 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- BFF 只记录 method、受控 path、status、duration 和安全 requestId；异常、Secret、Origin、上传/Prompt 和完整 Principal 不进入日志或网关错误。
-- 过滤不安全的上游 requestId，避免通过响应 Header 或审计事件把敏感值带给浏览器或日志。
-- 新增 `check:skill-market-sensitive-data`，扫描生产构建、Source Map、客户端资产、示例配置和实际构建环境，并用 canary 值执行负向测试。
+- BFF 审计日志采用字段白名单，只记录排障所需的 method、受控 path、status、duration 和安全 requestId；异常对象、业务内容及 Principal 明细一律不记录。
+- 对生产构建、Source Map、客户端资产和环境变量增加自动扫描，用 canary 负向测试证明 Secret、上游 Origin 和 Principal 配置不会进入浏览器产物。
+
+#### **代码变更：**
+
+1. 新增 `src/features/skills/api/security-audit.ts`，定义 Skill Market 审计事件白名单和安全 requestId 规则。
+2. 更新 `src/features/skills/api/gateway.ts` 与 BFF Route Handler，过滤不安全的上游 requestId，并阻止异常、Secret、Origin、上传内容、Prompt 和完整 Principal 进入日志或错误响应。
+3. 新增 `scripts/skill-market-sensitive-data.ts` 与 `scripts/check-skill-market-sensitive-data.ts`，扫描生产构建、Source Map、客户端资产、示例配置和实际构建环境。
+4. 新增 `scripts/skill-market-sensitive-data.test.ts` 和 gateway 安全测试，以 canary 值验证敏感信息泄漏会使门禁失败。
+5. 更新 `package.json`，注册 `check:skill-market-sensitive-data` 命令供本地和后续 CI 使用。
 
 ## 2026-11-07
 
@@ -214,11 +279,17 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 将固定制品升级为 `DSI-agent-loop@f8b6ad021547158acbd68181a78a13bf2bc1d92c` 的 `skill-market.v1@1.1.0`（SHA-256 `49d3a134485a714362e50ae92288fb85ce830b225862472846798dbd325c372e`，28 个 operation），重新生成类型与运行时校验器，并同步钉版断言与版本漂移测试。
-- 新增 `CatalogItemViewModel`/`SkillCatalogViewModel` 和 `getSkillCatalog` adapter：显式表达来源（内置/市场，兼容旧响应按 `market` 字段确定性推断）、修订、加载场景、分类、工具、安装状态（`built-in-active`/`enabled`/`installable`/`blocked`）与冲突状态；ViewModel 不包含 Prompt 字段，不猜测或补造响应中不存在的数据。
-- 新增 Catalog 页面状态机：首载 `loading`、有数据 `success`、零结果 `empty`、失败 `error`、刷新 `refreshing`；刷新与刷新失败均保留已有结果，错误为非阻断展示。
-- 新增 `useSkillCatalog` hook：`daily` 自动加载、单飞防重复刷新、加载结果按 generation 防止过期回写、`work` 模式零请求。
-- 验证：C-01 聚焦测试 27/27、前端全量测试 211/211、typecheck、lint、生成契约漂移检查、production build 和 canary 敏感信息扫描通过。
+- 将固定契约升级到包含统一 Catalog 语义的 v1.1.0，并在生成 DTO 与页面之间增加专用 ViewModel，所有来源、状态、场景和安装信息都必须由响应确定。
+- Catalog 加载使用显式状态机和 generation 防过期回写；刷新保留已有数据，work 模式不创建请求，也不复用 daily 的数据或状态。
+
+#### **代码变更：**
+
+1. 将固定制品升级为 `DSI-agent-loop@f8b6ad021547158acbd68181a78a13bf2bc1d92c` 的 `skill-market.v1@1.1.0`，更新 Schema、锁文件、钉版断言和 `contracts/generated` 生成物。
+2. 新增 `src/features/skills/contracts/catalog-view-model.ts`，实现 `CatalogItemViewModel`、`SkillCatalogViewModel` 和 `getSkillCatalog` adapter，显式映射来源、修订、场景、分类、工具、安装与冲突状态。
+3. ViewModel 不包含 Prompt；旧响应仅按已有 `market` 字段做确定性来源兼容，不猜测契约未提供的数据。
+4. 新增 `src/features/skills/catalog/catalog-state.ts`，定义 `idle/loading/success/empty/error/refreshing` 状态及保留旧数据的刷新规则。
+5. 新增 `src/features/skills/catalog/use-skill-catalog.ts`，实现 daily 自动加载、单飞刷新、generation 防过期回写和 work 零请求。
+6. 增加 Schema、ViewModel、状态机和 hook 测试；验证 C-01 聚焦测试 27/27、全量测试 211/211、typecheck、lint、契约漂移检查、production build 和敏感信息扫描通过。
 
 ### 12. 迁移 Skill 广场列表、搜索与筛选
 
@@ -238,15 +309,18 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- `/skills` 页面替换为 `SkillCatalogPlaza`：daily 模式经 `useSkillCatalog` 加载统一 Catalog 并渲染列表；work 模式渲染“办公场景暂未接入”占位且不实例化数据请求。
-- 新增 `catalog-filter` 纯函数：NFKC 规范化搜索（名称/描述/工具）、分类/来源/冲突状态筛选可组合且保持后端稳定顺序；条目搜索文本在每次目录加载时只规范化一次，键入筛选复用索引，避免重复重解析。
-- 卡片显式展示来源（内置 Skill/市场发布）、安装状态（运行中/已启用/可安装/不可用）、名称冲突徽标、修订号、工具数和加载场景。
-- 空目录（“Skill 广场暂无内容”）与零搜索结果（“没有符合条件的 Skill”）使用不同文案；加载、持久错误（可重试）、非阻断刷新与刷新失败保留列表的体验接自 C-01/H-02。
-- Review 修正：`daily → work` 时使 generation 失效、取消在途请求并清空页面状态；Catalog ViewModel 将后端 `loadedByScenarios` 显式映射为 `scenario` scope，不推断契约未提供的 agent scope。
-- Review 修正：绑定默认浏览器 `fetch`，避免 Chrome 将其作为实例方法调用时触发 `Illegal invocation`；刷新后若当前分类已从 Catalog 消失，则复位为全部分类。
-- Review 修正：新增 daily Catalog 加载/前端筛选和 work 零请求的 Playwright 覆盖，并为 Playwright 测试服务器提供最小 server-only Skill Market 配置；`/skills` route 保持服务端薄组合边界。
-- 文档权威：`AGENTS.md` 已明确 Skill 扩展设计和跨仓 Plan 在 Skill 范围内覆盖旧 V1 占位设计，消除绑定依据冲突；既有 docs-only 历史不重写，后续回填随功能、修复或测试变更提交。
-- 验证：C-01/C-02/API client 聚焦测试 58/58，前端全量测试 233/233，Playwright 11/11，typecheck、lint、生成契约漂移检查、production build 和敏感信息扫描通过。
+- 用 C-01 的统一 Catalog 完全替换 `/skills` fixture，搜索与筛选只作用于已加载快照，不触发新的后端查询，也不改变后端稳定顺序。
+- 搜索采用 NFKC 规范化并预建索引；空目录与零结果分开表达。模式切换时取消在途请求并清空状态，确保 daily 数据不会出现在 work 模式。
+
+#### **代码变更：**
+
+1. 将 `src/app/skills/page.tsx` 改为薄路由组合，daily 渲染 `SkillCatalogPlaza`，work 只显示未接入占位且不实例化数据请求。
+2. 新增 `catalog-filter.ts`，对名称、描述和工具建立 NFKC 搜索索引，并组合分类、来源、可用/冲突状态筛选，同时保持后端稳定顺序。
+3. 新增 `skill-catalog-card.tsx` 与 `skill-catalog-plaza.tsx`，展示来源、安装状态、冲突徽标、修订号、工具数和加载场景，并区分空目录、零搜索结果、持久错误和非阻断刷新状态。
+4. 新增 `browser-client.ts` 并绑定默认浏览器 `fetch`，修复 Chrome `Illegal invocation`；分类在刷新后失效时自动复位为全部分类。
+5. 审查修复 `daily → work` 的 generation 失效、AbortController 取消和状态清理，并将 `loadedByScenarios` 明确映射为 scenario scope，不推断 agent scope。
+6. 增加 filter、plaza、state、hook、client 单测及 `e2e/skill-catalog.spec.ts`，覆盖 daily 加载、组合筛选和 work 零请求；同步 Playwright server-only 配置。
+7. 更新 `AGENTS.md` 的 Skill 权威关系；验证聚焦测试 58/58、全量测试 233/233、Playwright 11/11、typecheck、lint、生成物检查、production build 和敏感信息扫描通过。
 
 ### 13. 完成 Skill Catalog 详情、我的 Skill 与场景隔离
 
@@ -264,10 +338,17 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 详情页改为按 Catalog ID 加载真实数据，展示来源、修订、安装/冲突状态、工具、场景和作用域；不补造后端未返回的字段。
-- 新增 `/skills/mine`，并行加载统一 Catalog 和当前 Principal 草稿，明确分组“我创建”“已安装/启用”和“可用未安装”。
-- 将 mode 及列表筛选编码到导航 URL；work 模式在组件边界直接显示占位且不创建请求，daily 列表和详情共用统一 adapter 语义。
-- 验证：聚焦测试 25/25、前端全量单测 239/239、typecheck 和 lint 通过。
+- 详情、广场和“我的 Skill”统一消费同一 Catalog ViewModel，详情通过稳定 Catalog ID 定位，不再读取 fixture 或在页面层补造字段。
+- mode 与筛选上下文编码进 URL，保证列表—详情往返可恢复；“我的 Skill”仅聚合当前 Principal 的草稿与 Catalog 状态，work 模式在组件边界直接停止。
+
+#### **代码变更：**
+
+1. 新增 `src/app/skills/[id]/page.tsx` 和 `skill-catalog-detail.tsx`，按 Catalog ID 加载真实详情，展示来源、修订、安装/冲突状态、工具、场景和作用域。
+2. 新增 `src/app/skills/mine/page.tsx`、`skill-mine.tsx` 与 `use-skill-mine.ts`，并行加载统一 Catalog 和当前 Principal 草稿。
+3. 新增 `skill-mine-view-model.ts`，将数据明确分为“我创建”“已安装/启用”和“可用未安装”，不虚构 Installation 明细。
+4. 新增 `catalog-navigation.ts`，把 mode、搜索和筛选状态编码到 URL；卡片、广场和详情统一使用该导航规则。
+5. 在详情和“我的 Skill”组件边界阻断 work 请求，并增加导航、详情、分组与模式隔离测试。
+6. 更新 Skill 页面样式；验证聚焦测试 25/25、全量单测 239/239、typecheck 和 lint 通过。
 
 ### 14. 完成草稿上传、编辑、修订冲突与提交审核
 
@@ -284,10 +365,17 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增草稿创建与详情路由，列表使用稳定草稿 ID；支持 ZIP 和保留相对路径的目录选择，并提供等待、取消、重试与防重。
-- 草稿编辑维护服务端快照、当前编辑和脏状态，保存携带 `expectedRevision`；409 保留本地内容并提供显式重载。
-- 提交前展示 revision、文件数和未解决 diagnostics；删除与提交均单飞，提交成功后草稿转为只读。
-- 验证：聚焦测试 9/9、前端全量单测 246/246、typecheck 和 lint 通过。
+- 以稳定 Draft ID 和服务端 revision 作为作者工作台的资源身份及乐观并发边界；本地编辑、服务端快照和脏状态分开保存。
+- 上传、保存、删除和提交都采用单飞防重。409 冲突不得自动覆盖本地内容，只能由用户显式重载权威版本后继续处理。
+
+#### **代码变更：**
+
+1. 新增 `src/app/skills/drafts/new/page.tsx`、`drafts/[id]/page.tsx` 和 `skill-draft-create.tsx`，提供 ZIP 与保留相对路径的目录上传入口。
+2. 新增 `draft-files.ts`，规范化浏览器文件选择结果，并处理等待、取消、重试和重复提交。
+3. 新增 `authoring-view-model.ts`，将服务端快照、当前编辑、revision、diagnostics 和只读状态映射为稳定编辑模型。
+4. 新增 `skill-draft-editor.tsx`，保存时携带 `expectedRevision`；409 保留本地内容并提供显式重载，不自动覆盖。
+5. 提交前展示 revision、文件数和未解决 diagnostics；删除与提交均单飞，提交成功后切换为只读状态。
+6. 更新“我的 Skill”草稿入口和全局样式，增加文件、ViewModel、编辑器及列表集成测试；验证聚焦测试 9/9、全量单测 246/246、typecheck 和 lint 通过。
 
 ### 15. 完成 Skill Creator 全流程
 
@@ -304,10 +392,17 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增显式 Creator 步骤状态机，串联 Requirement Analyze/Revise/Confirm、Tool Recommend/Confirm、Bundle Generate 与草稿保存；所有前进条件都由服务端响应和当前步骤共同约束。
-- 展示工具风险、权限、缺失能力与建议，保留结构化 Validator diagnostics；Smoke Test 区分用例建议、运行证据与软门禁，不把缺失证据显示为通过。
-- work 模式继续零请求；入口复用“我的 Skill”、草稿编辑和现有页面组件、表单样式及设计 token。
-- 验证：聚焦测试 9/9、前端全量单测 251/251、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
+- 用显式状态机串联需求分析、Spec 确认、工具解析、Bundle 生成、Validator、Smoke 和保存草稿，任何前进动作都必须与当前步骤及后端响应匹配。
+- Validator diagnostics 是结构化硬结果；Smoke 区分建议用例与真实运行证据，缺失证据不能显示为通过。work 模式继续零请求，并复用作者工作台的草稿资源。
+
+#### **代码变更：**
+
+1. 新增 `src/app/skills/creator/page.tsx` 与 `skill-creator.tsx`，提供从需求访谈到草稿保存的 Creator 页面。
+2. 新增 `creator-state.ts`，定义 Requirement Analyze/Revise/Confirm、Tool Recommend/Confirm、Bundle Generate、Validate、Smoke 和 Save 的步骤、事件及前进条件。
+3. 新增 `creator-adapters.ts`，把生成契约响应映射为需求、工具风险/权限、Bundle、Validator diagnostics 和 Smoke Evidence 视图模型。
+4. Creator 区分 Smoke 建议用例与实际运行证据，缺失证据不显示为通过；work 模式在操作边界保持零请求。
+5. 更新“我的 Skill”和草稿编辑入口，复用既有表单、组件与设计 token，并补充 Creator 状态机、交互和入口测试。
+6. 验证聚焦测试 9/9、全量单测 251/251、typecheck 和 lint 通过；本轮未运行 build 或 Playwright。
 
 ### 16. 完成审核、Trigger Test 与发布衔接
 
@@ -324,11 +419,17 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增审核队列与详情路由：不在前端按角色过滤，严格使用后端返回的 Submission；Requirement、Definition、revision diff、Tool、Validator、Smoke Evidence 和审核历史按运行时 Schema 解析，缺失证据明确显示“后端未提供”。
-- Trigger Test 展示预置用例、结果摘要与服务端历史，运行请求单飞防重并在刷新后重新查询；结果按 Submission ID 与修订语义展示，不跨修订复用。
-- 审核检查、评语、批准/拒绝与不可撤销删除均以后端授权和返回状态为准；409 保留当前视图并要求刷新权威状态。
-- approved 提交支持“仅发布”和“发布并启用”，目标范围固定显示为 `scenario:daily`；组合操作分别呈现 Publication 与 Installation 结果，发布成功后禁止重复发布。
-- 验证：聚焦测试 5/5、前端全量单测 256/256、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
+- 审核队列不在前端按角色或权限二次过滤，只呈现后端为当前 Principal 返回的 Submission；所有证据都绑定 Submission 与 revision。
+- Trigger、批准、驳回、删除和发布分别呈现自己的状态与失败恢复；发布并启用是两个可观察结果，目标 scope 固定为 `scenario:daily`。
+
+#### **代码变更：**
+
+1. 新增 `src/app/skills/review/page.tsx`、`review/[id]/page.tsx`、`skill-review-queue.tsx` 和 `use-review-queue.ts`，接入后端授权后的 Submission 队列。
+2. 新增 `review-view-model.ts` 与 `review-evidence.tsx`，按运行时 Schema 展示 Requirement、Definition、revision diff、Tool、Validator、Smoke Evidence 和审核历史；缺失项明确标记“后端未提供”。
+3. 新增 `skill-review-detail.tsx`，展示预置 Trigger 用例、结果摘要和服务端历史；运行操作单飞，刷新后重新查询且不跨 Submission/revision 复用结果。
+4. 接入审核检查、评语、批准、驳回和不可撤销删除；409 保留当前视图并要求重新加载后端权威状态。
+5. approved 状态支持“仅发布”和“发布并启用”，scope 固定为 `scenario:daily`，分别展示 Publication 与 Installation 结果并阻止重复发布。
+6. 更新广场、“我的 Skill”和全局样式入口，增加队列、ViewModel 和详情交互测试；验证聚焦测试 5/5、全量单测 256/256、typecheck 和 lint 通过，本轮未运行 build 或 Playwright。
 
 ### 17. 完成 Publication、Artifact 与 Installation 管理
 
@@ -345,19 +446,24 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增 `/skills/manage` 列表与详情：组合 Publication 管理接口和统一 Catalog，区分最新、历史、withdrawn、名称冲突、daily 已启用与未启用状态；当前契约未提供 Installation 列表时不虚构安装明细。
-- Artifact 继续经同源 BFF 下载，使用 `Content-Disposition` 文件名并展示 `Content-Type`；保存前计算实际字节 SHA-256，同时比对 `X-Content-Sha256` 和 Publication content hash，任一不一致均中止保存。
-- Installation mutation 固定为 `scenario:daily`，不读取 URL 中的 scope 参数；安装/启用/停用显示服务端最后操作结果，历史、下架、冲突或 Catalog 不可见项不显示为可安装。
-- 发布并启用部分成功后从审核结果直达 Publication 详情，只执行 `setInstallationStatus`，不会重复创建 Publication。
-- 下架前明确说明安装停用与 Runtime 退出并二次确认；创建新修订跳转后展示来源 Publication 和服务端返回的新 revision，不覆盖历史 Artifact。
-- H-04 代表性负向体验覆盖 403 明确拒绝与返回路径，以及 URL 注入 `agent/work` scope 仍只能发送 `scenario:daily`；前端未新增角色 UI，最终授权继续由后端决定。
-- 验证：聚焦测试 9/9、前端全量单测 263/263、typecheck 和 lint 通过；按当前测试范围未运行 build 或 Playwright。
+- 将 Publication、Artifact 和 Installation 建模为相关但可独立恢复的资源：发布成功而启用失败时，只允许重试 Installation，不能重复创建 Publication。
+- Artifact 下载在保存前完成响应头、实际字节和 Publication hash 三方校验；所有安装 mutation 固定为 `scenario:daily`，URL 或表单不能扩大 managed scope。
+
+#### **代码变更：**
+
+1. 新增 `src/app/skills/manage/page.tsx`、`manage/[id]/page.tsx`、`skill-publication-list.tsx` 和 `skill-publication-detail.tsx`，组合 Publication 管理接口与统一 Catalog。
+2. 新增 `publication-view-model.ts` 和 `use-publications.ts`，区分最新、历史、withdrawn、名称冲突、daily 已启用与未启用；契约未提供 Installation 列表时不虚构明细。
+3. 新增 `artifact-download.ts`，经同源 BFF 下载制品，读取 `Content-Disposition`/`Content-Type`，计算实际字节 SHA-256，并与 `X-Content-Sha256` 和 Publication content hash 三方比对。
+4. Installation mutation 固定发送 `scenario:daily`，不读取 URL scope；历史、下架、冲突或 Catalog 不可见项不显示为可安装。
+5. 发布并启用部分成功后跳转 Publication 详情，只重试 `setInstallationStatus`；下架要求二次确认，创建新修订保留来源 Publication 和历史 Artifact。
+6. 更新审核结果、作者工作台和广场入口；增加 Publication、Artifact hash、403 和 scope 注入测试，确认前端不新增角色判断且最终授权仍由后端决定。
+7. 验证聚焦测试 9/9、全量单测 263/263、typecheck 和 lint 通过；本轮未运行 build 或 Playwright。
 
 ## 2026-11-09
 
 ### 18. 完成 J-01/J-02 数据库边界与既有数据兼容验证
 
-提交：见本条所在提交
+提交：`0710c2a`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
@@ -371,14 +477,21 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增前端数据库边界检查，扫描 Skill BFF/Feature，拒绝数据库驱动、Schema、表名等实现依赖。
-- 使用后端只读快照和生成契约解析同一批 Docker PostgreSQL 既有数据，对照旧前端业务投影；覆盖正常、历史修订、withdrawn、disabled、Artifact 缺失和不落库的历史受保护名称冲突夹具。
-- Catalog 只有在 `loadedByScenarios` 明确包含 `daily` 时才显示 daily 已启用；`osint`、`border` 等历史 scope 仍保留展示，但不冒充 daily 安装。
-- 验证：兼容与边界脚本通过，聚焦单测 10/10、前端全量单测 264/264、typecheck 和 lint 通过；未执行 K-05 全生命周期 E2E、build 或 Playwright。
+- 把“前端不读取数据库实现”从约定升级为可执行门禁，扫描 BFF 与 Skill Feature 对数据库驱动、Schema、表名和后端源码的越界依赖。
+- 使用后端只读快照和生成契约对同一批既有数据做投影对照；安装状态只有在 `loadedByScenarios` 明确包含 `daily` 时才能显示为 daily 已启用。
+
+#### **代码变更：**
+
+1. 新增 `scripts/test-skill-market-database-boundary.ts`，扫描 Skill BFF 和 Feature，拒绝数据库驱动、数据库 Schema、表名及实现层依赖。
+2. 新增 `scripts/test-skill-market-existing-data.ts`，使用后端只读快照和前端生成契约解析同一批 Docker PostgreSQL 既有数据，并对照旧前端业务投影。
+3. 兼容夹具覆盖正常数据、历史修订、withdrawn、disabled、Artifact 缺失以及不落库的历史受保护名称冲突。
+4. 修改 `catalog-view-model.ts`，仅在 `loadedByScenarios` 明确包含 `daily` 时显示 daily 已启用；`osint`、`border` 等历史 scope 保留展示但不冒充 daily Installation。
+5. 更新 `package.json` 注册数据库边界与既有数据验证命令，并增加 Catalog 映射回归测试。
+6. 验证两个脚本、聚焦单测 10/10、全量单测 264/264、typecheck 和 lint 通过；本轮未执行 K-05 生命周期 E2E、build 或 Playwright。
 
 ### 19. 完成 K-01/K-02 分层测试与契约生成 CI
 
-提交：见本条所在提交
+提交：`0a7b0c2`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
@@ -391,13 +504,20 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 增加 `test:skill-market:bff`、`test:skill-market:components`、`test:skill-market:contract` 三个互不重复的测试入口，领域规则继续留在最低稳定层，上层只验证边界和集成结果。
-- 新增独立 Skill Market CI：固定 Node/pnpm 版本，校验 Schema 来源、版本和 SHA，离线重生成 Zod/TypeScript 客户端并执行 `git diff --exit-code`，最后运行契约与非法响应测试；不在构建时读取 DSI 仓库或远端 `main`。
-- 实际验证：BFF 27/27、组件 68/68、契约 43/43、全量 Vitest 264/264、typecheck、lint、Schema 锁和生成物无漂移检查全部通过；Playwright、build 与 K-03 以后任务未在本轮执行。
+- 按 BFF、组件和契约拆分互不重复的稳定测试入口，使失败能够直接定位到传输边界、页面行为或跨仓契约。
+- CI 固定 Node/pnpm 版本并保持离线契约验证：先检查 Schema 锁，再重新生成客户端并检查 diff，最后运行契约和非法响应测试。
+
+#### **代码变更：**
+
+1. 更新 `package.json`，新增 `test:skill-market:bff`、`test:skill-market:components` 和 `test:skill-market:contract` 三个稳定且不重复的测试入口。
+2. BFF 层覆盖目标门禁、Principal、gateway 和敏感信息；组件层覆盖 Catalog、作者、Creator、审核和发布交互；契约层覆盖 Schema 锁、生成物、错误与非法响应。
+3. 新增 `.github/workflows/skill-market-quality.yml`，固定 Node/pnpm 版本并依次执行安装、Schema 来源/版本/SHA 校验、离线生成、`git diff --exit-code` 和契约测试。
+4. CI 不读取本机 DSI 仓库或远端 `main`，确保钉版 Schema 与生成器是唯一构建输入。
+5. 验证 BFF 27/27、组件 68/68、契约 43/43、全量 Vitest 264/264、typecheck、lint、Schema 锁及生成物无漂移；本轮未运行 Playwright、build 或 K-03 后续任务。
 
 ### 20. 完成 K-03～K-05 关键旅程、安全矩阵与真实生命周期
 
-提交：见本条所在提交
+提交：`0a3ba03`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
@@ -411,14 +531,21 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增状态化 Playwright API fixture、完整生命周期 spec 和安全 spec，覆盖广场/详情/我的、Draft 409、Creator Smoke、Trigger 审核、Publication 启停/下架/修订、部分成功恢复与模式隔离。
-- 增加 `test:skill-market:security` 和 `test:e2e:skill-market` 稳定命令；市场 Catalog ID 进入详情页时在边界安全解码，修复含 `:` ID 查找失败。
-- 后端新增真实 E2E 脚本，使用 Docker PostgreSQL、Drizzle service/repository、LocalArtifactStore、Catalog 和 Runtime Provider；数据事务回滚且临时文件清理。
-- 验证：Playwright 12/12、安全聚焦 44/44、全量 Vitest 341/341、typecheck 和 lint 通过。真实链路保留 ID/revision/hash/状态证据并验证 disable/withdraw 退出。Trigger 使用明示的确定性测试判定器，不代表模型质量验证。
+- 以三层证据验收生命周期：状态化 Playwright 覆盖用户旅程，安全测试聚合可信边界，真实链路验证 PostgreSQL、Artifact Store、Catalog 和 Runtime 闭环。
+- 测试必须覆盖 work 零请求、daily/work 状态隔离、Draft 409 和发布后安装恢复；Trigger 仅使用确定性判定器验证流程，不宣称模型质量。
+
+#### **代码变更：**
+
+1. 新增 `e2e/fixtures/skill-market-api.ts`，提供可变状态的 Skill Market API fixture，支持跨页面共享 Draft、Submission、Publication 和 Installation 状态。
+2. 新增 `e2e/skill-market-lifecycle.spec.ts`，覆盖广场/详情/我的、Draft 409、Creator Smoke、Trigger 审核、Publication 启停/下架/修订及发布成功但启用失败后的恢复。
+3. 新增 `e2e/skill-market-security.spec.ts`，覆盖 work 零请求、daily/work 状态隔离、Principal/scope 边界、Artifact hash、结构化错误和非法响应。
+4. 更新 `package.json`，新增 `test:skill-market:security` 和 `test:e2e:skill-market`；修改 `skill-catalog-detail.tsx`，安全解码含 `:` 的市场 Catalog ID。
+5. 后端配套真实 E2E 使用 Docker PostgreSQL、Drizzle service/repository、LocalArtifactStore、Catalog 和 Runtime Provider，事务回滚数据并清理临时文件；设计文档同步记录证据边界。
+6. 验证 Playwright 12/12、安全聚焦 44/44、全量 Vitest 341/341、typecheck 和 lint 通过；真实链路保留 ID/revision/hash/状态证据并验证 disable/withdraw 退出，Trigger 不代表模型质量验证。
 
 ### 21. 完成 K-06～K-08 双仓门禁、production 并行与回滚方案
 
-提交：阶段实现 `92b4815`；收口提交见本条所在提交
+提交：阶段实现 `92b4815`；收口提交 `17036ff`
 
 Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
 
@@ -432,10 +559,17 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 新增独立性扫描、双仓 release gate、CI job、Docker 构建边界、部署 Runbook 和 K-07 production 三进程脚本；证据记录 commit dirty 状态、Build ID、Catalog 和网络请求。
-- 两仓 release gate 均通过；新前端全量 Vitest 346/346、Playwright 21 passed/1 个缺少真实 `yxkey_` 的外部用例 skipped、build 与敏感信息扫描通过。
-- K-07 比较两个 BFF 的同一 14 项 Catalog，验证旧四个 Skill 页面、work 零请求、旧停新存和新停旧存；证据写入 `docs/skill-market/evidence/2026-11-09-parallel-run.json`。
-- 冻结后端兼容优先、旧前端先回归、新前端后发布和独立回滚规则；本轮未执行生产发布、流量切换或数据库变更。
+- 用双仓 release gate、production 三进程并行验证和部署 Runbook 证明旧前端、新前端及后端可以独立启动、停止和回滚。
+- 新前端不得依赖旧页面、旧 BFF 或 `/api/skills`；证据需要记录 commit/dirty 状态、Build ID、Catalog 和网络请求，同时明确“通过门禁”不等于已经生产发布或切流。
+
+#### **代码变更：**
+
+1. 新增 `scripts/skill-market-independence.ts`、检查入口和测试，扫描新前端对旧页面、旧 BFF、`/api/skills` 及越界实现的依赖。
+2. 更新 `package.json`、Skill Market CI、`Dockerfile` 和 `.env.example`，加入双仓 release gate、production build 与 server-only 配置边界。
+3. 新增 `scripts/test-skill-market-parallel-run.ts`，启动旧前端、新前端和后端三进程，对比两个 BFF 的同一 14 项 Catalog，并验证旧停新存、新停旧存和 work 零请求。
+4. 新增 `docs/skill-market/2026-11-09-skill-market-deployment-runbook.md`，冻结后端兼容优先、旧前端先回归、新前端后发布、停止条件和独立回滚顺序。
+5. 将 K-07 证据写入 `docs/skill-market/evidence/2026-11-09-parallel-run.json`，记录 commit/dirty 状态、Build ID、Catalog 与网络请求；同步生命周期 E2E 和设计文档。
+6. 验证两仓 release gate、新前端 Vitest 346/346、Playwright 21 passed/1 skipped、build 和敏感信息扫描通过；本轮未执行生产发布、流量切换或数据库变更。
 
 ## 2026-11-10
 
@@ -456,9 +590,15 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 在 daily Skill 广场操作区增加主操作“创建 Skill”，固定跳转到 `/skills/creator?mode=daily`，直接衔接既有 Creator 全流程。
-- 使用现有 `skill-page-action` 按钮样式，并以全局 accent token 增加主操作及 hover 状态；其他发布管理、审核和“我的”入口保持不变。
-- 扩展广场组件测试，覆盖四个页面操作入口、Creator 跳转地址和主操作样式，同时继续确认页面不显示手动刷新按钮。
+- 在 daily Skill 广场的既有操作区增加一个明确主操作，让用户无需先进入“我的 Skill”即可开始创建。
+- 入口复用现有按钮和全局 accent token，固定携带 `mode=daily`；其他管理入口、自动加载行为和 work 模式边界保持不变。
+
+#### **代码变更：**
+
+1. 修改 `skill-catalog-plaza.tsx`，在 daily 广场操作区增加“创建 Skill”主操作，固定跳转 `/skills/creator?mode=daily`。
+2. 保留发布管理、审核和“我的 Skill”三个既有入口及顺序，不新增手动刷新或额外请求。
+3. 修改 `src/app/globals.css`，复用 `skill-page-action` 并使用全局 accent token 增加主按钮及 hover 状态。
+4. 扩展 `skill-catalog-plaza.test.tsx`，覆盖四个操作入口、Creator URL、主操作样式和无手动刷新按钮。
 
 ### 23. 收口 Skill 页面操作区与 Creator 高效创建流程
 
@@ -477,12 +617,17 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 当 Catalog 分类与来源一一对应时隐藏分类筛选并忽略分类 URL 参数；后端提供真实细分类别时自动恢复分类控件。
-- “我的 Skill”、审核队列和发布管理统一复用广场操作按钮样式，移除列表页手动刷新按钮；错误恢复和详情页权威刷新能力保持不变。
-- 保留内部 Creator 状态机和 daily 安全边界，将用户可见流程归纳为“需求定义、工具与生成、验证、保存与提交”四段；确认 Spec 后自动获取工具推荐，确认工具后直接生成 Bundle。
-- Bundle 无 error 后即可保存草稿；未运行 Smoke 时明确标记 Soft Gate，但不阻止保存或之后提交审核。
-- Creator 不再调用 Draft submit；保存成功后引导用户前往作者工作台，由草稿编辑页完成提交审核。
-- 验证：Creator/作者工作台聚焦测试 6/6、前端全量 Vitest 450/450、typecheck、lint 和 diff check 通过；Playwright 场景已同步，因现有 Next 开发进程占用 `.next/dev/lock` 未在本轮重跑。
+- 去除与来源一一对应的伪分类和重复刷新入口，统一广场、“我的 Skill”、审核队列和发布管理的操作区样式与自动加载语义。
+- Creator 保留内部状态机，但将用户流程压缩为四个阶段并自动串联安全步骤；Smoke 继续是 Soft Gate，Creator 只保存草稿，提交审核回到作者工作台完成。
+
+#### **代码变更：**
+
+1. 修改 `catalog-filter.ts` 和 `skill-catalog-plaza.tsx`：分类与来源一一对应时隐藏分类控件并忽略分类 URL 参数，真实细分类出现后自动恢复。
+2. 修改 `skill-mine.tsx`、`skill-review-queue.tsx` 和 `skill-publication-list.tsx`，统一复用广场操作按钮样式并移除列表页手动刷新；错误重试和详情权威刷新保留。
+3. 修改 `skill-creator.tsx`，将可见流程归纳为“需求定义、工具与生成、验证、保存与提交”四段；确认 Spec 后自动请求工具推荐，确认工具后自动生成 Bundle。
+4. 调整 Creator 门禁：Bundle 无 error 即可保存草稿，未运行 Smoke 明确显示 Soft Gate 但不阻止保存。
+5. 移除 Creator 对 Draft submit 的调用，保存成功后跳转/引导到作者工作台，由草稿编辑页承担提交审核职责。
+6. 更新 Catalog、Mine、Review、Publication、Creator 单测及生命周期 Playwright 场景；验证聚焦测试 6/6、全量 Vitest 450/450、typecheck、lint 和 diff check 通过，因 `.next/dev/lock` 未重跑 Playwright。
 
 ### 24. 对齐 Skill 管理页面与旧前端关键操作
 
@@ -500,16 +645,24 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 #### 修改方案
 
-- 将发布管理改为单列操作行：published 项提供查看详情、下载制品、安装/启用、停用和二次确认下架；withdrawn 项保留详情、历史制品下载和创建新修订。安装目标继续固定为 `scenario:daily`，下载继续执行响应头、实际字节与 Publication hash 三方校验。
-- 审核队列直接展示作者、修订、状态、完整 Artifact SHA-256、Trigger 次数和可折叠冻结证据；审核详情继续承载 Trigger、批准/驳回、删除、仅发布与发布并启用完整操作。
-- 作者工作台增加大幅 ZIP/目录上传入口，并为 editing 草稿增加编辑、提交审核和二次确认删除；保留后端数据驱动的“我创建、已安装/启用、可用未安装”分组。
-- Skill 广场在标题旁显示 `catalog.total` 权威总数；搜索和筛选只改变可见列表，不改写总数。
-- 统一 Skill 业务区标题、正文、字段标签的字号、字重和行高，并移除 Skill 模块全部手动刷新按钮；错误重试和写操作成功后的自动权威同步保持不变。
-- 验证：相关组件聚焦测试、前端全量 Vitest 460/460、TypeScript strict、全仓 ESLint、diff check 及桌面/窄屏浏览器核验通过；源码扫描确认 Skill 模块不存在剩余手动刷新按钮。
+- 将发布管理从双列跳转卡片改为单列操作行，让高频管理动作直接出现在列表；审核和作者工作台同步补足旧前端已具备的关键元数据与行内操作。
+- 所有状态仍以后端为权威：安装 scope 固定为 daily，Artifact 继续执行三方 hash 校验，写操作成功后自动重新同步而不是依赖手动刷新。
+
+#### **代码变更：**
+
+1. 修改 `skill-publication-list.tsx` 为单列操作行：published 项提供详情、制品下载、安装/启用、停用和二次确认下架；withdrawn 项提供详情、历史制品下载和创建新修订。
+2. 保留 `scenario:daily` 固定安装目标以及响应头、实际字节、Publication hash 三方校验；`skill-publication-detail.tsx` 继续承担完整状态与恢复操作。
+3. 修改审核队列和详情组件，列表直接展示作者、修订、状态、完整 Artifact SHA-256、Trigger 次数和可折叠冻结证据，详情保留 Trigger、审核、删除和发布操作。
+4. 修改 `skill-mine.tsx`，增加醒目的 ZIP/目录上传入口，并为 editing 草稿增加编辑、提交审核和二次确认删除，同时保留三个后端数据驱动分组。
+5. 修改 `skill-catalog-plaza.tsx`，在标题旁显示 `catalog.total` 权威总数；搜索和筛选只改变可见条目，不改写总数。
+6. 更新 `src/app/globals.css`，统一 Skill 业务区标题、正文和字段标签的字号、字重与行高，并移除 Skill 模块全部手动刷新按钮。
+7. 扩展 Catalog、Mine、Publication、Review 组件测试；验证全量 Vitest 460/460、TypeScript strict、全仓 ESLint、diff check 及桌面/窄屏浏览器核验通过，源码扫描无剩余手动刷新按钮。
 
 ## 后续条目模板
 
 ```markdown
+## YYYY-MM-DD
+
 ### 变更标题
 
 提交：`commit`
@@ -524,5 +677,13 @@ Plan 文档：`path/to/plan.md`
 
 #### 修改方案
 
-- 采用的设计和关键取舍。
+- 说明采用的整体设计、关键取舍、边界条件和失败/降级策略。
+- 明确哪些状态以后端为准、哪些行为在前端阻断，以及本次不包含的范围。
+
+#### **代码变更：**
+
+1. `path/to/file.ts`：说明新增或修改的具体行为。
+2. `path/to/component.tsx`：说明页面、状态或交互变化。
+3. `path/to/file.test.ts`：说明新增的测试覆盖和关键负向场景。
+4. 验证：列出实际运行的聚焦测试、全量测试、typecheck、lint 或 build 结果；未运行的项目也要明确说明。
 ```
