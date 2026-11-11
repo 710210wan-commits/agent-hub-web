@@ -4,6 +4,7 @@ import {
   BookOpen,
   Clock3,
   DatabaseZap,
+  LogOut,
   Map,
   MessageSquarePlus,
   Settings,
@@ -20,7 +21,7 @@ import {
   type NavigationIcon,
   type NavigationItem,
 } from "@/config/navigation";
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth, type AuthStatus } from "@/providers/auth-provider";
 import { useAppMode } from "@/providers/mode-provider";
 
 const icons: Record<NavigationIcon, LucideIcon> = {
@@ -32,6 +33,28 @@ const icons: Record<NavigationIcon, LucideIcon> = {
   mcp: DatabaseZap,
   settings: Settings,
 };
+
+/** 头像缩写：取显示名前两个字符（中文按字，英文按字母大写） */
+function userInitials(displayName?: string): string {
+  if (!displayName) return "--";
+  return displayName.trim().slice(0, 2).toUpperCase() || "--";
+}
+
+/** 侧栏用户槽的状态文案（统一登录后的真实登录态） */
+function authStatusLabel(status: AuthStatus): string {
+  switch (status) {
+    case "authenticated":
+      return "已登录";
+    case "demo":
+      return "演示模式";
+    case "checking":
+      return "登录状态确认中";
+    case "error":
+      return "登录服务异常";
+    default:
+      return "未登录";
+  }
+}
 
 function NavigationLink({
   item,
@@ -88,7 +111,7 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { mode } = useAppMode();
-  const { user } = useAuth();
+  const { user, status, logout } = useAuth();
   const items = getNavigation(mode);
   const primary = items.filter((item) => item.section === "primary");
   const capabilities = items.filter((item) => item.section === "capabilities");
@@ -130,11 +153,22 @@ export function Sidebar({
         <div className="sidebar-footer">
           {footer.map(renderLink)}
           <div className="sidebar-user">
-            <span className="sidebar-avatar">{user.initials}</span>
+            <span className="sidebar-avatar">{userInitials(user?.displayName)}</span>
             <span className="sidebar-user-copy">
-              <strong>{user.name}</strong>
-              <small>{user.workspace}</small>
+              <strong>{user?.displayName ?? "未登录"}</strong>
+              <small>{authStatusLabel(status)}</small>
             </span>
+            {status === "authenticated" || status === "demo" ? (
+              <button
+                aria-label="退出登录"
+                className="sidebar-logout"
+                onClick={() => void logout()}
+                title="退出登录"
+                type="button"
+              >
+                <LogOut aria-hidden size={14} />
+              </button>
+            ) : null}
           </div>
         </div>
       </nav>
