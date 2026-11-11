@@ -8,10 +8,12 @@ import { useState, type FormEvent } from "react";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { LoadingState } from "@/components/states/loading-state";
-import { useDailySessionAuth } from "@/features/chat/session/daily-session-auth-provider";
 import { useDailySessionStore } from "@/features/chat/session/daily-session-store";
+import { useDailySessionAuthBridge } from "@/features/chat/session/use-daily-session-auth-bridge";
 import type { DailySessionClient } from "@/features/chat/transports/daily-session-client";
 import type { ConversationMetadata } from "@/features/chat/transports/daily-session-contract";
+
+import { DailySessionAuthNotice } from "./daily-session-auth-notice";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
@@ -23,9 +25,29 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 });
 
 export function DailySessionHistory({ client }: { client: DailySessionClient }) {
-  const auth = useDailySessionAuth();
-  const store = useDailySessionStore(client, auth.identityGeneration, {
-    onAuthRequired: auth.invalidate,
+  const auth = useDailySessionAuthBridge();
+  if (!auth.enabled) return <DailySessionAuthNotice />;
+
+  return (
+    <AuthenticatedDailySessionHistory
+      client={client}
+      identityGeneration={auth.identityGeneration}
+      onAuthRequired={auth.onAuthRequired}
+    />
+  );
+}
+
+function AuthenticatedDailySessionHistory({
+  client,
+  identityGeneration,
+  onAuthRequired,
+}: {
+  client: DailySessionClient;
+  identityGeneration: number;
+  onAuthRequired(): void;
+}) {
+  const store = useDailySessionStore(client, identityGeneration, {
+    onAuthRequired,
   });
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);

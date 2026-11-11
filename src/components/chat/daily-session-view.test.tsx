@@ -1,11 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { DailySessionAuthGate } from "@/components/chat/daily-session-auth-gate";
-import {
-  DailySessionAuthProvider,
-  useDailySessionAuth,
-} from "@/features/chat/session/daily-session-auth-provider";
+import type { GlobalAuthClient } from "@/features/auth/global-auth-client";
 import {
   DailySessionClientError,
   type DailySessionClient,
@@ -15,11 +11,11 @@ import type {
   ConversationMetadata,
   ConversationSnapshot,
 } from "@/features/chat/transports/daily-session-contract";
+import { AuthProvider, useAuth } from "@/providers/auth-provider";
 
 import { DailySessionView } from "./daily-session-view";
 
 const conversationId = "10000000-0000-4000-8000-000000000001";
-const xiaozhiUrl = "http://127.0.0.1:5050/xiaozhi";
 const userA = {
   id: "user-a",
   displayName: "用户 A",
@@ -83,9 +79,6 @@ function snapshot(
 
 function makeClient(overrides: Partial<DailySessionClient> = {}): DailySessionClient {
   return {
-    getAuthStatus: vi.fn(async () => ({ enabled: true, xiaozhiUrl, user: userA })),
-    login: vi.fn(),
-    logout: vi.fn(async () => undefined),
     listConversations: vi.fn(),
     createConversation: vi.fn(),
     loadSnapshot: vi.fn(async () => snapshot()),
@@ -95,14 +88,29 @@ function makeClient(overrides: Partial<DailySessionClient> = {}): DailySessionCl
   };
 }
 
-function renderView(client: DailySessionClient, extra?: React.ReactNode) {
+function makeAuthClient(
+  getAuthStatus: GlobalAuthClient["getAuthStatus"] = vi
+    .fn()
+    .mockResolvedValue({ enabled: true, user: userA }),
+): GlobalAuthClient {
+  return {
+    getAuthStatus,
+    login: vi.fn(),
+    loginDemo: vi.fn(),
+    logout: vi.fn(),
+  };
+}
+
+function renderView(
+  client: DailySessionClient,
+  extra?: React.ReactNode,
+  authClient = makeAuthClient(),
+) {
   return render(
-    <DailySessionAuthProvider client={client}>
-      <DailySessionAuthGate>
-        {extra}
-        <DailySessionView client={client} conversationId={conversationId} />
-      </DailySessionAuthGate>
-    </DailySessionAuthProvider>,
+    <AuthProvider client={authClient}>
+      {extra}
+      <DailySessionView client={client} conversationId={conversationId} />
+    </AuthProvider>,
   );
 }
 
@@ -117,8 +125,13 @@ function deferred<T>() {
 }
 
 function IdentityRetry() {
-  const auth = useDailySessionAuth();
+  const auth = useAuth();
   return <button onClick={auth.retry}>切换身份</button>;
+}
+
+function AuthStatusProbe() {
+  const auth = useAuth();
+  return <output data-testid="auth-status">{auth.status}</output>;
 }
 
 describe("DailySessionView", () => {
@@ -198,7 +211,7 @@ describe("DailySessionView", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("invalidates auth on 401 and uses one safe message for 404", async () => {
+  it("invalidates global auth on 401 and uses one safe message for 404", async () => {
     const unauthorized = makeClient({
       loadSnapshot: vi.fn(async () => {
         throw new DailySessionClientError({
@@ -208,10 +221,10 @@ describe("DailySessionView", () => {
         });
       }),
     });
-    const first = renderView(unauthorized);
-    expect(
-      await screen.findByRole("heading", { name: "登录日常会话" }),
-    ).toBeInTheDocument();
+    const first = renderView(unauthorized, <AuthStatusProbe />);
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-status")).toHaveTextContent("anonymous"),
+    );
     first.unmount();
 
     const notFound = makeClient({
@@ -253,16 +266,15 @@ describe("DailySessionView", () => {
   it("aborts and clears user A before loading user B", async () => {
     const nextIdentity = deferred<{
       enabled: true;
-      xiaozhiUrl: string;
       user: typeof userB;
     }>();
     const oldSnapshot = deferred<ConversationSnapshot>();
     let oldSignal: AbortSignal | undefined;
+    const getAuthStatus = vi
+      .fn<GlobalAuthClient["getAuthStatus"]>()
+      .mockResolvedValueOnce({ enabled: true, user: userA })
+      .mockReturnValueOnce(nextIdentity.promise);
     const client = makeClient({
-      getAuthStatus: vi
-        .fn<DailySessionClient["getAuthStatus"]>()
-        .mockResolvedValueOnce({ enabled: true, xiaozhiUrl, user: userA })
-        .mockReturnValueOnce(nextIdentity.promise),
       loadSnapshot: vi
         .fn<DailySessionClient["loadSnapshot"]>()
         .mockImplementationOnce((_id, signal) => {
@@ -275,7 +287,7 @@ describe("DailySessionView", () => {
           ]),
         ),
     });
-    renderView(client, <IdentityRetry />);
+    renderView(client, <IdentityRetry />, makeAuthClient(getAuthStatus));
     await waitFor(() => expect(client.loadSnapshot).toHaveBeenCalledOnce());
 
     fireEvent.click(screen.getByRole("button", { name: "切换身份" }));
@@ -283,7 +295,7 @@ describe("DailySessionView", () => {
     expect(screen.queryByText("用户 A 消息")).not.toBeInTheDocument();
 
     await act(async () => {
-      nextIdentity.resolve({ enabled: true, xiaozhiUrl, user: userB });
+      nextIdentity.resolve({ enabled: true, user: userB });
       await nextIdentity.promise;
     });
     expect(await screen.findByText("用户 B 消息")).toBeInTheDocument();
@@ -297,5 +309,19 @@ describe("DailySessionView", () => {
       await oldSnapshot.promise;
     });
     expect(screen.queryByText("用户 A 迟到消息")).not.toBeInTheDocument();
+  });
+
+  it("shows a full-login notice in demo mode without loading the snapshot", async () => {
+    const client = makeClient();
+    renderView(
+      client,
+      undefined,
+      makeAuthClient(vi.fn().mockResolvedValue({ enabled: false })),
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "完整登录后使用日常会话" }),
+    ).toBeInTheDocument();
+    expect(client.loadSnapshot).not.toHaveBeenCalled();
   });
 });

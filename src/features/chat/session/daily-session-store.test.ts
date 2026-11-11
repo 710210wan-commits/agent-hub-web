@@ -35,9 +35,6 @@ function conversation(
 
 function createClient(): DailySessionClient {
   return {
-    getAuthStatus: vi.fn(),
-    login: vi.fn(),
-    logout: vi.fn(),
     listConversations: vi.fn().mockResolvedValue({
       conversations: [],
       nextCursor: null,

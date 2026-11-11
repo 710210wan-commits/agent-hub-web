@@ -7,10 +7,7 @@ import {
   ConversationSnapshotSchema,
   CreateConversationRequestSchema,
   CreatedConversationSchema,
-  DailySessionAuthStatusSchema,
   DailySessionErrorEnvelopeSchema,
-  DailySessionLoginResponseSchema,
-  DailySessionLogoutResponseSchema,
   RenameConversationRequestSchema,
   RenamedConversationSchema,
   type ConversationList,
@@ -18,8 +15,6 @@ import {
   type ConversationMetadata,
   type ConversationSnapshot,
   type CreatedConversation,
-  type DailySessionAuthStatus,
-  type DailySessionUser,
 } from "./daily-session-contract";
 
 export interface DailySessionClientOptions {
@@ -43,12 +38,6 @@ export interface RenameConversationInput {
 }
 
 export interface DailySessionClient {
-  getAuthStatus(signal?: AbortSignal): Promise<DailySessionAuthStatus>;
-  login(
-    input: { username: string; password: string },
-    signal?: AbortSignal,
-  ): Promise<DailySessionUser>;
-  logout(signal?: AbortSignal): Promise<void>;
   listConversations(
     input?: ListConversationsInput,
     signal?: AbortSignal,
@@ -141,54 +130,7 @@ export function createDailySessionClient(
     return parsed.data;
   }
 
-  async function getAuthStatus(signal?: AbortSignal) {
-    return request(
-      "/auth/xiaozhi-status",
-      DailySessionAuthStatusSchema,
-      { method: "GET", signal },
-    );
-  }
-
   return {
-    getAuthStatus,
-
-    async login(input, signal) {
-      const body = JSON.stringify({
-        username: input.username,
-        password: input.password,
-      });
-      const login = await request(
-        "/auth/login",
-        DailySessionLoginResponseSchema,
-        { method: "POST", body, signal },
-      );
-      if (login.kbUnavailable) {
-        await request(
-          "/auth/xiaozhi-login",
-          DailySessionLoginResponseSchema,
-          { method: "POST", body, signal },
-        );
-      }
-
-      const status = await getAuthStatus(signal);
-      if (!status.enabled) {
-        throw new DailySessionClientError({
-          status: 401,
-          code: "AUTH_REQUIRED",
-          message: "登录状态未通过验证，请重新登录",
-        });
-      }
-      return status.user;
-    },
-
-    async logout(signal) {
-      await request(
-        "/auth/logout",
-        DailySessionLogoutResponseSchema,
-        { method: "POST", signal },
-      );
-    },
-
     async listConversations(input = {}, signal) {
       const limit = pageLimitSchema.parse(input.limit ?? 100);
       const search = new URLSearchParams({

@@ -37,12 +37,6 @@ const message = {
   createdAt: "2026-11-09T01:03:04.000Z",
 } as const;
 
-const user = {
-  id: "user-7",
-  displayName: "测试用户",
-  sessionExpiresAt: "2026-11-09T09:02:03.000Z",
-};
-
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -188,103 +182,12 @@ describe("daily Session client", () => {
     });
   });
 
-  it("restores verified auth status with the HttpOnly Cookie boundary", async () => {
-    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
-      jsonResponse({
-        enabled: true,
-        xiaozhiUrl: "http://127.0.0.1:5050/xiaozhi",
-        user,
-      }),
-    );
-    const client = createDailySessionClient({ fetchFn });
+  it("does not own global authentication operations", () => {
+    const client = createDailySessionClient({ fetchFn: vi.fn<typeof fetch>() });
 
-    await expect(client.getAuthStatus()).resolves.toMatchObject({
-      enabled: true,
-      user,
-    });
-    expect(requestAt(fetchFn)).toMatchObject({
-      url: "/agent-api/auth/xiaozhi-status",
-      init: { method: "GET", credentials: "same-origin" },
-    });
-  });
-
-  it("logs in directly then rechecks the verified server identity", async () => {
-    const fetchFn = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(jsonResponse({ success: true, user }))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          enabled: true,
-          xiaozhiUrl: "http://127.0.0.1:5050/xiaozhi",
-          user,
-        }),
-      );
-    const client = createDailySessionClient({ fetchFn });
-
-    await expect(
-      client.login({ username: "alice", password: "private-password" }),
-    ).resolves.toEqual(user);
-
-    expect(fetchFn).toHaveBeenCalledTimes(2);
-    expect(requestAt(fetchFn, 0)).toMatchObject({
-      url: "/agent-api/auth/login",
-      init: {
-        method: "POST",
-        body: JSON.stringify({
-          username: "alice",
-          password: "private-password",
-        }),
-      },
-    });
-    expect(requestAt(fetchFn, 1).url).toBe(
-      "/agent-api/auth/xiaozhi-status",
-    );
-  });
-
-  it("upgrades a basic login before accepting the verified identity", async () => {
-    const fetchFn = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        jsonResponse({ success: true, user, kbUnavailable: true }),
-      )
-      .mockResolvedValueOnce(jsonResponse({ success: true, user }))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          enabled: true,
-          xiaozhiUrl: "http://127.0.0.1:5050/xiaozhi",
-          user,
-        }),
-      );
-    const client = createDailySessionClient({ fetchFn });
-
-    await expect(
-      client.login({ username: "alice", password: "private-password" }),
-    ).resolves.toEqual(user);
-
-    expect(fetchFn).toHaveBeenCalledTimes(3);
-    expect(requestAt(fetchFn, 1)).toMatchObject({
-      url: "/agent-api/auth/xiaozhi-login",
-      init: {
-        method: "POST",
-        body: JSON.stringify({
-          username: "alice",
-          password: "private-password",
-        }),
-      },
-    });
-  });
-
-  it("logs out through the same-origin Cookie session", async () => {
-    const fetchFn = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(jsonResponse({ ok: true }));
-    const client = createDailySessionClient({ fetchFn });
-
-    await expect(client.logout()).resolves.toBeUndefined();
-    expect(requestAt(fetchFn)).toMatchObject({
-      url: "/agent-api/auth/logout",
-      init: { method: "POST", credentials: "same-origin" },
-    });
+    expect(client).not.toHaveProperty("getAuthStatus");
+    expect(client).not.toHaveProperty("login");
+    expect(client).not.toHaveProperty("logout");
   });
 
   it.each([
@@ -343,15 +246,13 @@ describe("daily Session client", () => {
     await expect(client.listConversations({})).rejects.toBe(abort);
   });
 
-  it("never includes credentials or raw network errors in the safe message", async () => {
+  it("never includes raw network errors in the safe message", async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockRejectedValue(new Error("private-password upstream socket detail"));
     const client = createDailySessionClient({ fetchFn });
 
-    await expect(
-      client.login({ username: "alice", password: "private-password" }),
-    ).rejects.toMatchObject({
+    await expect(client.listConversations({})).rejects.toMatchObject({
       code: "NETWORK_ERROR",
       message: "网络请求失败，请稍后重试",
     });

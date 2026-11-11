@@ -4,14 +4,12 @@ import { Clock3, Pin } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { DailySessionAuthGate } from "@/components/chat/daily-session-auth-gate";
 import { DailySessionHistory } from "@/components/chat/daily-session-history";
 import { AppShell } from "@/components/shell/app-shell";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { LoadingState } from "@/components/states/loading-state";
 import type { AppMode } from "@/config/modes";
-import { DailySessionAuthProvider } from "@/features/chat/session/daily-session-auth-provider";
 import type { DailySessionClient } from "@/features/chat/transports/daily-session-client";
 import type {
   ChatSessionSummary,
@@ -111,13 +109,7 @@ function renderContent(
     if (!dailySessionClient) {
       return <ErrorState message="当前模式不支持历史会话" />;
     }
-    return (
-      <DailySessionAuthProvider client={dailySessionClient}>
-        <DailySessionAuthGate>
-          <DailySessionHistory client={dailySessionClient} />
-        </DailySessionAuthGate>
-      </DailySessionAuthProvider>
-    );
+    return <DailySessionHistory client={dailySessionClient} />;
   }
   if (!sessionTransport) {
     return <ErrorState message="当前模式不支持历史会话" />;

@@ -45,14 +45,17 @@ const mocks = vi.hoisted(() => {
     },
   };
   const dailySessionClient = {
-    getAuthStatus,
-    login: vi.fn(),
-    logout: vi.fn(async () => undefined),
     listConversations: vi.fn(),
     createConversation: vi.fn(),
     loadSnapshot,
     loadMessages,
     renameConversation: vi.fn(),
+  };
+  const globalAuthClient = {
+    getAuthStatus,
+    login: vi.fn(),
+    loginDemo: vi.fn(),
+    logout: vi.fn(),
   };
   return {
     search: "mode=work",
@@ -64,6 +67,7 @@ const mocks = vi.hoisted(() => {
     loadSnapshot,
     loadMessages,
     dailySessionClient,
+    globalAuthClient,
     dailyTransport,
     workTransport,
     createChatTransport: vi.fn(() => dailyTransport),
@@ -108,7 +112,7 @@ vi.mock("@/features/chat/transports/daily-session-client", async (importOriginal
 
 function renderRoute() {
   return render(
-    <AuthProvider>
+    <AuthProvider client={mocks.globalAuthClient}>
       <ModeProvider>
         <ChatRoute />
       </ModeProvider>
@@ -204,6 +208,10 @@ describe("ChatRoute", () => {
     expect(mocks.dailyLoadSession).not.toHaveBeenCalled();
     expect(screen.queryByRole("textbox", { name: "消息" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "发送" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "退出登录" })).toHaveLength(1);
+    expect(
+      screen.queryByRole("heading", { name: "登录日常会话" }),
+    ).not.toBeInTheDocument();
   });
 
   it("never lets the E2E real-backend override replace work transport", () => {
@@ -269,7 +277,7 @@ describe("ChatRoute", () => {
 
     mocks.search = "mode=work&conversation=thread%2Fcreated";
     view.rerender(
-      <AuthProvider>
+      <AuthProvider client={mocks.globalAuthClient}>
         <ModeProvider>
           <ChatRoute />
         </ModeProvider>

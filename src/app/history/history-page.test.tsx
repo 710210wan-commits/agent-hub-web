@@ -15,14 +15,17 @@ const mocks = vi.hoisted(() => {
   const createConversation = vi.fn();
   const renameConversation = vi.fn();
   const dailyClient = {
-    getAuthStatus,
-    login: vi.fn(),
-    logout,
     listConversations,
     createConversation,
     loadSnapshot: vi.fn(),
     loadMessages: vi.fn(),
     renameConversation,
+  };
+  const globalAuthClient = {
+    getAuthStatus,
+    login: vi.fn(),
+    loginDemo: vi.fn(),
+    logout,
   };
   return {
     search: "mode=work",
@@ -36,6 +39,7 @@ const mocks = vi.hoisted(() => {
     createConversation,
     renameConversation,
     dailyClient,
+    globalAuthClient,
     createDailySessionClient: vi.fn(() => dailyClient),
     createXiaozhiTransport: vi.fn(() => ({
       kind: "xiaozhi" as const,
@@ -67,7 +71,7 @@ vi.mock("@/features/chat/transports/daily-session-client", async (importOriginal
 
 function renderPage() {
   return render(
-    <AuthProvider>
+    <AuthProvider client={mocks.globalAuthClient}>
       <ModeProvider>
         <HistoryPage />
       </ModeProvider>
@@ -196,6 +200,10 @@ describe("HistoryPage", () => {
     expect(mocks.createXiaozhiTransport).not.toHaveBeenCalled();
     expect(mocks.listSessions).not.toHaveBeenCalled();
     expect(mocks.listConversations).toHaveBeenCalledOnce();
+    expect(screen.getAllByRole("button", { name: "退出登录" })).toHaveLength(1);
+    expect(
+      screen.queryByRole("heading", { name: "登录日常会话" }),
+    ).not.toBeInTheDocument();
   });
 
   it("aborts the old work request and ignores its result after switching daily", async () => {
@@ -217,7 +225,7 @@ describe("HistoryPage", () => {
 
     mocks.search = "mode=daily";
     view.rerender(
-      <AuthProvider>
+      <AuthProvider client={mocks.globalAuthClient}>
         <ModeProvider>
           <HistoryPage />
         </ModeProvider>

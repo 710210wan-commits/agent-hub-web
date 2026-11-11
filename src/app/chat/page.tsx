@@ -4,13 +4,11 @@ import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { ChatPage } from "@/components/chat/chat-page";
-import { DailySessionAuthGate } from "@/components/chat/daily-session-auth-gate";
 import { DailySessionView } from "@/components/chat/daily-session-view";
 import { AppShell } from "@/components/shell/app-shell";
 import { readPublicRuntimeConfig } from "@/config/env";
 import { parseMode } from "@/config/modes";
 import type { MockRunScenario } from "@/features/chat/fixtures/default-run";
-import { DailySessionAuthProvider } from "@/features/chat/session/daily-session-auth-provider";
 import { createChatTransport } from "@/features/chat/transports/create-transport";
 import { createDailySessionClient } from "@/features/chat/transports/daily-session-client";
 import { createMockTransport } from "@/features/chat/transports/mock-transport";
@@ -84,14 +82,10 @@ export default function ChatRoute() {
       <AppShell title="历史会话">
         <div className="chat-page">
           <div className="chat-scroll-region daily-session-scroll-region">
-            <DailySessionAuthProvider client={dailySessionClient}>
-              <DailySessionAuthGate>
-                <DailySessionView
-                  client={dailySessionClient}
-                  conversationId={dailyConversation}
-                />
-              </DailySessionAuthGate>
-            </DailySessionAuthProvider>
+            <DailySessionView
+              client={dailySessionClient}
+              conversationId={dailyConversation}
+            />
           </div>
         </div>
       </AppShell>

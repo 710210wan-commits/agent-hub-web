@@ -10,13 +10,14 @@ import {
   mergeDailySessionMessages,
   type DailySessionViewMessage,
 } from "@/features/chat/session/daily-session-adapter";
-import { useDailySessionAuth } from "@/features/chat/session/daily-session-auth-provider";
+import { useDailySessionAuthBridge } from "@/features/chat/session/use-daily-session-auth-bridge";
 import {
   DailySessionClientError,
   type DailySessionClient,
 } from "@/features/chat/transports/daily-session-client";
 import type { ConversationMetadata } from "@/features/chat/transports/daily-session-contract";
 
+import { DailySessionAuthNotice } from "./daily-session-auth-notice";
 import { MessageList } from "./message-list";
 
 type ViewStatus = "loading" | "ready" | "not-found" | "error";
@@ -42,8 +43,31 @@ export function DailySessionView({
   client: DailySessionClient;
   conversationId: string;
 }) {
-  const auth = useDailySessionAuth();
-  const viewKey = `${auth.identityGeneration}:${conversationId}`;
+  const auth = useDailySessionAuthBridge();
+  if (!auth.enabled) return <DailySessionAuthNotice />;
+
+  return (
+    <AuthenticatedDailySessionView
+      client={client}
+      conversationId={conversationId}
+      identityGeneration={auth.identityGeneration}
+      onAuthRequired={auth.onAuthRequired}
+    />
+  );
+}
+
+function AuthenticatedDailySessionView({
+  client,
+  conversationId,
+  identityGeneration,
+  onAuthRequired,
+}: {
+  client: DailySessionClient;
+  conversationId: string;
+  identityGeneration: number;
+  onAuthRequired(): void;
+}) {
+  const viewKey = `${identityGeneration}:${conversationId}`;
   const [state, setState] = useState<ViewState>(() => initialState(viewKey));
   const activeKeyRef = useRef(viewKey);
   activeKeyRef.current = viewKey;
@@ -74,7 +98,7 @@ export function DailySessionView({
           return;
         }
         if (isAuthRequired(error)) {
-          auth.invalidate();
+          onAuthRequired();
           return;
         }
         if (isNotFound(error)) {
@@ -92,7 +116,7 @@ export function DailySessionView({
         });
       }
     },
-    [auth, client, conversationId],
+    [client, conversationId, onAuthRequired],
   );
 
   const startSnapshotLoad = useCallback(() => {
@@ -158,7 +182,7 @@ export function DailySessionView({
         return;
       }
       if (isAuthRequired(error)) {
-        auth.invalidate();
+        onAuthRequired();
         return;
       }
       setState((current) => ({
@@ -167,7 +191,7 @@ export function DailySessionView({
         pageError: safeError(error, "更早消息加载失败，请稍后重试"),
       }));
     }
-  }, [auth, client, conversationId, viewKey, visibleState]);
+  }, [client, conversationId, onAuthRequired, viewKey, visibleState]);
 
   if (visibleState.status === "loading") {
     return <LoadingState label="正在加载历史会话…" />;
