@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "data": [
+    {
+      "slug": "skill-creator",
+      "success": true,
+      "skill": {
+        "id": 4,
+        "slug": "skill-creator",
+        "name": "skill-creator",
+        "description": "创建、维护和改进 Agent Skill。",
+        "source_type": "remote",
+        "tool_dependencies": [],
+        "mcp_dependencies": [],
+        "skill_dependencies": [],
+        "dir_path": "skills/skill-creator",
+        "version": null,
+        "content_hash": null,
+        "share_config": { "access_level": "user", "department_ids": [], "user_uids": ["op-001"] },
+        "enabled": true,
+        "created_by": "op-001",
+        "updated_by": "op-001",
+        "created_at": "2026-11-11 04:00:00",
+        "updated_at": "2026-11-11 04:00:00",
+        "can_manage": true,
+        "is_builtin": false
+      }
+    },
+    { "slug": "frontend-design", "success": false, "error": "Skill slug 已被占用，请重新解析安装" }
+  ],
+  "summary": { "total": 2, "success": 1, "failed": 1 }
+}

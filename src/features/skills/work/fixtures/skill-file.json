@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "data": {
+    "path": "SKILL.md",
+    "content": "---\nname: MySQL Reporter\ndescription: 查询 MySQL 数据并生成结构化业务报告。\n---\n\n# MySQL Reporter\n\n当用户需要查看数据表、分析业务指标或生成报告时使用此 Skill。\n\n## 工作流程\n\n1. 确认目标数据库和查询范围。\n2. 先读取表结构，再构造只读查询。\n3. 总结关键指标并说明数据口径。\n"
+  }
+}

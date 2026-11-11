@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "data": [
+    { "name": "SKILL.md", "path": "SKILL.md", "is_dir": false },
+    {
+      "name": "scripts",
+      "path": "scripts",
+      "is_dir": true,
+      "children": [
+        { "name": "list_tables.py", "path": "scripts/list_tables.py", "is_dir": false },
+        { "name": "query.py", "path": "scripts/query.py", "is_dir": false }
+      ]
+    },
+    { "name": "references", "path": "references", "is_dir": true, "children": [] }
+  ]
+}

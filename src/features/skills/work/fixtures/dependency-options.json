@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "tools": [
+      { "slug": "terminal", "name": "Terminal" },
+      { "slug": "read_file", "name": "Read File" },
+      { "slug": "write_file" }
+    ],
+    "mcps": ["mysql-mcp"],
+    "skills": ["workspace-files", "deep-research"]
+  }
+}

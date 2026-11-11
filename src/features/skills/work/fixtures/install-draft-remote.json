@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "data": {
+    "draft_id": "8b1a4c3d-2e4f-4a5b-8c6d-1f2e3a4b5c6d",
+    "created_by": "op-001",
+    "source_type": "remote",
+    "source": "https://github.com/anthropics/skills",
+    "created_at": 1762830000,
+    "expires_at": 1762833600,
+    "items": [
+      {
+        "draft_item_id": "b2c3d4e5f60718293a4b5c6d7e8f9012",
+        "source_dir": "items/b2c3d4e5f60718293a4b5c6d7e8f9012",
+        "slug": "skill-creator",
+        "name": "skill-creator",
+        "original_name": "skill-creator",
+        "description": "创建、维护和改进 Agent Skill。",
+        "tool_dependencies": [],
+        "mcp_dependencies": [],
+        "skill_dependencies": [],
+        "warnings": [],
+        "success": true
+      },
+      {
+        "slug": "frontend-design",
+        "success": false,
+        "error": "拉取失败：repository not found"
+      }
+    ],
+    "default_share_config": { "access_level": "user", "department_ids": [], "user_uids": ["op-001"] },
+    "allowed_access_levels": ["user"]
+  }
+}

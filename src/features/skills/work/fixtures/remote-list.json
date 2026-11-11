@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "data": [
+    { "name": "skill-creator", "description": "创建、维护和改进 Agent Skill" },
+    { "name": "docx", "description": "读取、编辑和生成 Word 文档" },
+    { "name": "xlsx", "description": "" }
+  ]
+}

@@ -708,6 +708,55 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 1. `docs/skill-market/2026-11-11-work-skill-frontend-implementation.md` 新增 §6.1，Task 4 步骤与 Decision log 同步登记。
 2. 本条仅澄清已批准范围，不改变能力地图、白名单或 daily 边界。
 
+## 2026-11-11
+
+### 27. Work Skill 接口契约冻结（Task 1）
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 1`
+
+#### 问题
+
+- `mode=work` 要接入 Xiaozhi 现有 Skill API，但 daily 的生成契约基于另一套后端领域模型，不能复用；前端需要一份以 Xiaozhi 后端源码为事实源的冻结契约，防止实施和回归中悄悄漂移。
+
+#### 修改方案
+
+- 依据 `xiaozhi-offline-deploy` 后端 `skill_router.py`、`service.py` 与 `share_config.py` 冻结 Work 接口契约：列表/文件树/文件内容/依赖选项/生效范围/安装草稿 DTO，防御性解析（未知字段忽略、缺关键字段 fail closed），以及批量删除上限 50、草稿 TTL 3600、slug 模式、上传文件名限制（.zip 或 skill.md 结尾）、confirm/cancel 准确路径。
+- 以 13 个 fixture 载荷样本固定请求/响应形态，供 Task 2 BFF 测试复用。
+
+#### **代码变更：**
+
+1. 新增 `src/features/skills/work/contracts.ts`、`contracts.test.ts` 与 `fixtures/`（13 个样本），聚焦测试 41 例全部通过。
+2. `pnpm typecheck`、ESLint 与全量 Vitest（554 例）无回归。
+
+## 2026-11-11
+
+### 28. Work Skill 独立安全 BFF（Task 2）
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 2`
+
+#### 问题
+
+- 浏览器不能持有 Xiaozhi API Key，且新统一登录后匿名/演示态可能直接打 Work Skill BFF 执行写操作；需要独立、可审计、fail closed 的同源代理，而不是扩大聊天 `/api/work-agent/*`。
+
+#### 修改方案
+
+- 新增 `/api/work-skills/*` BFF：每个请求先用 `dsi_app_session` 在服务端调 DSI `/auth/xiaozhi-status` 验证完整登录态（anonymous、demo、失效、缺 Cookie、认证超时/故障全部 fail closed，且先于读上传体与调上游）；通过后才用 server-only `XIAOZHI_API_KEY` 调白名单内的 Xiaozhi 现有接口（19 条 method+path+query 规则，含 path/slug 查询校验）。
+- Header 隔离：Cookie 只发 DSI；浏览器 Authorization/Origin/Forwarded 等凭据丢弃；JSON、multipart 上传与 ZIP 流式下载原样透传安全响应头；4xx 提取 FastAPI detail、5xx 泛化，支持取消与超时（60s 上游 / 8s 认证，可调）。
+
+#### **代码变更：**
+
+1. 新增 `src/server/xiaozhi/skills-proxy.ts`、`skills-proxy.test.ts`（47 例）与薄路由 `src/app/api/work-skills/[...path]/route.ts`（含 route 测试 2 例）。
+2. `contracts.ts` 补充 `isSafeWorkSkillFilePath` 与 BFF 错误体 `{code,error}` 解析。
+3. 聚焦测试 49/49、现有 Work Agent BFF 测试 34/34 无回归；typecheck 与 ESLint 通过。
+
 ## 后续条目模板
 
 ```markdown
