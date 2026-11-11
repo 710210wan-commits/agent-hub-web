@@ -60,6 +60,22 @@ describe("parseFetchSse", () => {
     ]);
   });
 
+  it("keeps unnamed events observable as the SSE message default", async () => {
+    const response = responseFromText(
+      ": heartbeat\n\n" +
+        "id: conversation:1\n" +
+        "data: {\"type\":\"conversation.created\"}\n\n",
+    );
+
+    await expect(collect(response)).resolves.toEqual([
+      {
+        event: "message",
+        id: "conversation:1",
+        data: { type: "conversation.created" },
+      },
+    ]);
+  });
+
   it("skips malformed JSON and continues at the next event", async () => {
     const response = responseFromText(
       "event: messages\ndata: {not-json}\n\n" +

@@ -84,6 +84,10 @@ function makeClient(overrides: Partial<DailySessionClient> = {}): DailySessionCl
     loadSnapshot: vi.fn(async () => snapshot()),
     loadMessages: vi.fn(),
     renameConversation: vi.fn(),
+    submitTurn: vi.fn(),
+    listEvents: vi.fn(),
+    streamEvents: vi.fn(),
+    cancelTurn: vi.fn(),
     ...overrides,
   };
 }

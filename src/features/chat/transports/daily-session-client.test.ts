@@ -9,6 +9,9 @@ const conversationId = "10000000-0000-4000-8000-000000000001";
 const turnId = "20000000-0000-4000-8000-000000000002";
 const messageId = "40000000-0000-4000-8000-000000000004";
 const requestId = "50000000-0000-4000-8000-000000000005";
+const userMessageId = "60000000-0000-4000-8000-000000000006";
+const taskId = "30000000-0000-4000-8000-000000000003";
+const eventId = "70000000-0000-4000-8000-000000000007";
 
 const metadata = {
   conversationId,
@@ -35,6 +38,16 @@ const message = {
   status: "committed",
   artifactRefs: [],
   createdAt: "2026-11-09T01:03:04.000Z",
+} as const;
+
+const createdEvent = {
+  eventId,
+  eventSeq: "3",
+  conversationId,
+  schemaVersion: 1,
+  type: "conversation.created",
+  occurredAt: "2026-11-09T01:03:04.000Z",
+  payload: { version: 1 },
 } as const;
 
 function jsonResponse(body: unknown, status = 200) {
@@ -185,6 +198,225 @@ describe("daily Session client", () => {
     });
   });
 
+  it("submits a canonical turn and accepts the 202 receipt", async () => {
+    const accepted = {
+      conversationId,
+      turnId,
+      taskId,
+      userMessageId,
+      acceptedEventSeq: "3",
+      status: "queued",
+      reused: false,
+    } as const;
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(accepted, 202));
+    const signal = new AbortController().signal;
+    const client = createDailySessionClient({ fetchFn });
+
+    await expect(
+      client.submitTurn(
+        conversationId,
+        {
+          clientRequestId: requestId,
+          input: { kind: "text", text: "1+1" },
+        },
+        signal,
+      ),
+    ).resolves.toEqual(accepted);
+
+    const request = requestAt(fetchFn);
+    expect(request.url).toBe(
+      `/agent-api/conversations/${conversationId}/turns`,
+    );
+    expect(request.init).toMatchObject({
+      method: "POST",
+      credentials: "same-origin",
+      signal,
+    });
+    expect(JSON.parse(String(request.init.body))).toEqual({
+      clientRequestId: requestId,
+      input: { kind: "text", text: "1+1" },
+    });
+    const headers = new Headers(request.init.headers);
+    expect(headers.has("cookie")).toBe(false);
+    expect(headers.has("origin")).toBe(false);
+  });
+
+  it("pages canonical events after an exact sequence", async () => {
+    const page = {
+      events: [createdEvent],
+      nextAfterSeq: "3",
+      lastEventSeq: "3",
+      hasMore: false,
+    } as const;
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(page));
+    const client = createDailySessionClient({ fetchFn });
+
+    await expect(
+      client.listEvents(conversationId, { afterSeq: "2", limit: 37 }),
+    ).resolves.toEqual(page);
+
+    const request = requestAt(fetchFn);
+    const url = new URL(request.url, "https://agent-hub.test");
+    expect(url.pathname).toBe(
+      `/agent-api/conversations/${conversationId}/events`,
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      afterSeq: "2",
+      limit: "37",
+    });
+  });
+
+  it.each([
+    [200, "completed"],
+    [202, "cancelling"],
+  ] as const)("accepts cancel HTTP %i with %s state", async (status, turnStatus) => {
+    const cancelled = {
+      turn: {
+        turnId,
+        taskId,
+        turnIndex: "1",
+        acceptedEventSeq: "3",
+        status: turnStatus,
+        errorCode: null,
+      },
+    };
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(cancelled, status));
+    const client = createDailySessionClient({ fetchFn });
+
+    await expect(client.cancelTurn(conversationId, turnId)).resolves.toEqual(
+      cancelled,
+    );
+    expect(requestAt(fetchFn)).toMatchObject({
+      url: `/agent-api/conversations/${conversationId}/turns/${turnId}/cancel`,
+      init: { method: "POST", credentials: "same-origin" },
+    });
+    expect(requestAt(fetchFn).init.body).toBeUndefined();
+  });
+
+  it("streams with afterSeq and a conversation-scoped Last-Event-ID", async () => {
+    const body =
+      `id: ${conversationId}:3\n` +
+      "event: conversation.created\n" +
+      `data: ${JSON.stringify(createdEvent)}\n\n`;
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      }),
+    );
+    const client = createDailySessionClient({ fetchFn });
+    const events = client.streamEvents(conversationId, {
+      afterSeq: "2",
+      lastEventId: `${conversationId}:2`,
+    });
+    const iterator = events[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({
+      done: false,
+      value: createdEvent,
+    });
+
+    const request = requestAt(fetchFn);
+    const url = new URL(request.url, "https://agent-hub.test");
+    expect(url.pathname).toBe(
+      `/agent-api/conversations/${conversationId}/events/stream`,
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({ afterSeq: "2" });
+    expect(request.init).toMatchObject({
+      method: "GET",
+      credentials: "same-origin",
+    });
+    const headers = new Headers(request.init.headers);
+    expect(headers.get("last-event-id")).toBe(`${conversationId}:2`);
+    expect(headers.has("cookie")).toBe(false);
+    expect(headers.has("origin")).toBe(false);
+  });
+
+  it("reports a stream HTTP envelope on first iteration", async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(
+        {
+          error: {
+            code: "RESYNC_REQUIRED",
+            message: "PRIVATE_UPSTREAM_DETAIL",
+            requestId,
+          },
+        },
+        409,
+      ),
+    );
+    const client = createDailySessionClient({ fetchFn });
+    const iterator = client
+      .streamEvents(conversationId, { afterSeq: "2" })
+      [Symbol.asyncIterator]();
+
+    await expect(iterator.next()).rejects.toMatchObject({
+      status: 409,
+      code: "RESYNC_REQUIRED",
+      requestId,
+      message: "事件记录已过期，请重新同步会话",
+    });
+  });
+
+  it("reports EOF as STREAM_DISCONNECTED without synthesizing a terminal event", async () => {
+    const body =
+      `id: ${conversationId}:3\n` +
+      "event: conversation.created\n" +
+      `data: ${JSON.stringify(createdEvent)}\n\n`;
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(body, {
+        headers: { "content-type": "text/event-stream" },
+      }),
+    );
+    const client = createDailySessionClient({ fetchFn });
+    const iterator = client
+      .streamEvents(conversationId, { afterSeq: "2" })
+      [Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({
+      done: false,
+      value: createdEvent,
+    });
+    await expect(iterator.next()).rejects.toMatchObject({
+      code: "STREAM_DISCONNECTED",
+      message: "会话事件流已断开，请重新连接",
+    });
+  });
+
+  it("preserves AbortError when the stream request is cancelled", async () => {
+    const abort = new DOMException("aborted", "AbortError");
+    const fetchFn = vi.fn<typeof fetch>().mockRejectedValue(abort);
+    const signal = new AbortController().signal;
+    const client = createDailySessionClient({ fetchFn });
+    const iterator = client
+      .streamEvents(conversationId, { afterSeq: "2" }, signal)
+      [Symbol.asyncIterator]();
+
+    await expect(iterator.next()).rejects.toBe(abort);
+    expect(requestAt(fetchFn).init.signal).toBe(signal);
+  });
+
+  it("rejects a Last-Event-ID from another conversation before fetching", async () => {
+    const fetchFn = vi.fn<typeof fetch>();
+    const client = createDailySessionClient({ fetchFn });
+    const iterator = client
+      .streamEvents(conversationId, {
+        lastEventId: "90000000-0000-4000-8000-000000000009:2",
+      })
+      [Symbol.asyncIterator]();
+
+    await expect(iterator.next()).rejects.toThrow(
+      "Last-Event-ID 必须属于当前会话",
+    );
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it("does not own global authentication operations", () => {
     const client = createDailySessionClient({ fetchFn: vi.fn<typeof fetch>() });
 
@@ -221,6 +453,47 @@ describe("daily Session client", () => {
     expect(error).toBeInstanceOf(DailySessionClientError);
     expect(error).toMatchObject({ status, code, requestId, message: messageText });
     expect(String(error)).not.toContain("PRIVATE_UPSTREAM_DETAIL");
+  });
+
+  it.each([
+    [409, "TURN_IN_PROGRESS", "当前会话已有任务运行中"],
+    [409, "IDEMPOTENCY_CONFLICT", "请求标识冲突，请重新发起请求"],
+    [409, "RESYNC_REQUIRED", "事件记录已过期，请重新同步会话"],
+    [503, "CONVERSATION_EXECUTION_DISABLED", "当前会话暂不可执行"],
+  ])(
+    "preserves backend error code %s instead of replacing it from HTTP status",
+    async (status, code, messageText) => {
+      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+        jsonResponse(
+          {
+            error: { code, message: "PRIVATE_UPSTREAM_DETAIL", requestId },
+          },
+          status,
+        ),
+      );
+      const client = createDailySessionClient({ fetchFn });
+
+      await expect(client.loadSnapshot(conversationId)).rejects.toMatchObject({
+        status,
+        code,
+        requestId,
+        message: messageText,
+      });
+    },
+  );
+
+  it("falls back to HTTP status only when the error envelope is malformed", async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ error: { code: "RESYNC_REQUIRED" } }, 409));
+    const client = createDailySessionClient({ fetchFn });
+
+    await expect(client.loadSnapshot(conversationId)).rejects.toMatchObject({
+      status: 409,
+      code: "CONFLICT",
+      requestId: undefined,
+      message: "会话已被更新，请刷新后重试",
+    });
   });
 
   it("fails safely for malformed success JSON without exposing it", async () => {
