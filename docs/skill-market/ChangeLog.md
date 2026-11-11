@@ -658,6 +658,56 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 6. 更新 `src/app/globals.css`，统一 Skill 业务区标题、正文和字段标签的字号、字重与行高，并移除 Skill 模块全部手动刷新按钮。
 7. 扩展 Catalog、Mine、Publication、Review 组件测试；验证全量 Vitest 460/460、TypeScript strict、全仓 ESLint、diff check 及桌面/窄屏浏览器核验通过，源码扫描无剩余手动刷新按钮。
 
+## 2026-11-11
+
+### 25. 批准单用户 Work Skill Market / Editor 设计与实施计划
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 0`
+
+#### 问题
+
+- 已批准的 Skill 绑定设计和 daily 迁移计划仍要求 `mode=work` 保持零请求占位，与新的 Work Skill Market / Editor 目标直接冲突。
+- 原型和可行性方案虽已收敛功能、交互和单用户部署边界，但尚未成为 `agent-hub-web` 的绑定权威，不能据此修改生产代码。
+
+#### 修改方案
+
+- 在绑定设计中正式批准 `mode=work` 通过独立 BFF 接入 Xiaozhi 现有 Skill API，并保持 daily 的契约、生命周期和 Runtime 边界不变。
+- 用独立 Work 实施计划冻结单用户固定操作员、DSI Session fail-closed、API Key 隔离、功能范围、原型顺序契约和 TDD 交付门禁。
+
+#### **代码变更：**
+
+1. 更新 `AGENTS.md`，登记 mode-specific daily/Work 权威计划及 supersession 规则。
+2. 更新 `docs/skill-market/2026-10-27-agent-hub-web-design.md`，取代旧 Work 占位约束，补充路由、BFF、安全、功能与验收边界。
+3. 新增 `docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`，形成 Task 1～6 的可执行 TDD 计划和停止条件。
+4. 本条仅完成设计与计划批准，没有修改生产代码、测试或任何后端仓库。
+
+### 26. 记录 Work 共享范围选择器的实施范围取舍
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`§6.1`
+
+#### 问题
+
+- 冻结的 Work BFF 白名单不含 `GET /api/departments` 与 `GET /api/auth/users/access-options`，原 Vue `ShareConfigForm` 的部门多选、指定多用户面板缺少目录数据源，无法在本期内完整复刻。
+
+#### 修改方案
+
+- 在 Work 计划中冻结本期共享范围 UI 为单选形态：按 `allowed_access_levels` 过滤选项，提交载入的原配置数组；后端保存路径强制追加操作员自己，单用户模式下语义为"仅自己 / 所在部门 / 全局共享"。
+- 明确合并保留规则：不得因界面降级缩小已有配置的可见范围；未来需要多选面板时按停止条件先更新计划与白名单。
+- 同步把该取舍回写到总体方案 `20261104_xiaozhi-offline-deploy/docs/2026-11-11_skill-workspace-prototype-and-implementation-plan.md` §6.1。
+
+#### **代码变更：**
+
+1. `docs/skill-market/2026-11-11-work-skill-frontend-implementation.md` 新增 §6.1，Task 4 步骤与 Decision log 同步登记。
+2. 本条仅澄清已批准范围，不改变能力地图、白名单或 daily 边界。
+
 ## 后续条目模板
 
 ```markdown
