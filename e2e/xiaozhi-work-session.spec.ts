@@ -25,6 +25,10 @@ test("work mode persists, restores, continues, cancels, and stays isolated from 
   page,
   request,
 }) => {
+  test.skip(
+    process.env.RUN_XIAOZHI_REAL_E2E !== "1",
+    "requires explicit RUN_XIAOZHI_REAL_E2E=1 opt-in",
+  );
   const apiKey = process.env.XIAOZHI_API_KEY;
   const apiKeyPrefix = ["yx", "key_"].join("");
   test.skip(!apiKey?.startsWith(apiKeyPrefix), "requires a temporary server-only Xiaozhi key");
