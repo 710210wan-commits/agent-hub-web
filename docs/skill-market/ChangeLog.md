@@ -876,7 +876,7 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 ### 33. Work Skill BFF 浏览器路径修正（加载失败与批量管理禁用根因）
 
-提交：未提交
+提交：`e0e9562`
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -900,7 +900,7 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 ### 34. 对齐老前端 Skill 页面跳转与 Creator 草稿状态保留
 
-提交：未提交
+提交：`e0e9562`
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -926,7 +926,7 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 ### 35. Skill 审核证据子标题样式统一
 
-提交：未提交
+提交：`e0e9562`
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -948,7 +948,7 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 ### 36. 统一 Skill 子页面返回链接
 
-提交：未提交
+提交：`e0e9562`
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
