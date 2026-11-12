@@ -11,6 +11,27 @@ describe("Skill Market frontend independence", () => {
   });
 
   it.each([
+    "src/features/skills/work/contracts.ts",
+    "src\\features\\skills\\work\\contracts.test.ts",
+  ])("accepts approved Xiaozhi paths in the frozen Work contract: %s", (path) => {
+    expect(findSkillMarketIndependenceViolations([{
+      path,
+      source: [
+        'remoteList: "/api/skills/remote/list"',
+        'uploadPrepare: "/api/skills/import/prepare"',
+        'return `/api/skills/install-drafts/${safeId}`',
+      ].join("\n"),
+    }])).toEqual([]);
+  });
+
+  it("still rejects the legacy root path inside the Work contract", () => {
+    expect(findSkillMarketIndependenceViolations([{
+      path: "src/features/skills/work/contracts.ts",
+      source: 'fetch("/api/skills")',
+    }])).toEqual([{ path: "src/features/skills/work/contracts.ts", rule: "legacy /api/skills dependency" }]);
+  });
+
+  it.each([
     ["fetch('/api/skills')", "legacy /api/skills dependency"],
     ["loadProjectSkillCatalog()", "legacy filesystem catalog dependency"],
     ["import 'DSI-agent-loop/api/src/db/schema'", "backend or legacy repository source dependency"],
