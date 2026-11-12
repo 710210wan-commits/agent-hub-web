@@ -117,4 +117,27 @@ describe("知识库列表页 × 全局登录态（Task 6）", () => {
     );
     expect(screen.getByTestId("auth-status").textContent).toBe("authenticated");
   });
+
+  it("完整登录态 + 403：显示权限或 Origin 错误，但不退出", async () => {
+    listKbDatabases.mockRejectedValue(
+      new KbApiError(
+        "unknown",
+        403,
+        "请求来源校验失败，请联系管理员检查部署配置",
+      ),
+    );
+    const client = createClientStub({
+      getAuthStatus: vi.fn().mockResolvedValue({
+        enabled: true,
+        user: { id: "u-1", displayName: "张三" },
+      }),
+    });
+    renderPage(client);
+
+    expect(
+      await screen.findByText("请求来源校验失败，请联系管理员检查部署配置"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("auth-status").textContent).toBe("authenticated");
+    expect(screen.queryByText("登录后使用知识库")).not.toBeInTheDocument();
+  });
 });
