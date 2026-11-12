@@ -3114,6 +3114,26 @@
                 "argumentHint": {
                   "type": "string"
                 },
+                "availability": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "installable": {
+                      "type": "boolean"
+                    },
+                    "reasonCode": {
+                      "const": "skill.protected_name_conflict",
+                      "type": "string"
+                    },
+                    "runnable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "installable",
+                    "runnable"
+                  ],
+                  "type": "object"
+                },
                 "category": {
                   "const": "other",
                   "type": "string"
@@ -3177,11 +3197,21 @@
                 "relativePath": {
                   "type": "string"
                 },
+                "source": {
+                  "enum": [
+                    "built-in",
+                    "market"
+                  ],
+                  "type": "string"
+                },
                 "sourceDir": {
                   "type": "string"
                 },
                 "status": {
-                  "const": "available",
+                  "enum": [
+                    "available",
+                    "conflict"
+                  ],
                   "type": "string"
                 },
                 "title": {
@@ -3196,7 +3226,6 @@
                 "description",
                 "id",
                 "loadedByScenarios",
-                "market",
                 "name",
                 "relativePath",
                 "sourceDir",
@@ -7354,15 +7383,71 @@
   "info": {
     "description": "Versioned contract for the Skill Creator and Skill Market HTTP surface used by the web clients.",
     "title": "Skill Market API",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "openapi": "3.1.0",
   "paths": {
     "/api/skill-market/catalog": {
       "get": {
-        "description": "Builds the current runtime-visible Skill Market catalog.",
+        "description": "Builds the unified built-in and published daily Skill catalog.",
         "operationId": "getSkillCatalog",
+        "parameters": [
+          {
+            "description": "Optional maximum number of returned items.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Optional zero-based item offset.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Reserved cursor for a future pagination mode.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional name, description, category, or tool search text.",
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional availability status filter.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "available",
+                "conflict"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import { installGlobalAuthFixture } from "./fixtures/global-auth";
+
+test.beforeEach(async ({ page }) => {
+  await installGlobalAuthFixture(page);
+});
+
 test("tablet collapses sidebar labels and mobile opens navigation", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 760 });
   await page.goto("/chat?mode=daily");

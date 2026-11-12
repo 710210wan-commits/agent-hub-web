@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "data": [
+    { "slug": "meeting-notes", "success": true },
+    { "slug": "old-report", "success": false, "error": "技能 'old-report' 不存在" }
+  ],
+  "summary": { "total": 2, "success": 1, "failed": 1 }
+}

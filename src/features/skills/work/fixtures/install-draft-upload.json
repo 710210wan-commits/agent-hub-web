@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "data": {
+    "draft_id": "3f6f8c2e-7d2b-4a1e-9c0d-2e5b8a9d4f01",
+    "created_by": "op-001",
+    "source_type": "upload",
+    "source": "mysql-reporter.zip",
+    "created_at": 1762828800,
+    "expires_at": 1762832400,
+    "items": [
+      {
+        "draft_item_id": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "source_dir": "items/a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "slug": "mysql-reporter",
+        "name": "MySQL Reporter",
+        "original_name": "mysql-reporter",
+        "description": "查询 MySQL 数据并生成结构化业务报告。",
+        "tool_dependencies": ["terminal"],
+        "mcp_dependencies": [],
+        "skill_dependencies": [],
+        "warnings": [],
+        "success": true
+      }
+    ],
+    "default_share_config": { "access_level": "user", "department_ids": [], "user_uids": ["op-001"] },
+    "allowed_access_levels": ["global", "department", "user"]
+  }
+}

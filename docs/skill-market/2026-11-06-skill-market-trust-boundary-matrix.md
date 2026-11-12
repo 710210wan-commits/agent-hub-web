@@ -10,7 +10,7 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 
 本矩阵覆盖新前端浏览器、同源 BFF、日常后端、Artifact Store、数据库和 Runtime。浏览器提交的 mode、路径、查询、业务 DTO 和 Header 均不可信；只有 BFF 的服务端目标配置和签名配置、后端验签后的 Principal、数据库权威状态及通过 hash/Schema 校验的 Artifact 可进入下一信任层。
 
-H-01 只冻结信任边界和负向证据，不在前端复制后端权限规则。日志脱敏的完整扫描归 H-03，API client 的 mode/cache key 和 work 零请求门禁归 B-06。
+H-01 只冻结信任边界和负向证据，不在前端复制后端权限规则。H-03 已完成日志脱敏和构建扫描，B-06 已完成 API client 的 mode/cache key 和 work 零请求门禁。
 
 ## 2. 边界矩阵
 
@@ -27,7 +27,7 @@ H-01 只冻结信任边界和负向证据，不在前端复制后端权限规则
 
 | 威胁 | 预期控制 | 自动化负向证据 | 补充验证/后续门禁 |
 | --- | --- | --- | --- |
-| Origin/目标注入 | 浏览器不能提交 Origin、Host、target、url 或 upstream；只允许服务端 daily Origin | `src/config/skill-market-targets.test.ts`：public lookalike、对象覆盖和查询覆盖全部失败；`src/features/skills/api/gateway.test.ts`：上游调用前剥离 Host/Origin | H-03 扫描错误和日志不出现上游 Origin |
+| Origin/目标注入 | 浏览器不能提交 Origin、Host、target、url 或 upstream；只允许服务端 daily Origin | `src/config/skill-market-targets.test.ts`：public lookalike、对象覆盖和查询覆盖全部失败；`src/features/skills/api/gateway.test.ts`：上游调用前剥离 Host/Origin；`scripts/skill-market-sensitive-data.test.ts`：客户端构建出现上游 Origin 时失败 | H-03 自动扫描已收口 |
 | Principal Header 注入 | BFF 丢弃客户端 Principal，并用服务端配置重新签名 | `src/features/skills/api/gateway.test.ts`：客户端 id/roles 不进入上游；`src/config/skill-market-principal.test.ts`：身份、角色、managed scenarios、permissions 篡改均验签失败 | 后端仍是身份和权限最终权威 |
 | 方法/路径重放 | 签名绑定最终 method 和 originalUrl；路径只允许固定 operation 形状 | `src/config/skill-market-principal.test.ts`：method/query order 改变后验签失败；`src/config/skill-market-targets.test.ts`：未知前缀、额外段和多重编码穿越失败 | K-04 执行真实跨层重放测试 |
 | 过期签名 | 超过五分钟的 Principal envelope 被后端拒绝 | `src/config/skill-market-principal.test.ts`：过期时间戳验签失败；后端 `test:skill-market:principal` 覆盖同一窗口 | 不在浏览器刷新或伪造 Principal |
@@ -39,9 +39,9 @@ H-01 只冻结信任边界和负向证据，不在前端复制后端权限规则
 
 1. 在浏览器网络面板分别访问 `mode=daily` 与 `mode=work`；work 不得出现 `/api/skill-market` 请求。
 2. 对 daily 请求手工加入 Origin、Host 和任一 `x-skill-principal-*` Header；BFF 上游请求只能出现服务端重新生成的 Principal。
-3. 检查错误响应和服务日志，不得出现 HMAC Secret、完整签名原文、服务端 Origin、上传正文或完整 Prompt；该项在 H-03 完成自动扫描后关闭。
+3. 检查错误响应和服务日志，不得出现 HMAC Secret、完整签名原文、服务端 Origin、上传正文或完整 Prompt；H-03 已通过异常 canary 测试和生产构建扫描关闭该项。
 4. B-06 完成后切换 daily → work → daily，确认 work 页面不显示 daily 数据，daily 重新进入时只读取带 daily mode 的缓存 key。
 
 ## 5. H-01 退出结论
 
-七类要求威胁均已有自动化负向证据或明确人工步骤。当前未解决项分别由 H-03、B-06、H-04/I-05 和 K-04/K-05 承接，不改变 H-01 已冻结的信任边界。
+七类要求威胁均已有自动化负向证据或明确人工步骤。H-03 和 B-06 已完成；剩余跨 scope/Runtime 真实链路由 H-04/I-05 和 K-04/K-05 承接，不改变 H-01 已冻结的信任边界。

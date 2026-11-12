@@ -1,0 +1,128 @@
+{
+  "checkedAt": "2026-11-09T15:07:08.364Z",
+  "versions": {
+    "backend": {
+      "commit": "163984a1e5b53f4a35d2a1b1301b0cb8fbbc5431",
+      "dirty": true
+    },
+    "legacyFrontend": {
+      "commit": "163984a1e5b53f4a35d2a1b1301b0cb8fbbc5431",
+      "dirty": true,
+      "buildId": "1RBLuOr_OqokF9l13hcCe"
+    },
+    "newFrontend": {
+      "commit": "c3d93931001c522100039034b96209ccba3a21d4",
+      "dirty": true,
+      "buildId": "5UxY1gNPu3Z8qqbxRZNtU"
+    }
+  },
+  "origins": {
+    "backendOrigin": "http://127.0.0.1:3301",
+    "frontendOrigin": "http://127.0.0.1:3300",
+    "legacyOrigin": "http://127.0.0.1:5300"
+  },
+  "catalog": [
+    {
+      "id": "built-in:aircraft-region-query",
+      "name": "aircraft-region-query",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:ais-region-query",
+      "name": "ais-region-query",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:alarm-disposal-orchestrator",
+      "name": "alarm-disposal-orchestrator",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:border-defense-daily-report",
+      "name": "border-defense-daily-report",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:border-defense-qa",
+      "name": "border-defense-qa",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:conventional-commit-helper",
+      "name": "conventional-commit-helper",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:csv-profile",
+      "name": "csv-profile",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:disaster-satellite-query",
+      "name": "disaster-satellite-query",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:earthquake-assessment",
+      "name": "earthquake-assessment",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:fire-investigation",
+      "name": "fire-investigation",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:flood-assessment",
+      "name": "flood-assessment",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "built-in:oil-spill-tracing",
+      "name": "oil-spill-tracing",
+      "source": "built-in",
+      "status": "available"
+    },
+    {
+      "id": "market:02427d06-da94-4336-a623-53e903f26473",
+      "name": "border-incident-brief",
+      "publicationId": "02427d06-da94-4336-a623-53e903f26473",
+      "revision": 2,
+      "source": "market",
+      "status": "available"
+    },
+    {
+      "id": "market:fb1fcf63-5986-49a6-8d05-c21665760f46",
+      "name": "incident-briefing-demo",
+      "publicationId": "fb1fcf63-5986-49a6-8d05-c21665760f46",
+      "revision": 1,
+      "source": "market",
+      "status": "available"
+    }
+  ],
+  "isolation": {
+    "newFrontendAfterLegacyStop": true,
+    "legacyFrontendAfterNewFrontendStop": true,
+    "legacyFrontendRoutes": [
+      "/skills",
+      "/skills/mine",
+      "/skills/review",
+      "/skills/manage"
+    ],
+    "newFrontendRequests": [
+      "http://127.0.0.1:3300/api/skill-market/catalog?mode=daily"
+    ]
+  },
+  "result": "passed"
+}

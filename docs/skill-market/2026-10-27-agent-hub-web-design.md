@@ -2,11 +2,11 @@
 
 日期：2026-10-27
 目标仓库：`S:\Projects\agent-hub-web`
-状态：已批准；2026-11-05 批准纳入日常模式 Skill Creator + Skill Market 完整生命周期
+状态：已批准；2026-11-05 批准纳入日常模式 Skill Creator + Skill Market 完整生命周期；2026-11-11 批准纳入单用户 Work Skill Market / Editor
 
 ## 1. 意图
 
-建设独立、简洁、可扩展的智能体 Web 前端。首页采用 GPT 类对话体验，让用户进入系统即可提问；左侧直接展示主要能力入口。平台负责统一外壳、导航、对话交互与扩展协议，各能力负责人以后可独立替换页面展示形式和视觉风格。
+建设独立、简洁、可扩展的智能体 Web 前端。首页采用 GPT 类对话体验，让用户进入系统即可提问；左侧直接展示主要能力入口。平台负责统一外壳、导航、设计 token、基础控件、状态体验、对话交互与扩展协议；各能力可独立调整信息架构和展示形式，但不得自行形成与新前端割裂的视觉语言。
 
 AgentLoop 是普通对话的隐式运行底座，不作为用户可选能力。Workflow 暂不进入首版。
 
@@ -18,7 +18,7 @@ AgentLoop 是普通对话的隐式运行底座，不作为用户可选能力。W
 - 左侧提供 GIS 工作台、知识库、Skill、MCP 管理入口。
 - 知识库、MCP 页面继续使用可替换的最小资源管理模板。
 - Skill 页面在 `mode=daily` 接入 Skill 广场、作者工作台、Creator、审核、发布和安装完整生命周期。
-- Skill 页面在 `mode=work` 只显示“办公场景暂未接入”，不请求或回退到日常 Skill Market。
+- Skill 页面在 `mode=work` 接入 Xiaozhi 现有 Skill Market 与已安装 Skill 管理编辑器，通过独立同源 BFF 工作，不请求或回退到日常 Skill Market。
 - 设置页预留模型、评测、API 三个入口。
 - 前端可切换 mock transport 与现有 `projects_new` transport。
 - 项目独立构建、测试、容器化部署。
@@ -27,7 +27,7 @@ AgentLoop 是普通对话的隐式运行底座，不作为用户可选能力。W
 
 - 不实现 Workflow。
 - 不修改 `S:\Projects\projects_new`。
-- 不实现真实登录、权限或统一认证。
+- 不在 Skill 模块内新建认证体系；Work Skill 复用现有统一登录的 HttpOnly DSI Session，并继续由 Xiaozhi 对固定操作员账号执行最终资源权限判断。
 - 不实现真实会话持久化。
 - 知识库和 MCP 不实现资源编辑流程；Skill 的编辑、审核、发布和安装流程按本文 Skill 扩展设计实施。
 - 不安装 Cesium、MapLibre 或其他地图引擎。
@@ -65,14 +65,16 @@ AgentLoop 不显示。GIS 工作台独立于普通对话。知识库、Skill、M
 - `/gis?mode=daily|work`
 - `/knowledge?mode=daily|work`
 - `/skills?mode=daily|work`
-- `/skills/[id]?mode=daily`
+- `/skills/[id]?mode=daily|work`
 - `/skills/mine?mode=daily`
-- `/skills/create?mode=daily`
+- `/skills/creator?mode=daily[&draftId=...]`
+- `/skills/drafts/new?mode=daily`
+- `/skills/drafts/[id]?mode=daily`
 - `/skills/review?mode=daily`
 - `/skills/manage?mode=daily`
 - `/mcp?mode=daily|work`
 - `/settings?section=model|evaluation|api&mode=daily|work`
-- `/knowledge/[id]`、`/skills/[id]`、`/mcp/[id]`：仅返回导航与内容插槽
+- `/knowledge/[id]`、`/mcp/[id]`：仅返回导航与内容插槽；`/skills/[id]` 按 mode 分别进入 daily 详情或 Work Editor
 
 缺失或非法 `mode` 回退到 `daily`。
 
@@ -89,9 +91,11 @@ AgentLoop 不显示。GIS 工作台独立于普通对话。知识库、Skill、M
 Skill 模块的模式边界已经冻结：
 
 - `mode=daily` 只通过新前端同源 BFF 访问服务端白名单中的日常 Skill Market 后端。
-- `mode=work` 本期不接入办公 Skill Market，不挂载 daily 查询、预取或 mutation，不发送 Skill Market 请求。
-- `mode=work` 不得回退、代理或误连到日常后端，也不得显示 daily 的缓存、草稿、发布、安装或 Runtime 状态。
-- query key、缓存、草稿上下文和 mutation 必须包含 `mode`；切换到 work 时清除 daily 页面内状态。
+- `mode=work` 只通过独立同源 `/api/work-skills/*` BFF 访问 Xiaozhi 白名单中的 `/api/skills/*` 与 `/api/system/skills/*`；不得调用 daily `/api/skill-market/*`。
+- `mode=work` 不得显示或复用 daily 的缓存、草稿、Creator、审核、发布、安装或 Runtime 状态；`mode=daily` 同样不得显示或复用 Work 的安装草稿、文件编辑和权限状态。
+- query key、请求生命周期、选择、弹窗和 mutation 状态必须按 mode 隔离；模式切换时中止旧请求并清除离开模式的临时页面状态。
+- Work 首版采用单用户固定操作员模式：一个 Agent Hub 部署对应一个 `XIAOZHI_API_KEY` 所属账号，不宣称支持多用户 `can_manage`、共享范围或文件权限隔离。
+- Work BFF 必须先使用请求中的 `dsi_app_session` 在服务端验证完整统一登录态；anonymous、demo、失效会话和认证服务不可用均 fail closed，且不得调用 Xiaozhi。
 
 ## 7. 新对话与对话框
 
@@ -166,7 +170,7 @@ UI 状态机至少包含：
 - 默认卡片列表
 - loading、empty、error 插槽
 
-负责人可替换为卡片、表格、看板或其他视觉形式。统一外壳不约束卡片内容、详情页或编辑流程。
+负责人可在统一设计语言内选择卡片、表格、看板或其他适合的信息展示形式。详情页和编辑流程可按业务需要扩展，但必须继续使用新前端已有的页面宽度、间距、字号、颜色、边框、按钮、表单、卡片和 loading/empty/error 状态模式。
 
 详情页首版只提供返回导航和内容插槽。
 
@@ -181,16 +185,34 @@ Skill 不再沿用只读 fixture 和详情占位，而是在 `mode=daily` 提供
 - 审核：Submission 证据、Trigger Test、审核意见、通过、驳回和删除待审核项。
 - 发布管理：Publication、Artifact 下载、安装、启用、停用、下架和创建新修订。
 
-App Router 页面保持薄，业务代码放在 `src/features/skills/` 下的 contract、api、catalog、authoring、creator、review、publication 和共享组件中。API DTO、运行时校验、错误转换和 UI ViewModel 分离；Creator 使用显式步骤状态机，不能重新形成超大单文件页面。
+`mode=work` 提供 Xiaozhi 现有能力的等价换肤，不复用 daily Creator 生命周期：
+
+- Work Skill Market：搜索、推荐/内置/上传分组、`SKILL.md` 居中预览、启停、上传、远程仓库安装、全局搜索安装和批量删除。
+- Work Skill Editor：从已安装 Skill 的预览弹窗进入，提供代码管理、生效范围、依赖管理三个页签，以及导出和删除。
+- 安装保持 prepare → 草稿确认/取消两阶段；Creator 仅指已安装 Skill 的管理编辑器，不增加从空白创建、Requirement Interview、审核或发布流程。
+- 按钮区域、左右顺序、分组顺序、页签顺序、弹窗 footer 和危险操作确认与原 Xiaozhi Vue 页面保持一致；允许变化仅限 Agent Hub 外壳、设计 token 和响应式适配。
+
+App Router 页面保持薄。daily 业务继续放在现有 contract、api、catalog、authoring、creator、review、publication 和共享组件中；Work 业务独立放在 `src/features/skills/work/`，不得把两套后端领域模型强行合并。API DTO、运行时校验、错误转换和 UI ViewModel 分离；daily Creator 使用显式步骤状态机，Work Editor 按文件、设置和依赖职责拆分，不能重新形成超大单文件页面。
+
+Skill 模块的交互与视觉一致性是绑定约束：
+
+- 优先复用 `AppShell`、`page-heading`、资源卡片、返回链接、按钮、表单、徽标和共享状态组件，不为 Skill 另建一套全局样式或设计 token。
+- 新样式只服务于 Catalog、Draft、Creator、Review 和 Publication 等必要业务结构，其颜色、圆角、间距、排版和交互反馈必须与新前端其他页面保持一致。
+- 长流程可增加步骤导航、diagnostics 和 Evidence 等业务组件，但不得复制 shell、导航、通用状态页或基础表单控件。
+- 每个 Skill 前端 Task 完成前都要与对话、知识库、MCP 和设置页做同屏视觉自审；发现不一致时优先复用/抽取现有前端模式，不以 Skill 业务特殊为由扩展独立风格。
 
 ### 10.2 Skill 后端与契约边界
 
-- 新前端只访问 `DSI-agent-loop` 公开的 `/api/skill-market` 契约，不读取后端源码、本地文件系统、旧 `/api/skills` 或旧 Skill BFF。
+- daily 新前端只访问 `DSI-agent-loop` 公开的 `/api/skill-market` 契约，不读取后端源码、本地文件系统、旧 `/api/skills` 或旧 Skill BFF。
 - 新前端新增同源 `/api/skill-market/[...path]` BFF；BFF 只负责目标白名单、HMAC Principal、请求转发、超时和响应边界校验，不复制领域逻辑。
 - 浏览器不能提交上游 Origin、可信用户、角色、权限或 managed scenarios；后端仍是身份和权限的最终权威。
 - HMAC Secret 只存在于服务端环境变量，不进入 `NEXT_PUBLIC_*`、客户端 bundle、日志或错误响应。
 - 后端版本化 OpenAPI/JSON Schema 是 Skill 跨仓 DTO 的唯一事实源；新前端据此生成 TypeScript 类型和运行时校验器，生成物禁止手工修改。
 - 下载必须保留 `Content-Type`、`Content-Disposition` 和 `X-Content-Sha256`；JSON、上传、204、4xx/5xx 和取消语义不得被 BFF 改写成另一套业务协议。
+- Work 新增独立同源 `/api/work-skills/[...path]` BFF，只允许已登记的 method + path + query 组合访问 Xiaozhi 现有 Skill 接口；不得扩大现有聊天 `/api/work-agent/*` 代理。
+- Work BFF 只复用 server-only `XIAOZHI_API_ORIGIN` 与 `XIAOZHI_API_KEY`。浏览器提交的 Authorization、Host、Cookie 和其他私有凭据不得转发到 Xiaozhi；`dsi_app_session` 只发送给 DSI 会话验证接口。
+- Work BFF 必须支持 JSON、multipart 上传和 ZIP 流式下载，保留安全的状态码、`Content-Type` 与 `Content-Disposition`，并清洗上游错误和响应头。
+- Work DTO 以已冻结的 Xiaozhi 接口 fixture 和最小防御性运行时解析为边界；本期不要求修改 Xiaozhi 或新增其 OpenAPI/Schema。
 
 ### 10.3 Skill 安全和 Runtime 规则
 
@@ -200,6 +222,9 @@ App Router 页面保持薄，业务代码放在 `src/features/skills/` 下的 co
 - 已审核、已发布、安装并启用到 `daily` 且制品有效、名称不冲突的市场 Skill 自动进入日常 Runtime。
 - 停用 Installation、下架 Publication 或制品/hash 校验失败后，Skill 退出新请求的可发现和可执行集合。
 - 前端不展示完整内部 Prompt、内部思维链、敏感 observation 或密钥。
+- Work 的 Xiaozhi API Key 只能存在于服务端环境变量，不得进入客户端 bundle、浏览器请求、日志或错误响应；BFF 必须在读取上传体和调用 Xiaozhi 前完成 DSI Session 校验。
+- Work 以 Xiaozhi 返回的 `can_manage`、`source_type` 和资源状态为权威；`can_manage === false` 仅可查看，内置 Skill 不可删除且生效范围只读，批量删除上限为 50。
+- Work 单用户部署要求统一登录账号与 `XIAOZHI_API_KEY` 所属账号一致；若未来要求多用户身份隔离，必须另行批准 DSI 到 Xiaozhi 的服务端身份桥接，不得在前端模拟。
 
 ### 10.4 Skill 状态和错误体验
 
@@ -208,6 +233,23 @@ App Router 页面保持薄，业务代码放在 `src/features/skills/` 下的 co
 - 前端优先按稳定结构化错误 code 映射体验，同时兼容后端保留的 `error` 文本。
 - 401/403、404、409、422 和网关超时具有不同说明及恢复动作；422 diagnostics 必须保留结构化详情。
 - 本期不按角色拆分前端入口；后端对 author、reviewer、admin、scenario_admin 执行最终授权。
+- Work 收到 DSI 401、`enabled: false` 或会话校验不可用时，显示重新登录或服务不可用提示，不得降级到固定 API Key 继续请求；上传、安装、启停、保存和删除必须防重复提交。
+
+### 10.5 实施进展（2026-11-09）
+
+- Catalog、广场、详情和“我的 Skill”（C-01～C-05）已由 `f7b0e31`、`ad55fe0`、`f579c50`、`c8a9048` 实现。
+- Draft 作者工作台（D-01～D-04）已由 `0f9893a` 实现；Creator（E-01～E-06）已由 `2557f21` 实现。
+- 审核、Trigger Test 和发布衔接（F-01～F-04）已由 `13375f6` 实现；ChangeLog 由 `8ce144b` 回填。
+- Publication、Artifact、Installation 管理和权限/作用域负向体验（G-01～G-05、H-04）已由 `d0a637c` 实现，入口为 `/skills/manage?mode=daily`，详情为 `/skills/manage/[id]?mode=daily`。
+- Artifact 下载保存前同时校验实际字节 SHA-256、`X-Content-Sha256` 和 Publication content hash；任何不一致均显示持久错误且不保存文件。
+- 当前公开契约允许 `scenario|agent` 类型但没有 authorized agent target 或 Installation 列表接口；为避免浏览器扩大 managed scope 或虚构安装明细，当前页面只开放固定 `scenario:daily`，不读取 URL/自由表单中的 scope。后端仍是权限和作用域的最终权威。
+- K-03～K-08 已收口测试与交付门禁：真实 Docker PostgreSQL + Artifact Store + Catalog/Runtime 生命周期验证 enable、disable 和 withdraw 退出；两仓独立 release gate、production build、Schema/生成物、敏感数据扫描均通过。新前端全量 Vitest 346/346、Playwright 21 passed/1 个缺少真实小智密钥的外部用例 skipped。K-07 使用 API/旧前端/新前端三个 production 进程比较同一 14 项 Catalog，验证旧四个 Skill 页面、work 零请求以及双向停机隔离；证据位于 `docs/skill-market/evidence/2026-11-09-parallel-run.json`。兼容矩阵和 Runbook 已冻结发布顺序与独立回滚，本轮未执行生产发布或数据库变更。
+
+### 10.6 Work Skill 扩展批准（2026-11-11）
+
+- 原 Work 零请求占位约束已由本节和 `docs/skill-market/2026-11-11-work-skill-frontend-implementation.md` 明确取代；历史测试与证据仅说明当时基线，不再代表 Work 最终验收要求。
+- 本次批准仅改变 `mode=work` 的前端、同源 BFF 和测试范围；daily 的公开契约、HMAC Principal、生命周期和 Runtime 规则保持不变。
+- Xiaozhi 后端、数据库和存储模型保持零代码、零结构改动；首版只验收单用户固定操作员模式。
 
 ## 11. GIS 工作台
 
@@ -228,14 +270,9 @@ App Router 页面保持薄，业务代码放在 `src/features/skills/` 下的 co
 
 历史页首版只展示 mock 列表，不写入 `localStorage`。刷新允许重置。真实历史等待后端 session API。
 
-首版不实现登录。预留：
+统一认证现已由应用级 `AuthProvider`、`AuthBoundary` 和 HttpOnly `dsi_app_session` Cookie 提供。页面边界负责未登录体验，但不能替代服务端 API 鉴权。
 
-- `AuthProvider`
-- 当前用户展示槽
-- 请求头注入接口
-- 未认证/无权限页面边界
-
-后续统一认证系统负责真实身份、权限和模式隔离。
+Work Skill BFF 必须在服务端用请求 Cookie 调用 DSI 会话状态接口，并只接受完整启用状态；浏览器不读取或转发 Xiaozhi Token。daily Skill Market 继续使用既有 HMAC Principal 边界，两种模式不得互换身份机制。
 
 ## 14. 技术方案
 
@@ -336,13 +373,17 @@ src/
 ### 19.1 Skill 扩展验收
 
 - `/skills?mode=daily` 使用真实日常统一 Catalog，完成广场、详情、我的、Draft、Creator、审核、发布、下载和安装生命周期。
-- `/skills?mode=work` 明确显示办公场景未接入，且浏览器和 BFF 均不发出 Skill Market 上游请求。
-- 新 Skill 模块不调用旧前端页面、旧 Skill BFF 或旧 `/api/skills`，停止任一前端不影响另一前端运行。
+- `/skills?mode=work` 展示 Work Skill Market；`/skills/[slug]?mode=work` 展示已安装 Skill Editor，核心功能、操作路径和控件顺序与原 Xiaozhi Vue 页面一致。
+- daily 新 Skill 模块不调用旧前端页面、旧 Skill BFF 或旧 `/api/skills`；Work 只能经独立 `/api/work-skills/*` 白名单 BFF 调用 Xiaozhi Skill 接口，二者不得互相回退或共享业务状态。
+- Work 未登录、anonymous、demo、失效会话和认证服务不可用均在调用 Xiaozhi 前拒绝；Cookie 与浏览器凭据不转发到 Xiaozhi，API Key 不进入客户端或日志。
+- Work 支持列表、搜索、预览、启停、上传、远程安装、草稿确认、批量删除、文件编辑、生效范围、依赖、导出和删除；只读、内置和批量上限行为与 Xiaozhi 权威响应一致。
+- Work 首版按单用户固定操作员模式验收，不宣称多用户隔离；Xiaozhi 后端和数据库无代码或结构改动。
 - Catalog 与 Runtime 对受保护名称、作用域、可见性和安装状态结论一致。
 - 非冲突市场 Skill 安装并启用到 daily 后可被 Runtime 发现；停用或下架后退出。
 - OpenAPI/JSON Schema 导出、前端代码生成和 CI 漂移检查可重复执行。
 - 后端和旧前端保持向后兼容，数据库结构和不可变历史数据不变。
 - Skill 相关单元、组件、BFF、Playwright、跨仓 E2E、双仓构建和旧前端回归通过。
+- Skill 广场、我的 Skill、Draft、Creator、审核和发布页与新前端其他页面共用设计 token、基础控件和状态模式，1280px 桌面布局无独立子产品感。
 
 ## 20. 本设计中的实现方判断
 
@@ -364,5 +405,7 @@ src/
 | --- | --- | --- |
 | 2026-10-27 | Agent Hub Web V1 设计基线 | 已批准并实现 |
 | 2026-11-05 | 将日常模式 Skill Creator + Skill Market 完整生命周期纳入绑定设计；work 保持无请求占位 | 已批准，可据此编写跨仓 Development Plan |
+| 2026-11-07 | 固化 Skill 模块与新前端其他部分的视觉/交互一致性，同步 Draft/Creator 实际路由 | 已批准 |
+| 2026-11-11 | 以单用户固定 Xiaozhi 操作员模式接入 Work Skill Market / Editor，建立独立会话门禁 BFF，并保持 daily 完全隔离 | 已批准；取代此前 Work 无请求占位约束 |
 
-本次批准不授权直接实施生产代码。跨仓实现必须先完成并批准 Development Plan，之后按 Plan 的独立 Task、测试、评审和提交门禁执行。
+2026-11-05 的 daily 批准继续受其跨仓 Development Plan 约束。2026-11-11 的 Work 批准以 `docs/skill-market/2026-11-11-work-skill-frontend-implementation.md` 为实施计划，后续生产代码必须按其中独立 Task、TDD、测试、评审和交付门禁执行。

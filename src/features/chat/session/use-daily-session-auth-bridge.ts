@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 
 import { useAuth } from "@/providers/auth-provider";
 
@@ -12,15 +12,10 @@ export interface DailySessionAuthBridge {
 
 export function useDailySessionAuthBridge(): DailySessionAuthBridge {
   const { status, identityGeneration, invalidate } = useAuth();
-  const statusRef = useRef(status);
-
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
 
   const onAuthRequired = useCallback(() => {
-    if (statusRef.current === "authenticated") invalidate();
-  }, [invalidate]);
+    if (status === "authenticated") invalidate();
+  }, [invalidate, status]);
 
   return {
     enabled: status === "authenticated",

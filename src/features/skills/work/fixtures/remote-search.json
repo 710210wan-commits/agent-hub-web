@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "data": [
+    { "source": "community/research-skills", "name": "web-research", "installs": "12.6k" },
+    { "source": "community/browser-skills", "name": "web-testing", "installs": "8.9k" },
+    { "source": "anthropics/skills", "name": "docx", "installs": "" }
+  ]
+}

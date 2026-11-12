@@ -20,9 +20,9 @@ describe("generated Skill Market contracts", () => {
   it("exposes the pinned contract metadata and every operation", () => {
     expect(skillMarketContractMetadata).toEqual({
       contractId: "skill-market.v1",
-      schemaVersion: "1.0.0",
-      schemaSha256: "0ce61e0a9c1618190f0b28f981af7bfebfbdee89f63090fb41b398371624de40",
-      sourceCommit: "076c4951bd0adb97b104e82f595b099c691a4226",
+      schemaVersion: "1.1.0",
+      schemaSha256: "49d3a134485a714362e50ae92288fb85ce830b225862472846798dbd325c372e",
+      sourceCommit: "f8b6ad021547158acbd68181a78a13bf2bc1d92c",
       generator: "zod@4.6.7",
     });
     expect(Object.keys(skillMarketOperationSchemas)).toHaveLength(28);
