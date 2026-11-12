@@ -87,10 +87,12 @@ corepack pnpm@9.0.0 dev
 |---|---|
 | Xiaozhi health | `http://127.0.0.1:5050/api/system/health` |
 | Agent Hub | `http://127.0.0.1:3000`（可用 `--port 3100` 改端口） |
-| 日常模式 | `projects_new`，经 `/agent-api/*`；历史会话等待其 Session 计划落地 |
+| 日常模式 | `projects_new` canonical Session，经 `/agent-api/conversations/*`；新对话、历史、多轮、SSE、取消与恢复已接入 |
 | 办公模式 | Xiaozhi，浏览器只访问同源 `/api/work-agent/*` |
 | 办公历史 | `/history?mode=work` |
 | 办公会话 | `/chat?mode=work&conversation=<xiaozhi-thread-id>` |
+
+日常模式以 canonical Conversation/Turn/Event 为唯一会话链路。旧 `/tasks` 只保留给非 canonical 兼容入口和固定 demo；Agent Hub Daily 不用它创建或恢复历史会话，也不以 `localStorage` 作为会话事实源。
 
 当前 `XIAOZHI_API_KEY` 代表一个 shared-demo-user。所有访问者共享该用户的办公会话列表；它只适合内网联调/低风险演示，不提供登录、权限或用户隔离。统一认证接入后必须替换为服务端用户身份映射。
 
@@ -118,6 +120,7 @@ corepack pnpm@9.0.0 dev
 corepack pnpm@9.0.0 lint
 corepack pnpm@9.0.0 typecheck
 corepack pnpm@9.0.0 test
+corepack pnpm@9.0.0 test:e2e:daily-session
 corepack pnpm@9.0.0 test:e2e
 corepack pnpm@9.0.0 build
 ```
@@ -144,7 +147,7 @@ docker run --rm -p 3000:3000 agent-hub-web
 - AgentLoop 是对话隐式基底，不作为用户开关。
 - Workflow 暂不纳入首版。
 - GIS 不提供新版内部页面；点击导航后在新 tab 打开老前端 Cesium 首页。
-- 日常历史会话仍为 fixture；无 localStorage。
+- 日常新对话、历史、多轮、SSE、取消与恢复使用 `projects_new` canonical Session；确定性浏览器测试使用 fixture，真实联调使用双用户 smoke；无 `localStorage` 会话事实源。
 - Xiaozhi 办公 BFF 首版使用单一演示用户 API Key。接入办公历史页后，所有演示访问者会看到同一用户的办公会话；这不是权限隔离。
 - 知识库、Skill、MCP 支持 UI 多选和消息级快照；当前真实后端尚未消费这些选项，因此真实模式会阻止带选择的提交。
 - 流式正文只显示最终可见内容；活动状态只显示安全的短描述，不展示内部推理。
