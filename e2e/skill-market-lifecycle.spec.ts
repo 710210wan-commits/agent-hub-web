@@ -67,6 +67,7 @@ test("runs Creator from Requirement through Smoke and saves a Draft", async ({ p
   await expect(page.getByLabel("Smoke Evidence")).toContainText("smoke-1：passed");
   await page.getByRole("button", { name: "保存草稿" }).click();
   await expect(page.getByText(/草稿 draft-k03 已保存/)).toBeVisible();
+  await expect(page).toHaveURL(/\/skills\/creator\?mode=daily&draftId=draft-k03$/);
   await expect(page.getByRole("button", { name: "提交审核" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "前往作者工作台提交审核" })).toHaveAttribute("href", "/skills/mine?mode=daily");
 });
@@ -116,7 +117,8 @@ test("downloads, enables, disables, withdraws, and revises a Publication", async
   await page.getByRole("button", { name: "下架" }).click();
   await expect(page.getByRole("status")).toContainText("Publication 已下架");
   await page.getByRole("button", { name: "创建新修订" }).click();
-  await expect(page.getByRole("status")).toContainText("已从 Publication publication-k03 创建新修订 r2");
+  await expect(page).toHaveURL(/\/skills\/creator\?mode=daily&draftId=draft-k03&sourcePublication=publication-k03&revision=2$/);
+  await expect(page.getByRole("heading", { name: "Skill Creator" })).toBeVisible();
 });
 
 test("recovers from publish success with installation failure without republishing", async ({ page }) => {

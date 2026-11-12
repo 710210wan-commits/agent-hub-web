@@ -82,9 +82,9 @@ test("Work Market handles upload, remote draft, and batch deletion", async ({ pa
   await expect(page.getByText("批量删除成功，已删除 1 个技能")).toBeVisible();
   await expect(page.getByRole("button", { name: "查看 MySQL Reporter 预览" })).toHaveCount(0);
 
-  expect(fixture.calls.some((call) => call.path.endsWith("/api/skills/import/prepare"))).toBe(true);
-  expect(fixture.calls.some((call) => call.path.endsWith("/api/skills/remote/prepare"))).toBe(true);
-  expect(fixture.calls.some((call) => call.path.endsWith("/api/system/skills/delete-batch"))).toBe(true);
+  expect(fixture.calls.some((call) => call.path.endsWith("/skills/import/prepare"))).toBe(true);
+  expect(fixture.calls.some((call) => call.path.endsWith("/skills/remote/prepare"))).toBe(true);
+  expect(fixture.calls.some((call) => call.path.endsWith("/system/skills/delete-batch"))).toBe(true);
 });
 
 test("Work Editor saves file, scope, dependencies, and exports the archive", async ({ page }) => {

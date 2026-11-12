@@ -292,6 +292,18 @@ describe("SkillCatalogPlaza", () => {
       "href",
       "/skills/creator?mode=daily",
     );
+    expect(screen.getByRole("link", { name: "发布管理" })).toHaveAttribute(
+      "href",
+      "/skills/manage?mode=daily",
+    );
+    expect(screen.getByRole("link", { name: "审核" })).toHaveAttribute(
+      "href",
+      "/skills/review?mode=daily",
+    );
+    expect(screen.getByRole("link", { name: "我的" })).toHaveAttribute(
+      "href",
+      "/skills/mine?mode=daily",
+    );
     expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveClass("skill-page-action-primary");
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
   });

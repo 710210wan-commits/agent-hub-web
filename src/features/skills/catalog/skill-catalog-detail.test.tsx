@@ -211,7 +211,7 @@ describe("SkillCatalogDetail", () => {
 
     expect(await screen.findByRole("heading", { name: "Report Skill" })).toBeInTheDocument();
     expect(screen.getByText("document-render")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "返回 Skill 广场" }))
+    expect(screen.getByRole("link", { name: "← 返回 Skill 广场" }))
       .toHaveAttribute("href", expect.stringContaining("search=report"));
     expect(screen.queryByText(/prompt/i)).not.toBeInTheDocument();
   });

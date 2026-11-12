@@ -874,6 +874,102 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 4. 验证 Work focused tests 201/201、完整 Vitest 692/692、目标 Playwright 17/17（真实后端用例因无临时 API Key 跳过 1 项）、ESLint、TypeScript strict 与 production build 全部通过；临时 canary 构建扫描未发现密钥、Cookie 或私有配置泄漏。
 5. 只读核对 `DSI-agent-loop` 工作树为 clean；Xiaozhi 工作区仅有实施文档勾选，`xiaozhi-offline-deploy` 后端源码、配置结构和数据库 Schema 均无 diff。
 
+### 33. Work Skill BFF 浏览器路径修正（加载失败与批量管理禁用根因）
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 6 后续修正`
+
+#### 问题
+
+- 浏览器端把上游 `/api/...` 路径原样拼到 BFF 前缀，发出 `/api/work-skills/api/system/skills`（双 `api` 段），被 Task 2 白名单拒绝；列表请求 404 触发"Work Skill 加载失败"，无可管理 Skill 导致批量管理按钮按设计持续禁用。
+- Task 6 的 e2e fixture 使用相同错误路径形状，未能在验收中暴露该缺陷。
+
+#### 修改方案
+
+- `createWorkSkillsApi` 新增 `bffUrl`：剥离 `/api` 前缀访问同源 BFF，并拒绝非 `/api/` 上游路径；契约常量保持冻结。
+- e2e fixture 的 install-drafts 与 Skill 子资源正则、spec 的路径断言同步到正确形状。
+
+#### **代码变更：**
+
+1. `work-api.ts` 所有请求（含 ZIP 导出）统一经 `bffUrl` 构造；`work-api.test.ts` 路径断言全部改配。
+2. `e2e/fixtures/work-skills-api.ts` 修正 install-drafts、tree/file/enabled/share-config/dependencies/export 匹配；`e2e/work-skills.spec.ts` 三个 endsWith 断言改配。
+3. 验证 work-api 聚焦测试全部通过、Work e2e 4/4 通过。
+
+### 34. 对齐老前端 Skill 页面跳转与 Creator 草稿状态保留
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 5/6 后续对齐`
+
+#### 问题
+
+- Creator 返回、保存后 URL、我的-草稿编辑、发布-创建新修订的跳转与老前端不一致。
+- 保存草稿后 `router.replace` 绑定 draftId，页面把 draftId 传回组件触发草稿恢复 effect，`recoverCreatorState` 重置整个本地状态，"草稿已保存"提示与"前往作者工作台提交审核"入口消失（e2e 捕获）。
+
+#### 修改方案
+
+- Creator 返回链接统一指向 `/skills?mode=daily`；首次保存后 `router.replace` 绑定 `draftId`。
+- 我的-草稿编辑与发布-创建新修订统一跳转 `/skills/creator?mode=daily&draftId=...`（修订携带 `sourcePublication`/`revision`）。
+- 新增 `savedDraftRef` 记录刚保存的草稿 id，恢复 effect 跳过该 id，避免保存结果被自身覆盖；广场四个入口 href 由测试固定，lifecycle e2e 增加 URL 断言。
+
+#### **代码变更：**
+
+1. `skill-creator.tsx` 返回链接、保存后 URL 绑定与 `savedDraftRef` 门禁；`skill-creator.test.tsx` 新增"URL 绑定不重置已保存状态"用例。
+2. `skill-mine.tsx` 草稿编辑链接改指 Creator；`skill-publication-list.tsx` 与 `skill-publication-detail.tsx` 创建新修订改指 Creator。
+3. `skill-catalog-plaza.test.tsx` 固定四个入口 href；`e2e/skill-market-lifecycle.spec.ts` 增加保存后与创建修订后的 URL 断言。
+4. 验证 Creator 聚焦测试 6/6、全量 Vitest 696/696、lifecycle e2e 通过。
+
+### 35. Skill 审核证据子标题样式统一
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 5/6 后续对齐`
+
+#### 问题
+
+- 审核详情页各证据子标题（Definition、Requirement、Revision Diff、Tool 与 Validator、Smoke Evidence、审核历史）及页面自有区块标题需要统一的字体与设计。
+
+#### 修改方案
+
+- 统一使用 `.skill-review-evidence-title`，与 `.creator-section h2` 共享同一条字体规则（14px / 620 / -0.01em / line-height 1.35）。
+- 补齐 Trigger Test、审核决定、发布三个裸标题；测试循环断言全部子标题共用类名且保持 H2 语义。
+
+#### **代码变更：**
+
+1. `review-evidence.tsx` 证据区块标题挂载统一类名；`skill-review-detail.tsx` 三个页面自有区块标题补齐同类名。
+2. `globals.css` 追加 `.skill-review-evidence-title` 规则；`skill-review-detail.test.tsx` 断言 8 个可靠渲染的子标题样式一致。
+
+### 36. 统一 Skill 子页面返回链接
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 5/6 后续对齐`
+
+#### 问题
+
+- 各子页面返回入口不一致：Skill 详情用图标箭头且内容套在扩展槽位面板中，审核队列、发布管理、我的 Skill 没有左上角返回链接（仅有右上角"返回广场"按钮）。
+
+#### 修改方案
+
+- 新增共享 `SkillBackLink`：左上角、灰色 `.back-link`、文本"← "前缀，与 Creator 返回入口完全一致。
+- 9 个页面统一接入；移除审核队列、发布管理、我的 Skill 右上角的"返回广场"按钮；Skill 详情弃用 `ResourceDetailSlot`，返回链接改为统一文本箭头并去掉"扩展槽位"占位标签。
+
+#### **代码变更：**
+
+1. 新增 `src/features/skills/components/skill-back-link.tsx` 与单元测试。
+2. Creator（含草稿已提交提示页）、审核队列、审核详情、发布管理列表（含错误态）与详情、我的 Skill、草稿编辑/新建、Skill 详情全部接入共享组件。
+3. 同步更新 mine、发布、审核队列与 Skill 详情的相关测试断言。
+4. 验证全量 Vitest 696/696、目标 Playwright 14/14、TypeScript strict 与 ESLint 全部通过。
+
 ## 后续条目模板
 
 ```markdown

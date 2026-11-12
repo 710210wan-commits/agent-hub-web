@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
@@ -27,11 +28,9 @@ function SkillReviewQueueDaily({ client }: { client: SkillMarketClient }) {
 
   return (
     <section className="resource-page skill-review-queue">
+      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
       <header className="page-heading">
         <div><h1>Skill 审核队列</h1><p>审查冻结快照、Tool 事实、Validator、Diff、Smoke 与 Trigger 证据</p></div>
-        <div className="skill-page-actions skill-catalog-actions">
-          <Link className="skill-page-action" href="/skills?mode=daily">返回广场</Link>
-        </div>
       </header>
       {state.submissions.length ? (
         <div className="skill-review-queue-list">

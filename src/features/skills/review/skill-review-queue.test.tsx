@@ -41,7 +41,7 @@ describe("SkillReviewQueue", () => {
 
     expect(await screen.findByRole("heading", { name: "Skill 审核队列" })).toBeInTheDocument();
     expect(screen.getByText("审查冻结快照、Tool 事实、Validator、Diff、Smoke 与 Trigger 证据")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "返回广场" })).toHaveClass("skill-page-action");
+    expect(screen.getByRole("link", { name: "← 返回 Skill 广场" })).toHaveClass("back-link");
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
   });
 

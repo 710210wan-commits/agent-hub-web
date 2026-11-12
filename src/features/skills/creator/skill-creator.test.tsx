@@ -9,16 +9,105 @@ import type { RequirementSpecV1 } from "../contracts/generated";
 import { SkillCreator } from "./skill-creator";
 
 let mockMode = "daily";
+const replace = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => "/skills/creator",
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace }),
   useSearchParams: () => new URLSearchParams(`mode=${mockMode}`),
 }));
 
 describe("SkillCreator", () => {
   beforeEach(() => {
     mockMode = "daily";
+    replace.mockClear();
     sessionStorage.clear();
+  });
+
+  it("keeps the legacy Creator navigation: return to plaza and bind the URL after first save", async () => {
+    const mutate = vi.fn(async (input: { operation: string }) => {
+      switch (input.operation) {
+        case "analyzeRequirement":
+          return { ok: true, value: { questions: [], requirement, summary: "Ready" } };
+        case "confirmRequirement":
+          return { ok: true, value: { requirement } };
+        case "recommendToolResolution":
+          return { ok: true, value: { candidates: [toolManifest], diagnostics: [], missingCapabilities: [], recommendations: [] } };
+        case "confirmToolResolution":
+          return { ok: true, value: { requirement } };
+        case "generateSkillBundle":
+          return { ok: true, value: { diagnostics: [], files: { "SKILL.md": "# Demo" } } };
+        case "createDraft":
+          return { ok: true, value: { diagnostics: [], draft: { id: "draft-1", revision: 1, status: "editing" } } };
+        default:
+          throw new Error(`Unexpected mutation ${input.operation}`);
+      }
+    });
+    const query = vi.fn(async () => ({ items: [{ diagnostics: [], manifest: toolManifest }] }));
+    render(<ModeProvider><SkillCreator client={{ mutate, query } as unknown as SkillMarketClient} /></ModeProvider>);
+
+    expect(screen.getByRole("link", { name: /返回 Skill 广场/ })).toHaveAttribute("href", "/skills?mode=daily");
+    fireEvent.change(screen.getByLabelText("名称"), { target: { value: "demo-skill" } });
+    fireEvent.change(screen.getByLabelText("标题"), { target: { value: "Demo" } });
+    fireEvent.change(screen.getByLabelText("需求描述"), { target: { value: "Build a useful demo skill" } });
+    fireEvent.click(screen.getByRole("button", { name: "分析需求" }));
+    await screen.findByRole("button", { name: "确认 Spec 并推荐工具" });
+    fireEvent.click(screen.getByRole("button", { name: "确认 Spec 并推荐工具" }));
+    await screen.findByRole("button", { name: "确认工具并生成 Bundle" });
+    fireEvent.click(screen.getByRole("button", { name: "确认工具并生成 Bundle" }));
+    await screen.findByRole("button", { name: "保存草稿" });
+    fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/skills/creator?mode=daily&draftId=draft-1"));
+  });
+
+  it("keeps the saved state when the URL binds the draft that was just saved", async () => {
+    const mutate = vi.fn(async (input: { operation: string }) => {
+      switch (input.operation) {
+        case "analyzeRequirement":
+          return { ok: true, value: { questions: [], requirement, summary: "Ready" } };
+        case "confirmRequirement":
+          return { ok: true, value: { requirement } };
+        case "recommendToolResolution":
+          return { ok: true, value: { candidates: [toolManifest], diagnostics: [], missingCapabilities: [], recommendations: [] } };
+        case "confirmToolResolution":
+          return { ok: true, value: { requirement } };
+        case "generateSkillBundle":
+          return { ok: true, value: { diagnostics: [], files: { "SKILL.md": "# Demo" } } };
+        case "createDraft":
+          return { ok: true, value: { diagnostics: [], draft: { id: "draft-1", revision: 1, status: "editing" } } };
+        default:
+          throw new Error(`Unexpected mutation ${input.operation}`);
+      }
+    });
+    const getDraft = vi.fn(async () => {
+      throw new Error("getDraft must not reload the draft that was just saved");
+    });
+    const query = vi.fn(async (input: { operation: string }) => {
+      if (input.operation === "getDraft") return getDraft();
+      return { items: [{ diagnostics: [], manifest: toolManifest }] };
+    });
+    const client = { mutate, query } as unknown as SkillMarketClient;
+    const view = render(<ModeProvider><SkillCreator client={client} /></ModeProvider>);
+
+    fireEvent.change(screen.getByLabelText("名称"), { target: { value: "demo-skill" } });
+    fireEvent.change(screen.getByLabelText("标题"), { target: { value: "Demo" } });
+    fireEvent.change(screen.getByLabelText("需求描述"), { target: { value: "Build a useful demo skill" } });
+    fireEvent.click(screen.getByRole("button", { name: "分析需求" }));
+    await screen.findByRole("button", { name: "确认 Spec 并推荐工具" });
+    fireEvent.click(screen.getByRole("button", { name: "确认 Spec 并推荐工具" }));
+    await screen.findByRole("button", { name: "确认工具并生成 Bundle" });
+    fireEvent.click(screen.getByRole("button", { name: "确认工具并生成 Bundle" }));
+    await screen.findByRole("button", { name: "保存草稿" });
+    fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/skills/creator?mode=daily&draftId=draft-1"));
+    expect(screen.getByRole("link", { name: "前往作者工作台提交审核" })).toBeInTheDocument();
+
+    view.rerender(<ModeProvider><SkillCreator client={client} draftId="draft-1" /></ModeProvider>);
+
+    expect(getDraft).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "前往作者工作台提交审核" })).toBeInTheDocument();
+    expect(screen.getByText(/草稿 draft-1 已保存/)).toBeInTheDocument();
   });
 
   it("prevents duplicate requirement analysis while the mutation is pending", async () => {

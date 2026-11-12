@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { EmptyState } from "@/components/states/empty-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
@@ -95,13 +96,13 @@ function SkillMineDaily({ client }: { client: SkillMarketClient }) {
 
   return (
     <section className="resource-page skill-mine">
+      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
       <header className="page-heading">
         <div><h1>我的 Skill</h1><p>管理草稿、上传目录或 ZIP，并提交审核</p></div>
         <div className="skill-page-actions skill-catalog-actions">
           <Link className="skill-page-action" href="/skills/manage?mode=daily">发布管理</Link>
           <Link className="skill-page-action" href="/skills/review?mode=daily">审核</Link>
           <Link className="skill-page-action" href="/skills/creator?mode=daily">Creator</Link>
-          <Link className="skill-page-action" href="/skills?mode=daily">返回广场</Link>
         </div>
       </header>
 
@@ -123,7 +124,7 @@ function SkillMineDaily({ client }: { client: SkillMarketClient }) {
             </span>
             {draft.status === "editing" ? (
               <div className="skill-mine-draft-actions">
-                <Link href={`/skills/drafts/${encodeURIComponent(draft.id)}?mode=daily`}>编辑</Link>
+                <Link href={`/skills/creator?mode=daily&draftId=${encodeURIComponent(draft.id)}`}>编辑</Link>
                 <button disabled={Boolean(busyId)} onClick={() => void submitDraft(draft)} type="button">
                   {busyId === draft.id ? "处理中…" : "提交审核"}
                 </button>

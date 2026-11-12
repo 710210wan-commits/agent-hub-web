@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
@@ -132,7 +133,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
 
   return (
     <section className="resource-page skill-review-detail">
-      <Link className="back-link" href="/skills/review?mode=daily">← 返回审核队列</Link>
+      <SkillBackLink href="/skills/review?mode=daily">返回审核队列</SkillBackLink>
       <header className="page-heading">
         <div><h1>{submission.name}</h1><p>状态：{submission.status} · 修订 r{submission.revision} · 提交 {submission.id}</p></div>
       </header>
@@ -141,7 +142,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
       <ReviewEvidence submission={submission} />
 
       <section className="creator-section">
-        <h2>Trigger Test</h2>
+        <h2 className="skill-review-evidence-title">Trigger Test</h2>
         <p>结果仅绑定当前提交修订 r{submission.revision}，并以服务端记录为准。</p>
         <TriggerCases submission={submission} />
         <label>触发查询<input aria-label="触发查询" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
@@ -152,7 +153,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
 
       {submission.status === "pending_review" ? (
         <section className="creator-section">
-          <h2>审核决定</h2>
+          <h2 className="skill-review-evidence-title">审核决定</h2>
           {REVIEW_CHECKS.map((key) => <label className="skill-review-inline" key={key}><input checked={checks[key]} type="checkbox" onChange={(event) => setChecks({ ...checks, [key]: event.target.checked })} />{checkLabel(key)}</label>)}
           <label>审核评语<textarea rows={4} value={comment} onChange={(event) => setComment(event.target.value)} /></label>
           <div className="skill-draft-actions">
@@ -165,7 +166,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
 
       {submission.status === "approved" || publication || publishAndEnable ? (
         <section className="creator-section">
-          <h2>发布</h2><p>目标范围由当前日常场景契约固定为 scenario:daily。</p>
+          <h2 className="skill-review-evidence-title">发布</h2><p>目标范围由当前日常场景契约固定为 scenario:daily。</p>
           {submission.status === "approved" ? <div className="skill-draft-actions">
             <button disabled={Boolean(action)} type="button" onClick={() => void publish(false)}>仅发布</button>
             <button disabled={Boolean(action)} type="button" onClick={() => void publish(true)}>发布并启用</button>

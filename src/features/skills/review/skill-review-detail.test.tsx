@@ -19,6 +19,30 @@ const submission = {
 };
 
 describe("SkillReviewDetail", () => {
+  it("uses one shared heading style for every evidence subsection", async () => {
+    const query = vi.fn(async (input: { operation: string }) => input.operation === "listSubmissions" ? [submission] : []);
+    render(
+      <ModeProvider>
+        <SkillReviewDetail client={{ query } as unknown as SkillMarketClient} id="submission-1" />
+      </ModeProvider>,
+    );
+
+    const definition = await screen.findByRole("heading", { name: "Definition" });
+    for (const name of [
+      "Definition",
+      "Requirement",
+      "Revision Diff",
+      "Tool 与 Validator",
+      "Smoke Evidence",
+      "审核历史",
+      "Trigger Test",
+      "审核决定",
+    ]) {
+      expect(screen.getByRole("heading", { name })).toHaveClass("skill-review-evidence-title");
+    }
+    expect(definition.tagName).toBe("H2");
+  });
+
   it("marks missing optional evidence instead of treating it as passing", async () => {
     const query = vi.fn(async (input: { operation: string }) => input.operation === "listSubmissions" ? [submission] : []);
     render(<ModeProvider><SkillReviewDetail client={{ query } as unknown as SkillMarketClient} id="submission-1" /></ModeProvider>);

@@ -47,7 +47,7 @@ describe("createWorkSkillsApi", () => {
     const api = createWorkSkillsApi({ fetchImpl });
     const envelope = await api.listSkills();
     expect(envelope.data).toHaveLength(3);
-    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills`);
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/system/skills`);
     expect(calls[0].init?.method).toBeUndefined();
     expect(calls[0].init?.credentials).toBe("same-origin");
   });
@@ -58,7 +58,7 @@ describe("createWorkSkillsApi", () => {
     const file = await api.getSkillFile("mysql-reporter", "scripts/query.py");
     expect(file.path).toBe("SKILL.md");
     expect(calls[0].input).toBe(
-      `${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/file?path=scripts%2Fquery.py`,
+      `${WORK_SKILLS_BFF_BASE}/system/skills/mysql-reporter/file?path=scripts%2Fquery.py`,
     );
   });
 
@@ -67,7 +67,7 @@ describe("createWorkSkillsApi", () => {
     const api = createWorkSkillsApi({ fetchImpl });
     const skill = await api.setSkillEnabled("mysql-reporter", false);
     expect(skill.enabled).toBe(false);
-    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/enabled`);
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/system/skills/mysql-reporter/enabled`);
     expect(calls[0].init?.method).toBe("PUT");
     expect(calls[0].init?.body).toBe(JSON.stringify({ enabled: false }));
   });
@@ -84,7 +84,7 @@ describe("createWorkSkillsApi", () => {
     const api = createWorkSkillsApi({ fetchImpl });
 
     await api.getSkillTree("mysql-reporter");
-    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/tree`);
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/system/skills/mysql-reporter/tree`);
 
     await api.createSkillNode("mysql-reporter", {
       content: "print('ok')",
@@ -102,14 +102,14 @@ describe("createWorkSkillsApi", () => {
 
     await api.deleteSkillNode("mysql-reporter", "scripts/new.py");
     expect(calls[3].input).toBe(
-      `${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/file?path=scripts%2Fnew.py`,
+      `${WORK_SKILLS_BFF_BASE}/system/skills/mysql-reporter/file?path=scripts%2Fnew.py`,
     );
     expect(calls[3].init?.method).toBe("DELETE");
 
     const options = await api.getDependencyOptions("mysql-reporter");
     expect(options.tools[0].slug).toBe("terminal");
     expect(calls[4].input).toBe(
-      `${WORK_SKILLS_BFF_BASE}/api/system/skills/dependency-options?slug=mysql-reporter`,
+      `${WORK_SKILLS_BFF_BASE}/system/skills/dependency-options?slug=mysql-reporter`,
     );
 
     const shareConfig: WorkSkillShareConfig = {
@@ -151,14 +151,14 @@ describe("createWorkSkillsApi", () => {
     const { calls, fetchImpl } = createFetchStub(() => jsonResponse({ success: true }));
     const api = createWorkSkillsApi({ fetchImpl });
     await api.deleteSkill("meeting-notes");
-    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills/meeting-notes`);
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/system/skills/meeting-notes`);
     expect(calls[0].init?.method).toBe("DELETE");
 
     const batch = createFetchStub(() => jsonResponse(batchDeleteResultsFixture));
     const api2 = createWorkSkillsApi({ fetchImpl: batch.fetchImpl });
     const results = await api2.deleteSkillsBatch(["meeting-notes", "old-report"]);
     expect(results).toHaveLength(2);
-    expect(batch.calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills/delete-batch`);
+    expect(batch.calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/system/skills/delete-batch`);
     expect(batch.calls[0].init?.body).toBe(JSON.stringify({ slugs: ["meeting-notes", "old-report"] }));
   });
 
@@ -168,7 +168,7 @@ describe("createWorkSkillsApi", () => {
     const file = new Blob(["zip-bytes"], { type: "application/zip" });
     const draft = await api.prepareSkillUpload(file);
     expect(draft.draft_id).toBe("3f6f8c2e-7d2b-4a1e-9c0d-2e5b8a9d4f01");
-    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/skills/import/prepare`);
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/skills/import/prepare`);
     expect(calls[0].init?.method).toBe("POST");
     const body = calls[0].init?.body as FormData;
     expect(body.get("file")).toBeInstanceOf(Blob);
@@ -202,10 +202,10 @@ describe("createWorkSkillsApi", () => {
     const api = createWorkSkillsApi({ fetchImpl });
     const results = await api.confirmInstallDraft("d-1", shareConfig);
     expect(results).toHaveLength(2);
-    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/skills/install-drafts/d-1/confirm`);
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/skills/install-drafts/d-1/confirm`);
     expect(calls[0].init?.body).toBe(JSON.stringify({ share_config: shareConfig }));
     await api.discardInstallDraft("d-1");
-    expect(calls[1].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/skills/install-drafts/d-1`);
+    expect(calls[1].input).toBe(`${WORK_SKILLS_BFF_BASE}/skills/install-drafts/d-1`);
     expect(calls[1].init?.method).toBe("DELETE");
   });
 
@@ -223,7 +223,7 @@ describe("createWorkSkillsApi", () => {
     );
     const api = createWorkSkillsApi({ fetchImpl });
     const exported = await api.exportSkill("mysql-reporter");
-    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/api/system/skills/mysql-reporter/export`);
+    expect(calls[0].input).toBe(`${WORK_SKILLS_BFF_BASE}/system/skills/mysql-reporter/export`);
     expect(exported.filename).toBe("mysql-reporter.zip");
     expect(exported.blob).toBeTruthy();
   });

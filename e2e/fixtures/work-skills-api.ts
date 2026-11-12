@@ -58,11 +58,11 @@ export async function installWorkSkillsFixture(page: Page): Promise<WorkSkillsFi
     const body = postData(request);
     calls.push({ ...(body === undefined ? {} : { body }), method, path });
 
-    if (method === "GET" && path === "/api/work-skills/api/system/skills") {
+    if (method === "GET" && path === "/api/work-skills/system/skills") {
       await json(route, listEnvelope(state.skills));
       return;
     }
-    if (method === "GET" && path === "/api/work-skills/api/system/skills/dependency-options") {
+    if (method === "GET" && path === "/api/work-skills/system/skills/dependency-options") {
       await json(route, {
         success: true,
         data: {
@@ -76,11 +76,11 @@ export async function installWorkSkillsFixture(page: Page): Promise<WorkSkillsFi
       });
       return;
     }
-    if (method === "POST" && path === "/api/work-skills/api/skills/import/prepare") {
+    if (method === "POST" && path === "/api/work-skills/skills/import/prepare") {
       await json(route, installDraft("upload-draft", "upload", "task6-skill.zip", "uploaded-task6", "Uploaded Task 6"));
       return;
     }
-    if (method === "POST" && path === "/api/work-skills/api/skills/remote/list") {
+    if (method === "POST" && path === "/api/work-skills/skills/remote/list") {
       await json(route, {
         success: true,
         data: [
@@ -90,11 +90,11 @@ export async function installWorkSkillsFixture(page: Page): Promise<WorkSkillsFi
       });
       return;
     }
-    if (method === "POST" && path === "/api/work-skills/api/skills/remote/prepare") {
+    if (method === "POST" && path === "/api/work-skills/skills/remote/prepare") {
       await json(route, installDraft("remote-draft", "remote", "https://github.com/anthropics/skills", "skill-creator", "skill-creator"));
       return;
     }
-    if (method === "POST" && path === "/api/work-skills/api/system/skills/delete-batch") {
+    if (method === "POST" && path === "/api/work-skills/system/skills/delete-batch") {
       const slugs = objectBody(body).slugs;
       const requested = Array.isArray(slugs) ? slugs.filter((slug): slug is string => typeof slug === "string") : [];
       state.skills = state.skills.filter((skill) => !requested.includes(skill.slug));
@@ -106,7 +106,7 @@ export async function installWorkSkillsFixture(page: Page): Promise<WorkSkillsFi
       return;
     }
 
-    const draftMatch = path.match(/^\/api\/work-skills\/api\/skills\/install-drafts\/([^/]+)(?:\/(confirm))?$/);
+    const draftMatch = path.match(/^\/api\/work-skills\/skills\/install-drafts\/([^/]+)(?:\/(confirm))?$/);
     if (draftMatch && method === "POST" && draftMatch[2] === "confirm") {
       const draftId = draftMatch[1];
       const installed = draftId === "upload-draft"
@@ -125,7 +125,7 @@ export async function installWorkSkillsFixture(page: Page): Promise<WorkSkillsFi
       return;
     }
 
-    const skillMatch = path.match(/^\/api\/work-skills\/api\/system\/skills\/([^/]+)(?:\/(tree|file|enabled|share-config|dependencies|export))?$/);
+    const skillMatch = path.match(/^\/api\/work-skills\/system\/skills\/([^/]+)(?:\/(tree|file|enabled|share-config|dependencies|export))?$/);
     if (skillMatch) {
       const slug = decodeURIComponent(skillMatch[1]);
       const action = skillMatch[2];
