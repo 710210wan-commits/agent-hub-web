@@ -31,7 +31,9 @@ function sse(event: string, data: unknown, id?: string): string {
 }
 
 async function collect(stream: AsyncIterable<ChatStreamEvent>) {
-  return Array.fromAsync(stream);
+  const events: ChatStreamEvent[] = [];
+  for await (const event of stream) events.push(event);
+  return events;
 }
 
 describe("xiaozhi transport", () => {

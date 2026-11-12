@@ -27,7 +27,9 @@ function responseFromText(text: string, chunkSizes = [text.length]): Response {
 }
 
 async function collect(response: Response, signal?: AbortSignal) {
-  return Array.fromAsync(parseFetchSse(response, signal));
+  const events = [];
+  for await (const event of parseFetchSse(response, signal)) events.push(event);
+  return events;
 }
 
 describe("parseFetchSse", () => {

@@ -20,9 +20,11 @@ function responseFromText(text: string): Response {
 }
 
 async function collect(text: string) {
-  return Array.fromAsync(
-    parseConversationSse(responseFromText(text), conversationId),
-  );
+  const events = [];
+  for await (const event of parseConversationSse(responseFromText(text), conversationId)) {
+    events.push(event);
+  }
+  return events;
 }
 
 function frame(input?: {
