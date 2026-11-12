@@ -1,18 +1,22 @@
 import { expect, test } from "@playwright/test";
 
-test("real transport blocks unsupported selections before network", async ({ page }) => {
-  let agentApiRequests = 0;
+import { installGlobalAuthFixture } from "./fixtures/global-auth";
+
+test.beforeEach(async ({ page }) => {
+  await installGlobalAuthFixture(page);
+});
+
+test("canonical real transport disables unsupported selections before network", async ({ page }) => {
+  let conversationRequests = 0;
   page.on("request", (request) => {
-    if (request.url().includes("/agent-api/")) agentApiRequests += 1;
+    if (request.url().includes("/agent-api/conversations")) conversationRequests += 1;
   });
 
   await page.goto("/chat?mode=daily&backend=real");
-  await page.getByRole("button", { name: "知识库" }).click();
-  await page.getByText("项目资料库", { exact: true }).click();
-  await page.getByRole("textbox", { name: "消息" }).fill("使用资料库回答");
-  await page.getByRole("button", { name: "发送" }).click();
-
-  await expect(page.getByText("当前后端尚未接入所选能力")).toBeVisible();
+  await expect(page.getByRole("button", { name: "知识库" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Skill" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "MCP" })).toBeDisabled();
+  await expect(page.getByText("当前持久会话暂未支持能力组合")).toBeVisible();
   await expect(page.getByRole("button", { name: "继续生成" })).toHaveCount(0);
-  expect(agentApiRequests).toBe(0);
+  expect(conversationRequests).toBe(0);
 });

@@ -15,6 +15,11 @@ const mocks = vi.hoisted(() => {
   const getAuthStatus = vi.fn();
   const loadSnapshot = vi.fn();
   const loadMessages = vi.fn();
+  const createConversation = vi.fn();
+  const submitTurn = vi.fn();
+  const listEvents = vi.fn();
+  const streamEvents = vi.fn(async function* () {});
+  const cancelTurn = vi.fn();
   const dailyTransport: ChatTransport = {
     kind: "mock",
     capabilities: { selections: true, answerDeltas: true, resume: true },
@@ -45,14 +50,21 @@ const mocks = vi.hoisted(() => {
     },
   };
   const dailySessionClient = {
-    getAuthStatus,
-    login: vi.fn(),
-    logout: vi.fn(async () => undefined),
     listConversations: vi.fn(),
-    createConversation: vi.fn(),
+    createConversation,
     loadSnapshot,
     loadMessages,
     renameConversation: vi.fn(),
+    submitTurn,
+    listEvents,
+    streamEvents,
+    cancelTurn,
+  };
+  const globalAuthClient = {
+    getAuthStatus,
+    login: vi.fn(),
+    loginDemo: vi.fn(),
+    logout: vi.fn(),
   };
   return {
     search: "mode=work",
@@ -63,7 +75,13 @@ const mocks = vi.hoisted(() => {
     getAuthStatus,
     loadSnapshot,
     loadMessages,
+    createConversation,
+    submitTurn,
+    listEvents,
+    streamEvents,
+    cancelTurn,
     dailySessionClient,
+    globalAuthClient,
     dailyTransport,
     workTransport,
     createChatTransport: vi.fn(() => dailyTransport),
@@ -108,7 +126,7 @@ vi.mock("@/features/chat/transports/daily-session-client", async (importOriginal
 
 function renderRoute() {
   return render(
-    <AuthProvider>
+    <AuthProvider client={mocks.globalAuthClient}>
       <ModeProvider>
         <ChatRoute />
       </ModeProvider>
@@ -145,7 +163,7 @@ describe("ChatRoute", () => {
         status: "open",
         archivedAt: null,
         version: 1,
-        lastEventSeq: "2",
+        lastEventSeq: "0",
         lastTurnIndex: "1",
         createdAt: "2026-11-09T00:00:00.000Z",
         updatedAt: "2026-11-09T01:00:00.000Z",
@@ -166,9 +184,42 @@ describe("ChatRoute", () => {
         },
       ],
       nextCursor: null,
-      lastEventSeq: "2",
+      lastEventSeq: "0",
     });
     mocks.loadMessages.mockReset();
+    mocks.createConversation.mockReset().mockResolvedValue({
+      conversation: {
+        conversationId: "10000000-0000-4000-8000-000000000001",
+        scenarioId: "daily",
+        agentKey: "agent-loop",
+        title: "首轮问题",
+        status: "open",
+        archivedAt: null,
+        version: 1,
+        lastEventSeq: "0",
+        lastTurnIndex: "0",
+        createdAt: "2026-11-09T00:00:00.000Z",
+        updatedAt: "2026-11-09T00:00:00.000Z",
+      },
+      reused: false,
+    });
+    mocks.submitTurn.mockReset().mockResolvedValue({
+      conversationId: "10000000-0000-4000-8000-000000000001",
+      turnId: "20000000-0000-4000-8000-000000000002",
+      taskId: "30000000-0000-4000-8000-000000000003",
+      userMessageId: "40000000-0000-4000-8000-000000000004",
+      acceptedEventSeq: "1",
+      status: "queued",
+      reused: false,
+    });
+    mocks.listEvents.mockReset().mockResolvedValue({
+      events: [],
+      nextAfterSeq: "0",
+      lastEventSeq: "0",
+      hasMore: false,
+    });
+    mocks.streamEvents.mockReset().mockImplementation(async function* () {});
+    mocks.cancelTurn.mockReset();
     vi.stubEnv("NEXT_PUBLIC_E2E_SCENARIOS", "1");
   });
 
@@ -180,17 +231,17 @@ describe("ChatRoute", () => {
     expect(mocks.createChatTransport).not.toHaveBeenCalled();
   });
 
-  it("keeps daily mode on the existing transport", () => {
+  it("routes default daily mode to the canonical conversation client", async () => {
     mocks.search = "mode=daily";
     renderRoute();
 
-    expect(screen.getByRole("textbox", { name: "消息" })).toBeInTheDocument();
-    expect(mocks.createChatTransport).toHaveBeenCalledOnce();
+    expect(await screen.findByRole("textbox", { name: "消息" })).toBeInTheDocument();
+    expect(mocks.createDailySessionClient).toHaveBeenCalledOnce();
+    expect(mocks.createChatTransport).not.toHaveBeenCalled();
     expect(mocks.createXiaozhiTransport).not.toHaveBeenCalled();
-    expect(mocks.createDailySessionClient).not.toHaveBeenCalled();
   });
 
-  it("routes a daily conversation to the read-only Session client", async () => {
+  it("routes a daily conversation to the canonical Session client", async () => {
     mocks.search =
       "mode=daily&conversation=10000000-0000-4000-8000-000000000001";
     renderRoute();
@@ -202,8 +253,47 @@ describe("ChatRoute", () => {
     );
     expect(mocks.createChatTransport).not.toHaveBeenCalled();
     expect(mocks.dailyLoadSession).not.toHaveBeenCalled();
-    expect(screen.queryByRole("textbox", { name: "消息" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "发送" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "消息" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "发送" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "退出登录" })).toHaveLength(1);
+    expect(
+      screen.queryByRole("heading", { name: "登录日常会话" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("replaces the first daily URL without restarting its canonical controller", async () => {
+    mocks.search = "mode=daily&panel=open";
+    const view = renderRoute();
+
+    fireEvent.change(await screen.findByRole("textbox", { name: "消息" }), {
+      target: { value: "首轮问题" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送" }));
+
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledOnce());
+    const replaced = new URL(
+      String(mocks.replace.mock.calls[0]?.[0]),
+      "https://agent-hub.test",
+    );
+    expect(replaced.searchParams.get("mode")).toBe("daily");
+    expect(replaced.searchParams.get("conversation")).toBe(
+      "10000000-0000-4000-8000-000000000001",
+    );
+    expect(replaced.searchParams.get("panel")).toBe("open");
+
+    mocks.search =
+      "mode=daily&conversation=10000000-0000-4000-8000-000000000001&panel=open";
+    view.rerender(
+      <AuthProvider client={mocks.globalAuthClient}>
+        <ModeProvider>
+          <ChatRoute />
+        </ModeProvider>
+      </AuthProvider>,
+    );
+
+    expect(mocks.createConversation).toHaveBeenCalledOnce();
+    expect(mocks.submitTurn).toHaveBeenCalledOnce();
+    expect(mocks.loadSnapshot).toHaveBeenCalledOnce();
   });
 
   it("never lets the E2E real-backend override replace work transport", () => {
@@ -269,7 +359,7 @@ describe("ChatRoute", () => {
 
     mocks.search = "mode=work&conversation=thread%2Fcreated";
     view.rerender(
-      <AuthProvider>
+      <AuthProvider client={mocks.globalAuthClient}>
         <ModeProvider>
           <ChatRoute />
         </ModeProvider>

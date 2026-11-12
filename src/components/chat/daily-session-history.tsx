@@ -8,10 +8,12 @@ import { useState, type FormEvent } from "react";
 import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
 import { LoadingState } from "@/components/states/loading-state";
-import { useDailySessionAuth } from "@/features/chat/session/daily-session-auth-provider";
 import { useDailySessionStore } from "@/features/chat/session/daily-session-store";
+import { useDailySessionAuthBridge } from "@/features/chat/session/use-daily-session-auth-bridge";
 import type { DailySessionClient } from "@/features/chat/transports/daily-session-client";
 import type { ConversationMetadata } from "@/features/chat/transports/daily-session-contract";
+
+import { DailySessionAuthNotice } from "./daily-session-auth-notice";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
@@ -23,24 +25,33 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 });
 
 export function DailySessionHistory({ client }: { client: DailySessionClient }) {
-  const auth = useDailySessionAuth();
-  const store = useDailySessionStore(client, auth.identityGeneration, {
-    onAuthRequired: auth.invalidate,
+  const auth = useDailySessionAuthBridge();
+  if (!auth.enabled) return <DailySessionAuthNotice />;
+
+  return (
+    <AuthenticatedDailySessionHistory
+      client={client}
+      identityGeneration={auth.identityGeneration}
+      onAuthRequired={auth.onAuthRequired}
+    />
+  );
+}
+
+function AuthenticatedDailySessionHistory({
+  client,
+  identityGeneration,
+  onAuthRequired,
+}: {
+  client: DailySessionClient;
+  identityGeneration: number;
+  onAuthRequired(): void;
+}) {
+  const store = useDailySessionStore(client, identityGeneration, {
+    onAuthRequired,
   });
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
-
-  const navigateAfterCreate = async (retry: boolean) => {
-    const result = retry
-      ? await store.retryCreate()
-      : await store.createConversation();
-    if (result.status === "created") {
-      router.push(
-        `/chat?mode=daily&conversation=${encodeURIComponent(result.conversationId)}`,
-      );
-    }
-  };
 
   const startRename = (conversation: ConversationMetadata) => {
     store.clearRenameError();
@@ -63,27 +74,12 @@ export function DailySessionHistory({ client }: { client: DailySessionClient }) 
       <div className="daily-history-toolbar">
         <button
           className="primary-button"
-          disabled={store.createStatus === "creating"}
-          onClick={() => void navigateAfterCreate(false)}
+          onClick={() => router.push("/chat?mode=daily")}
           type="button"
         >
-          {store.createStatus === "creating" ? "正在创建…" : "新建持久会话"}
+          新对话
         </button>
       </div>
-
-      {store.createError ? (
-        <div className="inline-error daily-history-feedback" role="alert">
-          <span>{store.createError}</span>
-          <button
-            className="text-button"
-            disabled={store.createStatus === "creating"}
-            onClick={() => void navigateAfterCreate(true)}
-            type="button"
-          >
-            重试创建
-          </button>
-        </div>
-      ) : null}
 
       {store.renameError ? (
         <div className="inline-error daily-history-feedback" role="alert">
@@ -137,7 +133,7 @@ function renderHistoryContent(input: {
     <>
       {store.conversations.length === 0 ? (
         <EmptyState
-          description="新建持久会话后，会话将显示在这里"
+          description="首次发送消息后，会话将显示在这里"
           title="暂无日常历史会话"
         />
       ) : (

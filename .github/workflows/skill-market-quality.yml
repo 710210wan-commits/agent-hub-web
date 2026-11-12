@@ -101,3 +101,6 @@ jobs:
           SKILL_MARKET_PRINCIPAL_MANAGED_SCENARIOS: daily
           SKILL_MARKET_PRINCIPAL_PERMISSIONS: ""
           SKILL_MARKET_PRINCIPAL_ROLES: author,reviewer,admin,scenario_admin
+          XIAOZHI_API_KEY: yxkey_ci-only-sensitive-data-canary
+          XIAOZHI_API_ORIGIN: https://xiaozhi-ci.example.test
+          XIAOZHI_WORK_AGENT_SLUG: ci-office-agent

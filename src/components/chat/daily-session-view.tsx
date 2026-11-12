@@ -1,262 +1,189 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
-import { EmptyState } from "@/components/states/empty-state";
 import { ErrorState } from "@/components/states/error-state";
+import { InlineError } from "@/components/states/inline-error";
 import { LoadingState } from "@/components/states/loading-state";
 import {
-  adaptDailySessionMessage,
-  mergeDailySessionMessages,
-  type DailySessionViewMessage,
-} from "@/features/chat/session/daily-session-adapter";
-import { useDailySessionAuth } from "@/features/chat/session/daily-session-auth-provider";
-import {
-  DailySessionClientError,
-  type DailySessionClient,
-} from "@/features/chat/transports/daily-session-client";
-import type { ConversationMetadata } from "@/features/chat/transports/daily-session-contract";
+  createEmptySelection,
+  type ChatRunState,
+  type ChatRunView,
+} from "@/features/chat/reducer/chat-state";
+import { useDailyConversation } from "@/features/chat/session/use-daily-conversation";
+import { useDailySessionAuthBridge } from "@/features/chat/session/use-daily-session-auth-bridge";
+import type { DailySessionClient } from "@/features/chat/transports/daily-session-client";
 
+import { ActivityLine } from "./activity-line";
+import { ChatEmptyState } from "./chat-empty-state";
+import { Composer } from "./composer";
+import { DailySessionAuthNotice } from "./daily-session-auth-notice";
 import { MessageList } from "./message-list";
-
-type ViewStatus = "loading" | "ready" | "not-found" | "error";
-
-interface ViewState {
-  key: string;
-  status: ViewStatus;
-  conversation?: ConversationMetadata;
-  messages: DailySessionViewMessage[];
-  nextCursor: string | null;
-  errorMessage?: string;
-  loadingEarlier: boolean;
-  pageError?: string;
-}
-
-const loadFailure = "历史会话加载失败，请稍后重试";
-const notFoundMessage = "会话不存在、已删除或不属于当前用户";
 
 export function DailySessionView({
   client,
   conversationId,
+  onConversationResolved,
 }: {
   client: DailySessionClient;
-  conversationId: string;
+  conversationId?: string;
+  onConversationResolved?(conversationId: string): void;
 }) {
-  const auth = useDailySessionAuth();
-  const viewKey = `${auth.identityGeneration}:${conversationId}`;
-  const [state, setState] = useState<ViewState>(() => initialState(viewKey));
-  const activeKeyRef = useRef(viewKey);
-  activeKeyRef.current = viewKey;
-  const requestEpochRef = useRef(0);
-  const snapshotControllerRef = useRef<AbortController | null>(null);
-  const pageControllerRef = useRef<AbortController | null>(null);
+  const auth = useDailySessionAuthBridge();
+  if (!auth.enabled) return <DailySessionAuthNotice />;
 
-  const applySnapshot = useCallback(
-    async (key: string, epoch: number, controller: AbortController) => {
-      try {
-        const snapshot = await client.loadSnapshot(
-          conversationId,
-          controller.signal,
-        );
-        if (!isCurrent(key, epoch, controller, activeKeyRef, requestEpochRef)) {
-          return;
-        }
-        setState({
-          key,
-          status: "ready",
-          conversation: snapshot.conversation,
-          messages: snapshot.messages.map(adaptDailySessionMessage),
-          nextCursor: snapshot.nextCursor,
-          loadingEarlier: false,
-        });
-      } catch (error) {
-        if (!isCurrent(key, epoch, controller, activeKeyRef, requestEpochRef)) {
-          return;
-        }
-        if (isAuthRequired(error)) {
-          auth.invalidate();
-          return;
-        }
-        if (isNotFound(error)) {
-          setState({
-            ...initialState(key),
-            status: "not-found",
-            errorMessage: notFoundMessage,
-          });
-          return;
-        }
-        setState({
-          ...initialState(key),
-          status: "error",
-          errorMessage: safeError(error, loadFailure),
-        });
-      }
-    },
-    [auth, client, conversationId],
+  return (
+    <AuthenticatedDailySessionView
+      client={client}
+      conversationId={conversationId}
+      identityGeneration={auth.identityGeneration}
+      onAuthRequired={auth.onAuthRequired}
+      onConversationResolved={onConversationResolved}
+    />
   );
+}
 
-  const startSnapshotLoad = useCallback(() => {
-    snapshotControllerRef.current?.abort();
-    pageControllerRef.current?.abort();
-    requestEpochRef.current += 1;
-    const epoch = requestEpochRef.current;
-    const key = activeKeyRef.current;
-    const controller = new AbortController();
-    snapshotControllerRef.current = controller;
-    setState(initialState(key));
-    void applySnapshot(key, epoch, controller);
-  }, [applySnapshot]);
+function AuthenticatedDailySessionView({
+  client,
+  conversationId,
+  identityGeneration,
+  onAuthRequired,
+  onConversationResolved,
+}: {
+  client: DailySessionClient;
+  conversationId?: string;
+  identityGeneration: number;
+  onAuthRequired(): void;
+  onConversationResolved?(conversationId: string): void;
+}) {
+  const controller = useDailyConversation({
+    client,
+    conversationId,
+    identityGeneration,
+    onAuthRequired,
+    onConversationResolved,
+  });
+  const [input, setInput] = useState("");
+  const [selection, setSelection] = useState(createEmptySelection);
+  const hasInitialConversation = Boolean(conversationId);
+  const isInitialLoading =
+    hasInitialConversation &&
+    !controller.state.conversation &&
+    ["idle", "loading"].includes(controller.state.status);
 
-  useEffect(() => {
-    snapshotControllerRef.current?.abort();
-    pageControllerRef.current?.abort();
-    requestEpochRef.current += 1;
-    const epoch = requestEpochRef.current;
-    const controller = new AbortController();
-    snapshotControllerRef.current = controller;
-    void applySnapshot(viewKey, epoch, controller);
-    return () => {
-      controller.abort();
-      pageControllerRef.current?.abort();
-      if (requestEpochRef.current === epoch) requestEpochRef.current += 1;
-    };
-  }, [applySnapshot, viewKey]);
-
-  const visibleState = state.key === viewKey ? state : initialState(viewKey);
-
-  const loadEarlier = useCallback(async () => {
-    if (!visibleState.nextCursor || visibleState.loadingEarlier) return;
-    pageControllerRef.current?.abort();
-    const controller = new AbortController();
-    pageControllerRef.current = controller;
-    const key = viewKey;
-    const epoch = requestEpochRef.current;
-    const cursor = visibleState.nextCursor;
-    setState((current) => ({
-      ...current,
-      loadingEarlier: true,
-      pageError: undefined,
-    }));
-    try {
-      const page = await client.loadMessages(
-        conversationId,
-        cursor,
-        controller.signal,
-      );
-      if (!isCurrent(key, epoch, controller, activeKeyRef, requestEpochRef)) {
-        return;
-      }
-      const older = page.messages.map(adaptDailySessionMessage);
-      setState((current) => ({
-        ...current,
-        messages: mergeDailySessionMessages(older, current.messages),
-        nextCursor: page.nextCursor,
-        loadingEarlier: false,
-      }));
-    } catch (error) {
-      if (!isCurrent(key, epoch, controller, activeKeyRef, requestEpochRef)) {
-        return;
-      }
-      if (isAuthRequired(error)) {
-        auth.invalidate();
-        return;
-      }
-      setState((current) => ({
-        ...current,
-        loadingEarlier: false,
-        pageError: safeError(error, "更早消息加载失败，请稍后重试"),
-      }));
-    }
-  }, [auth, client, conversationId, viewKey, visibleState]);
-
-  if (visibleState.status === "loading") {
+  if (controller.state.status === "deleted") {
+    return <ErrorState message="会话不存在、已删除或不属于当前用户" />;
+  }
+  if (isInitialLoading && !controller.state.notice) {
     return <LoadingState label="正在加载历史会话…" />;
   }
-  if (visibleState.status === "not-found") {
-    return <ErrorState message={visibleState.errorMessage ?? notFoundMessage} />;
-  }
-  if (visibleState.status === "error") {
+  if (isInitialLoading && controller.state.notice) {
     return (
       <div className="daily-session-view-state">
-        <ErrorState message={visibleState.errorMessage ?? loadFailure} />
-        <button className="secondary-button" onClick={startSnapshotLoad} type="button">
+        <ErrorState message={controller.state.notice} />
+        <button
+          className="secondary-button"
+          onClick={controller.reconnect}
+          type="button"
+        >
           重试加载
         </button>
       </div>
     );
   }
 
-  return (
-    <section aria-label="日常历史会话" className="daily-session-view">
-      <header className="daily-session-view-heading">
-        <div>
-          <span>持久会话</span>
-          <h1>{visibleState.conversation?.title || "未命名会话"}</h1>
-        </div>
-        <p>当前为只读历史，会话发送将在后续阶段开放</p>
-      </header>
+  const submit = () => {
+    const content = input.trim();
+    if (!content) return;
+    setInput("");
+    void controller.submit(content);
+  };
+  const run = presentRun(controller.state);
+  const showEmpty = controller.messages.length === 0 && !controller.state.conversation;
 
-      {visibleState.nextCursor ? (
+  return (
+    <section aria-label="日常持久会话" className="daily-session-view">
+      {controller.state.conversation ? (
+        <header className="daily-session-view-heading">
+          <div>
+            <span>持久会话</span>
+            <h1>{controller.state.conversation.title || "未命名会话"}</h1>
+          </div>
+        </header>
+      ) : null}
+
+      {controller.state.nextCursor ? (
         <button
           className="secondary-button daily-session-load-earlier"
-          disabled={visibleState.loadingEarlier}
-          onClick={() => void loadEarlier()}
+          onClick={() => void controller.loadEarlier()}
           type="button"
         >
-          {visibleState.loadingEarlier ? "正在加载…" : "加载更早消息"}
+          加载更早消息
         </button>
       ) : null}
-      {visibleState.pageError ? (
-        <div className="inline-error" role="alert">
-          {visibleState.pageError}
+
+      {showEmpty ? (
+        <ChatEmptyState mode="daily" onSelectPrompt={setInput} />
+      ) : controller.messages.length === 0 ? (
+        <section className="state-card empty-state">
+          <strong>这个持久会话暂时没有消息</strong>
+          <p>可以直接发送第一条消息</p>
+        </section>
+      ) : (
+        <MessageList messages={controller.messages} />
+      )}
+
+      {controller.state.activity ? <ActivityLine run={run} /> : null}
+      {controller.state.notice ? (
+        <div className="run-actions">
+          <InlineError message={controller.state.notice} />
+          {controller.state.status === "disconnected" ? (
+            <button onClick={controller.reconnect} type="button">
+              重新连接
+            </button>
+          ) : controller.state.pendingSend?.status === "unknown" ||
+            controller.state.pendingSend?.status === "failed" ? (
+            <button onClick={() => void controller.retrySubmit()} type="button">
+              重试发送
+            </button>
+          ) : null}
         </div>
       ) : null}
-      {visibleState.messages.length === 0 ? (
-        <EmptyState
-          description="可从历史页切换其他会话"
-          title="这个持久会话暂时没有消息"
-        />
-      ) : (
-        <MessageList messages={visibleState.messages} />
-      )}
+
+      <Composer
+        capabilityMode="unavailable"
+        input={input}
+        mode="daily"
+        onChange={setInput}
+        onSelectionChange={setSelection}
+        onSend={submit}
+        onStop={() => void controller.cancel()}
+        selection={selection}
+        status={composerStatus(controller.state.status)}
+      />
     </section>
   );
 }
 
-function initialState(key: string): ViewState {
+function composerStatus(status: string): ChatRunState {
+  if (status === "submitting") return "submitting";
+  if (status === "working" || status === "cancelling") return "working";
+  return "idle";
+}
+
+function presentRun(input: {
+  status: string;
+  activity: string | null;
+  completedStepCount: number;
+  notice: string | null;
+  activeTurn: { turnId: string } | null;
+}): ChatRunView {
   return {
-    key,
-    status: "loading",
-    messages: [],
-    nextCursor: null,
-    loadingEarlier: false,
+    status: input.activity ? "working" : composerStatus(input.status),
+    runId: input.activeTurn?.turnId ?? null,
+    assistantMessageId: null,
+    activity: input.activity,
+    completedStepCount: input.completedStepCount,
+    notice: input.notice,
   };
-}
-
-function isCurrent(
-  key: string,
-  epoch: number,
-  controller: AbortController,
-  activeKeyRef: React.RefObject<string>,
-  epochRef: React.RefObject<number>,
-): boolean {
-  return (
-    activeKeyRef.current === key &&
-    epochRef.current === epoch &&
-    !controller.signal.aborted
-  );
-}
-
-function isAuthRequired(error: unknown): boolean {
-  return (
-    error instanceof DailySessionClientError && error.status === 401
-  );
-}
-
-function isNotFound(error: unknown): boolean {
-  return error instanceof DailySessionClientError && error.status === 404;
-}
-
-function safeError(error: unknown, fallback: string): string {
-  return error instanceof DailySessionClientError ? error.message : fallback;
 }

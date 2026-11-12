@@ -27,7 +27,9 @@ function responseFromText(text: string, chunkSizes = [text.length]): Response {
 }
 
 async function collect(response: Response, signal?: AbortSignal) {
-  return Array.fromAsync(parseFetchSse(response, signal));
+  const events = [];
+  for await (const event of parseFetchSse(response, signal)) events.push(event);
+  return events;
 }
 
 describe("parseFetchSse", () => {
@@ -57,6 +59,22 @@ describe("parseFetchSse", () => {
     await expect(collect(response)).resolves.toEqual([
       { event: "custom", data: { status: "working" }, id: "2-0" },
       { event: "end", data: { status: "completed" } },
+    ]);
+  });
+
+  it("keeps unnamed events observable as the SSE message default", async () => {
+    const response = responseFromText(
+      ": heartbeat\n\n" +
+        "id: conversation:1\n" +
+        "data: {\"type\":\"conversation.created\"}\n\n",
+    );
+
+    await expect(collect(response)).resolves.toEqual([
+      {
+        event: "message",
+        id: "conversation:1",
+        data: { type: "conversation.created" },
+      },
     ]);
   });
 

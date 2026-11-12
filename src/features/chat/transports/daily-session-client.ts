@@ -1,26 +1,36 @@
 import { z, type ZodType } from "zod";
 
 import {
+  AcceptedConversationTurnSchema,
+  CancelledConversationTurnSchema,
+  ConversationEventPageSchema,
   ConversationListSchema,
   ConversationMessagePageSchema,
   ConversationMetadataSchema,
+  ConversationSequenceSchema,
   ConversationSnapshotSchema,
   CreateConversationRequestSchema,
   CreatedConversationSchema,
-  DailySessionAuthStatusSchema,
   DailySessionErrorEnvelopeSchema,
-  DailySessionLoginResponseSchema,
-  DailySessionLogoutResponseSchema,
   RenameConversationRequestSchema,
   RenamedConversationSchema,
+  SubmitConversationTurnRequestSchema,
+  type AcceptedConversationTurn,
+  type CancelledConversationTurn,
+  type ConversationEventPage,
   type ConversationList,
   type ConversationMessagePage,
   type ConversationMetadata,
   type ConversationSnapshot,
+  type ConversationPublicEvent,
+  type ConversationSequence,
   type CreatedConversation,
-  type DailySessionAuthStatus,
-  type DailySessionUser,
+  type SubmitConversationTurnRequest,
 } from "./daily-session-contract";
+import {
+  ConversationSseError,
+  parseConversationSse,
+} from "./conversation-sse";
 
 export interface DailySessionClientOptions {
   apiBaseUrl?: string;
@@ -42,13 +52,19 @@ export interface RenameConversationInput {
   expectedVersion: number;
 }
 
+export type SubmitTurnInput = SubmitConversationTurnRequest;
+
+export interface ListEventsInput {
+  afterSeq: ConversationSequence;
+  limit?: number;
+}
+
+export interface StreamEventsInput {
+  afterSeq?: ConversationSequence;
+  lastEventId?: string;
+}
+
 export interface DailySessionClient {
-  getAuthStatus(signal?: AbortSignal): Promise<DailySessionAuthStatus>;
-  login(
-    input: { username: string; password: string },
-    signal?: AbortSignal,
-  ): Promise<DailySessionUser>;
-  logout(signal?: AbortSignal): Promise<void>;
   listConversations(
     input?: ListConversationsInput,
     signal?: AbortSignal,
@@ -71,6 +87,26 @@ export interface DailySessionClient {
     input: RenameConversationInput,
     signal?: AbortSignal,
   ): Promise<ConversationMetadata>;
+  submitTurn(
+    conversationId: string,
+    input: SubmitTurnInput,
+    signal?: AbortSignal,
+  ): Promise<AcceptedConversationTurn>;
+  listEvents(
+    conversationId: string,
+    input: ListEventsInput,
+    signal?: AbortSignal,
+  ): Promise<ConversationEventPage>;
+  streamEvents(
+    conversationId: string,
+    input: StreamEventsInput,
+    signal?: AbortSignal,
+  ): AsyncIterable<ConversationPublicEvent>;
+  cancelTurn(
+    conversationId: string,
+    turnId: string,
+    signal?: AbortSignal,
+  ): Promise<CancelledConversationTurn>;
 }
 
 export class DailySessionClientError extends Error {
@@ -94,6 +130,7 @@ export class DailySessionClientError extends Error {
 
 const conversationIdSchema = z.string().uuid();
 const pageLimitSchema = z.number().int().min(1).max(100);
+const eventPageLimitSchema = z.number().int().min(1).max(200);
 
 export function createDailySessionClient(
   options: DailySessionClientOptions = {},
@@ -141,54 +178,7 @@ export function createDailySessionClient(
     return parsed.data;
   }
 
-  async function getAuthStatus(signal?: AbortSignal) {
-    return request(
-      "/auth/xiaozhi-status",
-      DailySessionAuthStatusSchema,
-      { method: "GET", signal },
-    );
-  }
-
   return {
-    getAuthStatus,
-
-    async login(input, signal) {
-      const body = JSON.stringify({
-        username: input.username,
-        password: input.password,
-      });
-      const login = await request(
-        "/auth/login",
-        DailySessionLoginResponseSchema,
-        { method: "POST", body, signal },
-      );
-      if (login.kbUnavailable) {
-        await request(
-          "/auth/xiaozhi-login",
-          DailySessionLoginResponseSchema,
-          { method: "POST", body, signal },
-        );
-      }
-
-      const status = await getAuthStatus(signal);
-      if (!status.enabled) {
-        throw new DailySessionClientError({
-          status: 401,
-          code: "AUTH_REQUIRED",
-          message: "登录状态未通过验证，请重新登录",
-        });
-      }
-      return status.user;
-    },
-
-    async logout(signal) {
-      await request(
-        "/auth/logout",
-        DailySessionLogoutResponseSchema,
-        { method: "POST", signal },
-      );
-    },
-
     async listConversations(input = {}, signal) {
       const limit = pageLimitSchema.parse(input.limit ?? 100);
       const search = new URLSearchParams({
@@ -211,7 +201,7 @@ export function createDailySessionClient(
         scenarioId: "daily",
         agentKey: "agent-loop",
       });
-      return request("/conversations/", CreatedConversationSchema, {
+      return request("/conversations", CreatedConversationSchema, {
         method: "POST",
         body: JSON.stringify(body),
         signal,
@@ -247,7 +237,124 @@ export function createDailySessionClient(
       );
       return ConversationMetadataSchema.parse(result.conversation);
     },
+
+    async submitTurn(conversationId, input, signal) {
+      const id = conversationIdSchema.parse(conversationId);
+      const body = SubmitConversationTurnRequestSchema.parse(input);
+      return request(
+        `/conversations/${encodeURIComponent(id)}/turns`,
+        AcceptedConversationTurnSchema,
+        { method: "POST", body: JSON.stringify(body), signal },
+      );
+    },
+
+    async listEvents(conversationId, input, signal) {
+      const id = conversationIdSchema.parse(conversationId);
+      const afterSeq = ConversationSequenceSchema.parse(input.afterSeq);
+      const limit = eventPageLimitSchema.parse(input.limit ?? 200);
+      const search = new URLSearchParams({
+        afterSeq,
+        limit: String(limit),
+      });
+      return request(
+        `/conversations/${encodeURIComponent(id)}/events?${search.toString()}`,
+        ConversationEventPageSchema,
+        { method: "GET", signal },
+      );
+    },
+
+    async *streamEvents(conversationId, input, signal) {
+      const id = conversationIdSchema.parse(conversationId);
+      const search = new URLSearchParams();
+      if (input.afterSeq !== undefined) {
+        search.set(
+          "afterSeq",
+          ConversationSequenceSchema.parse(input.afterSeq),
+        );
+      }
+      const lastEventId = parseLastEventId(input.lastEventId, id);
+      const query = search.size > 0 ? `?${search.toString()}` : "";
+
+      let response: Response;
+      try {
+        response = await fetchFn(
+          `${apiBaseUrl}/conversations/${encodeURIComponent(id)}/stream${query}`,
+          {
+            method: "GET",
+            credentials: "same-origin",
+            headers: {
+              accept: "text/event-stream",
+              ...(lastEventId ? { "last-event-id": lastEventId } : {}),
+            },
+            signal,
+          },
+        );
+      } catch (error) {
+        if (isAbortError(error)) throw error;
+        throw streamDisconnected();
+      }
+
+      if (!response.ok) {
+        throw mapHttpError(response.status, await readUnknownJson(response));
+      }
+      if (!response.headers.get("content-type")?.includes("text/event-stream")) {
+        throw new DailySessionClientError({
+          status: response.status,
+          code: "INVALID_RESPONSE",
+          message: "服务响应格式错误，请稍后重试",
+        });
+      }
+
+      try {
+        for await (const event of parseConversationSse(response, id, signal)) {
+          yield event;
+        }
+      } catch (error) {
+        if (isAbortError(error) || error instanceof DailySessionClientError) {
+          throw error;
+        }
+        if (error instanceof ConversationSseError) {
+          throw new DailySessionClientError({
+            code: error.code,
+            message: error.message,
+          });
+        }
+        throw streamDisconnected();
+      }
+
+      if (!signal?.aborted) throw streamDisconnected();
+    },
+
+    async cancelTurn(conversationId, turnId, signal) {
+      const id = conversationIdSchema.parse(conversationId);
+      const canonicalTurnId = conversationIdSchema.parse(turnId);
+      return request(
+        `/conversations/${encodeURIComponent(id)}/turns/${encodeURIComponent(canonicalTurnId)}/cancel`,
+        CancelledConversationTurnSchema,
+        { method: "POST", signal },
+      );
+    },
   };
+}
+
+function parseLastEventId(
+  raw: string | undefined,
+  conversationId: string,
+): string | undefined {
+  if (raw === undefined) return undefined;
+  const prefix = `${conversationId}:`;
+  if (!raw.startsWith(prefix)) {
+    throw new Error("Last-Event-ID 必须属于当前会话");
+  }
+  ConversationSequenceSchema.parse(raw.slice(prefix.length));
+  return raw;
+}
+
+function streamDisconnected(): DailySessionClientError {
+  return new DailySessionClientError({
+    code: "STREAM_DISCONNECTED",
+    message: "会话事件流已断开，请重新连接",
+  });
 }
 
 function normalizeSameOriginBase(raw: string): string {
@@ -282,14 +389,36 @@ async function readUnknownJson(response: Response): Promise<unknown> {
 
 function mapHttpError(status: number, payload: unknown): DailySessionClientError {
   const envelope = DailySessionErrorEnvelopeSchema.safeParse(payload);
-  const requestId = envelope.success ? envelope.data.error.requestId : undefined;
   const fallback = statusError(status);
+  if (!envelope.success) {
+    return new DailySessionClientError({
+      status,
+      code: fallback.code,
+      message: fallback.message,
+    });
+  }
+  const { code, requestId } = envelope.data.error;
   return new DailySessionClientError({
     status,
     requestId,
-    code: fallback.code,
-    message: fallback.message,
+    code,
+    message: backendErrorMessage(code) ?? fallback.message,
   });
+}
+
+function backendErrorMessage(code: string): string | undefined {
+  switch (code) {
+    case "TURN_IN_PROGRESS":
+      return "当前会话已有任务运行中";
+    case "IDEMPOTENCY_CONFLICT":
+      return "请求标识冲突，请重新发起请求";
+    case "RESYNC_REQUIRED":
+      return "事件记录已过期，请重新同步会话";
+    case "CONVERSATION_EXECUTION_DISABLED":
+      return "当前会话暂不可执行";
+    default:
+      return undefined;
+  }
 }
 
 function statusError(status: number): { code: string; message: string } {

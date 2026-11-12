@@ -1,13 +1,13 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DailySessionAuthGate } from "@/components/chat/daily-session-auth-gate";
-import { DailySessionAuthProvider } from "@/features/chat/session/daily-session-auth-provider";
+import type { GlobalAuthClient } from "@/features/auth/global-auth-client";
 import {
   DailySessionClientError,
   type DailySessionClient,
 } from "@/features/chat/transports/daily-session-client";
 import type { ConversationMetadata } from "@/features/chat/transports/daily-session-contract";
+import { AuthProvider, useAuth } from "@/providers/auth-provider";
 
 import { DailySessionHistory } from "./daily-session-history";
 
@@ -41,17 +41,6 @@ function conversation(
 
 function createClient(): DailySessionClient {
   return {
-    getAuthStatus: vi.fn().mockResolvedValue({
-      enabled: true,
-      xiaozhiUrl: "http://xiaozhi.local",
-      user: {
-        id: "user-1",
-        displayName: "测试用户",
-        sessionExpiresAt: "2026-11-10T00:00:00.000Z",
-      },
-    }),
-    login: vi.fn(),
-    logout: vi.fn().mockResolvedValue(undefined),
     listConversations: vi.fn().mockResolvedValue({
       conversations: [],
       nextCursor: null,
@@ -60,16 +49,40 @@ function createClient(): DailySessionClient {
     loadSnapshot: vi.fn(),
     loadMessages: vi.fn(),
     renameConversation: vi.fn(),
+    submitTurn: vi.fn(),
+    listEvents: vi.fn(),
+    streamEvents: vi.fn(),
+    cancelTurn: vi.fn(),
   };
 }
 
-function renderHistory(client: DailySessionClient) {
+function createAuthClient(enabled = true): GlobalAuthClient {
+  return {
+    getAuthStatus: vi.fn().mockResolvedValue(
+      enabled
+        ? { enabled: true, user: { id: "user-1", displayName: "测试用户" } }
+        : { enabled: false },
+    ),
+    login: vi.fn(),
+    loginDemo: vi.fn(),
+    logout: vi.fn(),
+  };
+}
+
+function AuthStatusProbe() {
+  const { status } = useAuth();
+  return <output data-testid="auth-status">{status}</output>;
+}
+
+function renderHistory(
+  client: DailySessionClient,
+  authClient = createAuthClient(),
+) {
   return render(
-    <DailySessionAuthProvider client={client}>
-      <DailySessionAuthGate>
-        <DailySessionHistory client={client} />
-      </DailySessionAuthGate>
-    </DailySessionAuthProvider>,
+    <AuthProvider client={authClient}>
+      <AuthStatusProbe />
+      <DailySessionHistory client={client} />
+    </AuthProvider>,
   );
 }
 
@@ -100,8 +113,7 @@ describe("DailySessionHistory", () => {
       });
 
     renderHistory(client);
-    await screen.findByText("测试用户");
-    expect(screen.getByRole("status")).toHaveTextContent("正在加载日常历史");
+    expect(await screen.findByText("正在加载日常历史…")).toBeInTheDocument();
 
     await act(async () => {
       initial.resolve({ conversations: [], nextCursor: "opaque/+==" });
@@ -122,48 +134,13 @@ describe("DailySessionHistory", () => {
     );
   });
 
-  it("creates an untitled persistent conversation and navigates to it", async () => {
+  it("opens a fresh daily route without creating an empty conversation", async () => {
     const client = createClient();
-    vi.mocked(client.createConversation).mockResolvedValue({
-      conversation: conversation(FIRST_ID, { title: "新会话" }),
-      reused: false,
-    });
     renderHistory(client);
 
-    fireEvent.click(await screen.findByRole("button", { name: "新建持久会话" }));
-    await waitFor(() =>
-      expect(push).toHaveBeenCalledWith(
-        `/chat?mode=daily&conversation=${FIRST_ID}`,
-      ),
-    );
-    expect(client.createConversation).toHaveBeenCalledWith(
-      { clientRequestId: expect.any(String) },
-      expect.any(AbortSignal),
-    );
-  });
-
-  it("offers a stable retry when the create result is unknown", async () => {
-    const client = createClient();
-    vi.mocked(client.createConversation)
-      .mockRejectedValueOnce(
-        new DailySessionClientError({ code: "NETWORK_ERROR", message: "secret" }),
-      )
-      .mockResolvedValueOnce({
-        conversation: conversation(FIRST_ID),
-        reused: true,
-      });
-    renderHistory(client);
-
-    fireEvent.click(await screen.findByRole("button", { name: "新建持久会话" }));
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("创建结果暂未确认");
-    expect(alert).not.toHaveTextContent("secret");
-
-    fireEvent.click(screen.getByRole("button", { name: "重试创建" }));
-    await waitFor(() => expect(push).toHaveBeenCalledOnce());
-    expect(
-      vi.mocked(client.createConversation).mock.calls[0]?.[0].clientRequestId,
-    ).toBe(vi.mocked(client.createConversation).mock.calls[1]?.[0].clientRequestId);
+    fireEvent.click(await screen.findByRole("button", { name: "新对话" }));
+    expect(push).toHaveBeenCalledWith("/chat?mode=daily");
+    expect(client.createConversation).not.toHaveBeenCalled();
   });
 
   it("renames inline and refreshes the visible title after a conflict", async () => {
@@ -234,7 +211,7 @@ describe("DailySessionHistory", () => {
     expect(await screen.findByRole("link", { name: /第二页/ })).toBeInTheDocument();
   });
 
-  it("returns to the login gate when history pagination expires", async () => {
+  it("invalidates the global identity when history pagination expires", async () => {
     const client = createClient();
     vi.mocked(client.listConversations)
       .mockResolvedValueOnce({
@@ -253,18 +230,20 @@ describe("DailySessionHistory", () => {
     await screen.findByRole("link", { name: /边境态势分析/ });
     fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
 
-    expect(
-      await screen.findByRole("heading", { name: "登录日常会话" }),
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-status")).toHaveTextContent("anonymous"),
+    );
     expect(screen.queryByText("边境态势分析")).not.toBeInTheDocument();
   });
 
-  it("logs out through the authenticated boundary", async () => {
+  it("shows a full-login notice in demo mode without loading conversations", async () => {
     const client = createClient();
-    renderHistory(client);
+    renderHistory(client, createAuthClient(false));
 
-    fireEvent.click(await screen.findByRole("button", { name: "退出登录" }));
-    await waitFor(() => expect(client.logout).toHaveBeenCalledOnce());
-    expect(await screen.findByRole("heading", { name: "登录日常会话" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "完整登录后使用日常会话" }),
+    ).toBeInTheDocument();
+    expect(client.listConversations).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "退出登录" })).not.toBeInTheDocument();
   });
 });

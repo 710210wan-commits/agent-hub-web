@@ -60,10 +60,7 @@ describe("知识库列表页 × 全局登录态（Task 6）", () => {
     listKbDatabases.mockReset();
   });
 
-  it("演示态 + 401：页面内引导「登录后使用知识库」，不渲染旧登录表单，不踢登录态", async () => {
-    listKbDatabases.mockRejectedValue(
-      new KbApiError("unauthorized", 401, "请先登录后再访问知识库"),
-    );
+  it("演示态：不请求受保护接口，页面内引导完整登录", async () => {
     renderPage(createClientStub());
     await waitFor(() =>
       expect(screen.getByTestId("auth-status").textContent).toBe("demo"),
@@ -74,6 +71,7 @@ describe("知识库列表页 × 全局登录态（Task 6）", () => {
     );
     expect(screen.queryByLabelText("用户名")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("密码")).not.toBeInTheDocument();
+    expect(listKbDatabases).not.toHaveBeenCalled();
     // 演示态不被踢出
     expect(screen.getByTestId("auth-status").textContent).toBe("demo");
   });
@@ -116,5 +114,28 @@ describe("知识库列表页 × 全局登录态（Task 6）", () => {
       expect(screen.getByText("制度库")).toBeInTheDocument(),
     );
     expect(screen.getByTestId("auth-status").textContent).toBe("authenticated");
+  });
+
+  it("完整登录态 + 403：显示权限或 Origin 错误，但不退出", async () => {
+    listKbDatabases.mockRejectedValue(
+      new KbApiError(
+        "unknown",
+        403,
+        "请求来源校验失败，请联系管理员检查部署配置",
+      ),
+    );
+    const client = createClientStub({
+      getAuthStatus: vi.fn().mockResolvedValue({
+        enabled: true,
+        user: { id: "u-1", displayName: "张三" },
+      }),
+    });
+    renderPage(client);
+
+    expect(
+      await screen.findByText("请求来源校验失败，请联系管理员检查部署配置"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("auth-status").textContent).toBe("authenticated");
+    expect(screen.queryByText("登录后使用知识库")).not.toBeInTheDocument();
   });
 });

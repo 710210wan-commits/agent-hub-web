@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import { installGlobalAuthFixture } from "./fixtures/global-auth";
+
+test.beforeEach(async ({ page }) => {
+  await installGlobalAuthFixture(page);
+});
+
 const routes = [
   ["/chat", "今天要处理什么工作？"],
   ["/history", "历史对话"],
@@ -48,12 +54,11 @@ test("GIS opens the legacy homepage in one new tab", async ({ page, context }) =
   await expect(page).toHaveURL(/\/chat\?mode=daily/);
 });
 
-test("resource details and settings remain explicit placeholders", async ({ page }) => {
-  await page.goto("/knowledge?mode=daily");
+test("knowledge demo renders and settings remain explicit placeholders", async ({ page }) => {
+  await page.goto("/knowledge?mode=daily&demo=1");
   await page.screenshot({ path: "e2e/screenshots/resource-template.png" });
-  await page.getByRole("link", { name: /项目资料库/ }).click();
-  await expect(page.getByText("详情能力待接入")).toBeVisible();
-  await expect(page.getByRole("link", { name: "返回知识库" })).toHaveAttribute("href", "/knowledge?mode=daily");
+  await expect(page.getByRole("link", { name: /项目资料库/ })).toBeVisible();
+  await expect(page.getByText(/当前为演示数据/)).toBeVisible();
 
   await page.goto("/settings?mode=daily");
   await expect(page.getByText("模型配置待接入")).toBeVisible();
