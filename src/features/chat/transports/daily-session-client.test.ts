@@ -121,7 +121,7 @@ describe("daily Session client", () => {
     ).resolves.toMatchObject({ conversation: metadata, reused: false });
 
     const request = requestAt(fetchFn);
-    expect(request.url).toBe("/agent-api/conversations/");
+    expect(request.url).toBe("/agent-api/conversations");
     expect(request.init).toMatchObject({
       method: "POST",
       credentials: "same-origin",

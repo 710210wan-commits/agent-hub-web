@@ -253,11 +253,11 @@ function applyReceipt(
   );
   if (
     existing &&
-    (isTerminal(existing.status) ||
+    ((existing.turnId === receipt.turnId &&
+      (isTerminal(existing.status) ||
+        statusRank(existing.status) > statusRank(receipt.status))) ||
       (existing.turnId !== receipt.turnId &&
-        compareSequence(existing.acceptedEventSeq, receipt.acceptedEventSeq) >= 0) ||
-      (existing.turnId === receipt.turnId &&
-        statusRank(existing.status) > statusRank(receipt.status)))
+        compareSequence(existing.acceptedEventSeq, receipt.acceptedEventSeq) >= 0))
   ) {
     return { ...state, pendingSend: pending };
   }

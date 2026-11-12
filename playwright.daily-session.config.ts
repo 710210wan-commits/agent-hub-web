@@ -20,19 +20,28 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], channel: "chrome" },
     },
   ],
-  webServer: {
-    command: "corepack pnpm@9.0.0 dev --hostname 127.0.0.1 --port 3103",
-    url: "http://127.0.0.1:3103/chat?mode=daily",
-    reuseExistingServer: false,
-    timeout: 120_000,
-    env: {
-      NEXT_PUBLIC_CHAT_TRANSPORT: "mock",
-      NEXT_PUBLIC_E2E_SCENARIOS: "1",
-      SKILL_MARKET_DAILY_ORIGIN: "http://127.0.0.1:3999",
-      SKILL_MARKET_GATEWAY_HMAC_SECRET:
-        "test-only-skill-market-hmac-secret-32-bytes",
-      SKILL_MARKET_PRINCIPAL_ID: "daily-session-e2e",
-      SKILL_MARKET_PRINCIPAL_ROLES: "admin",
+  webServer: [
+    {
+      command: "node e2e/fixtures/canonical-conversation-backend.mjs",
+      url: "http://127.0.0.1:3203/__health",
+      reuseExistingServer: false,
+      timeout: 30_000,
     },
-  },
+    {
+      command: "corepack pnpm@9.0.0 dev --hostname 127.0.0.1 --port 3103",
+      url: "http://127.0.0.1:3103/chat?mode=daily",
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        NEXT_PUBLIC_CHAT_TRANSPORT: "projects-new",
+        NEXT_PUBLIC_AGENT_API_BASE: "/agent-api",
+        AGENT_API_ORIGIN: "http://127.0.0.1:3203",
+        SKILL_MARKET_DAILY_ORIGIN: "http://127.0.0.1:3999",
+        SKILL_MARKET_GATEWAY_HMAC_SECRET:
+          "test-only-skill-market-hmac-secret-32-bytes",
+        SKILL_MARKET_PRINCIPAL_ID: "daily-session-e2e",
+        SKILL_MARKET_PRINCIPAL_ROLES: "admin",
+      },
+    },
+  ],
 });

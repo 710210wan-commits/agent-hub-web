@@ -201,7 +201,7 @@ export function createDailySessionClient(
         scenarioId: "daily",
         agentKey: "agent-loop",
       });
-      return request("/conversations/", CreatedConversationSchema, {
+      return request("/conversations", CreatedConversationSchema, {
         method: "POST",
         body: JSON.stringify(body),
         signal,

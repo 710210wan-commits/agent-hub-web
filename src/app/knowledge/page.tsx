@@ -25,6 +25,7 @@ import {
   type KbDatabase,
   type KbEmbeddingModel,
 } from "@/lib/kb-api";
+import { useAuth } from "@/providers/auth-provider";
 
 interface KnowledgeListItem {
   id: string;
@@ -62,6 +63,7 @@ type PageState = "loading" | "error" | "ready";
 export default function KnowledgePage() {
   // 401 分流：完整态自动 invalidate 回登录页；演示态页面内引导
   useKbAuthBridge();
+  const { status: authStatus } = useAuth();
   const [items, setItems] = useState<KnowledgeListItem[]>([]);
   const [state, setState] = useState<PageState>("loading");
   const [isDemo, setIsDemo] = useState(false);
@@ -74,6 +76,7 @@ export default function KnowledgePage() {
   const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
     // 演示模式：URL 带 ?demo=1 时用本地演示数据渲染页面（不请求后端），
     // 用于在登录/后端依赖未就绪时预览最终 UI 效果。
     // 演示与真实取数走同一条异步流程，保证状态流转一致。
@@ -101,7 +104,7 @@ export default function KnowledgePage() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [authStatus, reloadKey]);
 
   function reloadList() {
     setReloadKey((current) => current + 1);
@@ -249,6 +252,14 @@ export default function KnowledgePage() {
       setDeleteError(kbErrorMessage(error));
       setDeleteBusy(false);
     }
+  }
+
+  if (authStatus === "demo") {
+    return (
+      <AppShell title="知识库">
+        <KbAuthNotice />
+      </AppShell>
+    );
   }
 
   return (

@@ -253,6 +253,48 @@ describe("dailyConversationReducer", () => {
     expect(lateReceipt.status).toBe("completed");
   });
 
+  it("accepts a later turn receipt after the previous turn is terminal", () => {
+    const terminal = dailyConversationReducer(
+      dailyConversationReducer(
+        createInitialDailyConversationState(`${conversationId}:1`),
+        {
+          type: "event.apply",
+          event: event("1", "turn.queued", {
+            turn: turnState("queued"),
+            userMessageId,
+          }),
+        },
+      ),
+      {
+        type: "event.apply",
+        event: event("2", "turn.completed", {
+          turn: turnState("completed"),
+          messageId: assistantMessageId,
+        }),
+      },
+    );
+    const secondTurnId = "21000000-0000-4000-8000-000000000012";
+
+    const next = dailyConversationReducer(terminal, {
+      type: "receipt.apply",
+      receipt: {
+        ...receipt(),
+        turnId: secondTurnId,
+        taskId: "31000000-0000-4000-8000-000000000013",
+        userMessageId: "41000000-0000-4000-8000-000000000014",
+        acceptedEventSeq: "4",
+      },
+    });
+
+    expect(next.activeTurn).toMatchObject({
+      turnId: secondTurnId,
+      status: "queued",
+      acceptedEventSeq: "4",
+    });
+    expect(next.status).toBe("submitting");
+    expect(next.activity).toBe("正在准备…");
+  });
+
   it("keeps a terminal turn terminal if a later nonterminal frame arrives", () => {
     const queued = event("1", "turn.queued", {
       turn: turnState("queued"),
