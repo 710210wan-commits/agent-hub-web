@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -8,6 +7,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
@@ -47,12 +47,12 @@ function SkillPublicationDetailDaily({ client, id }: { client: SkillMarketClient
   if (state.kind === "loading") return <LoadingState label="正在加载 Publication…" />;
   if (state.kind === "error") return (
     <section className="resource-page">
-      <Link className="back-link" href="/skills/manage?mode=daily">← 返回发布管理</Link>
+      <SkillBackLink href="/skills/manage?mode=daily">返回发布管理</SkillBackLink>
       <SkillMarketErrorState error={state.error} onRecover={state.error.recovery === "back" ? undefined : refresh} />
     </section>
   );
   const publication = state.publications.find((item) => item.id === id);
-  if (!publication) return <section className="resource-page"><Link className="back-link" href="/skills/manage?mode=daily">← 返回发布管理</Link><EmptyState title="Publication 不存在或当前身份不可见" /></section>;
+  if (!publication) return <section className="resource-page"><SkillBackLink href="/skills/manage?mode=daily">返回发布管理</SkillBackLink><EmptyState title="Publication 不存在或当前身份不可见" /></section>;
 
   const publicationHash = publication.contentHash;
   const currentStatus = withdrawn?.status ?? publication.status;
@@ -123,15 +123,20 @@ function SkillPublicationDetailDaily({ client, id }: { client: SkillMarketClient
     if (!start("revise")) return;
     const result = await client.mutate({ mode: "daily", operation: "revisePublication", pathParameters: { id } }, revisePublicationAdapter);
     if (result.ok) {
-      const query = new URLSearchParams({ mode: "daily", sourcePublication: id, revision: String(result.value.revision) });
-      router.push(`/skills/drafts/${encodeURIComponent(result.value.id)}?${query.toString()}`);
+      const query = new URLSearchParams({
+        mode: "daily",
+        draftId: result.value.id,
+        sourcePublication: id,
+        revision: String(result.value.revision),
+      });
+      router.push(`/skills/creator?${query.toString()}`);
     } else setError(result.error);
     finish();
   }
 
   return (
     <section className="resource-page skill-publication-detail">
-      <Link className="back-link" href="/skills/manage?mode=daily">← 返回发布管理</Link>
+      <SkillBackLink href="/skills/manage?mode=daily">返回发布管理</SkillBackLink>
       <header className="page-heading">
         <div><h1>{publication.skillName}</h1><p>Publication {publication.id} · 修订 r{publication.revision}</p></div>
       </header>

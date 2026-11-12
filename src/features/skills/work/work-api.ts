@@ -118,6 +118,13 @@ export function createWorkSkillsApi(
   const basePath = options.basePath ?? WORK_SKILLS_BFF_BASE;
   const fetchImpl = options.fetchImpl ?? fetch;
 
+  const bffUrl = (upstreamPath: string): string => {
+    if (!upstreamPath.startsWith("/api/")) {
+      throw new Error("Work Skill 上游路径必须以 /api/ 开头");
+    }
+    return `${basePath}${upstreamPath.slice("/api".length)}`;
+  };
+
   async function send<T>(
     path: string,
     init: RequestInit,
@@ -125,7 +132,7 @@ export function createWorkSkillsApi(
   ): Promise<T> {
     let response: Response;
     try {
-      response = await fetchImpl(`${basePath}${path}`, {
+      response = await fetchImpl(bffUrl(path), {
         credentials: "same-origin",
         ...init,
       });
@@ -285,7 +292,7 @@ export function createWorkSkillsApi(
     exportSkill: async (slug, signal) => {
       let response: Response;
       try {
-        response = await fetchImpl(`${basePath}${buildSkillPath(slug, "/export")}`, {
+        response = await fetchImpl(bffUrl(buildSkillPath(slug, "/export")), {
           credentials: "same-origin",
           signal,
         });

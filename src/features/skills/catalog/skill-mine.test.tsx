@@ -72,7 +72,7 @@ describe("SkillMine", () => {
     expect(await screen.findByRole("heading", { name: "我的 Skill" })).toBeInTheDocument();
     const draft = screen.getByRole("article", { name: "草稿 my-draft" });
     expect(within(draft).getByRole("link", { name: "编辑" })).toHaveAttribute(
-      "href", "/skills/drafts/draft-1?mode=daily",
+      "href", "/skills/creator?mode=daily&draftId=draft-1",
     );
     expect(within(draft).getByRole("button", { name: "提交审核" })).toBeInTheDocument();
     expect(within(draft).getByRole("button", { name: "删除" })).toBeInTheDocument();
@@ -98,7 +98,8 @@ describe("SkillMine", () => {
     render(<ModeProvider><SkillMine client={clientStub(query)} /></ModeProvider>);
 
     expect(await screen.findByRole("heading", { name: "我的 Skill" })).toBeInTheDocument();
-    for (const name of ["发布管理", "审核", "Creator", "返回广场"]) {
+    expect(screen.getByRole("link", { name: "← 返回 Skill 广场" })).toHaveClass("back-link");
+    for (const name of ["发布管理", "审核", "Creator"]) {
       expect(screen.getByRole("link", { name })).toHaveClass("skill-page-action");
     }
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();

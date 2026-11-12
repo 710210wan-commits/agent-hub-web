@@ -89,7 +89,12 @@ export function ReviewEvidence({ submission }: { submission: ReviewSubmissionVie
 }
 
 function EvidenceSection({ children, title }: { children: React.ReactNode; title: string }) {
-  return <section className="creator-section"><h2>{title}</h2>{children}</section>;
+  return (
+    <section className="creator-section">
+      <h2 className="skill-review-evidence-title">{title}</h2>
+      {children}
+    </section>
+  );
 }
 
 function Row({ label, value }: { label: string; value: string }) {

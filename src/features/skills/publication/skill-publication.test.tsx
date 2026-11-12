@@ -58,7 +58,7 @@ describe("Skill publication management", () => {
     render(<ModeProvider><SkillPublicationList client={{ query } as unknown as SkillMarketClient} /></ModeProvider>);
 
     expect(await screen.findByRole("heading", { name: "发布管理" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "返回广场" })).toHaveClass("skill-page-action");
+    expect(screen.getByRole("link", { name: "← 返回 Skill 广场" })).toHaveClass("back-link");
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
   });
 
@@ -171,7 +171,7 @@ describe("Skill publication management", () => {
     await waitFor(() => expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
       operation: "revisePublication", pathParameters: { id: "pub-2" },
     }), expect.anything()));
-    expect(push).toHaveBeenCalledWith("/skills/drafts/draft-9?mode=daily&sourcePublication=pub-2&revision=2");
+    expect(push).toHaveBeenCalledWith("/skills/creator?mode=daily&draftId=draft-9&sourcePublication=pub-2&revision=2");
   });
 
   it("downloads the artifact with integrity verification before saving", async () => {

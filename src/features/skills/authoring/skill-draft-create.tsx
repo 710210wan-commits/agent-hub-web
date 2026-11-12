@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
 import { useAppMode } from "@/providers/mode-provider";
 
@@ -73,7 +74,7 @@ function SkillDraftCreateDaily({ client }: { client: SkillMarketClient }) {
 
   return (
     <section className="resource-page skill-draft-page">
-      <Link className="back-link" href="/skills/mine?mode=daily">← 返回我的 Skill</Link>
+      <SkillBackLink href="/skills/mine?mode=daily">返回我的 Skill</SkillBackLink>
       <header className="page-heading"><div><h1>上传草稿</h1><p>后端校验结果是最终依据，前端仅做文件选择检查。</p></div></header>
       <div className="skill-draft-panel">
         <label>草稿名称<input maxLength={64} value={name} onChange={(event) => setName(event.target.value)} /></label>

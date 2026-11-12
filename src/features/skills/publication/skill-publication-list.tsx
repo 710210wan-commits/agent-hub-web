@@ -1,7 +1,6 @@
 "use client";
 
 import { Download, Eye, FilePenLine, Power, PowerOff } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -9,6 +8,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
@@ -42,7 +42,7 @@ function SkillPublicationListDaily({ client }: { client: SkillMarketClient }) {
 
   if (state.kind === "loading") return <LoadingState label="正在加载发布记录…" />;
   if (state.kind === "error") {
-    return <section className="resource-page"><Link className="back-link" href="/skills?mode=daily">← 返回 Skill 广场</Link><SkillMarketErrorState error={state.error} onRecover={state.error.recovery === "back" ? undefined : refresh} /></section>;
+    return <section className="resource-page"><SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink><SkillMarketErrorState error={state.error} onRecover={state.error.recovery === "back" ? undefined : refresh} /></section>;
   }
 
   function begin(id: string): boolean {
@@ -97,19 +97,22 @@ function SkillPublicationListDaily({ client }: { client: SkillMarketClient }) {
     if (!begin(publication.id)) return;
     const result = await client.mutate({ mode: "daily", operation: "revisePublication", pathParameters: { id: publication.id } }, revisePublicationAdapter);
     if (result.ok) {
-      const query = new URLSearchParams({ mode: "daily", sourcePublication: publication.id, revision: String(result.value.revision) });
-      router.push(`/skills/drafts/${encodeURIComponent(result.value.id)}?${query.toString()}`);
+      const query = new URLSearchParams({
+        mode: "daily",
+        draftId: result.value.id,
+        sourcePublication: publication.id,
+        revision: String(result.value.revision),
+      });
+      router.push(`/skills/creator?${query.toString()}`);
     } else setError(result.error);
     end();
   }
 
   return (
     <section className="resource-page skill-publication-list">
+      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
       <header className="page-heading">
         <div><h1>发布管理</h1><p>按场景启用、停用或下架不可变 Skill 修订；安装目标固定为 scenario:daily</p></div>
-        <div className="skill-page-actions skill-catalog-actions">
-          <Link className="skill-page-action" href="/skills?mode=daily">返回广场</Link>
-        </div>
       </header>
       {error ? <SkillMarketErrorState error={error} onRecover={error.recovery === "retry" ? () => refresh() : undefined} /> : null}
       {message ? <div className="skill-draft-notice" role="status">{message}</div> : null}

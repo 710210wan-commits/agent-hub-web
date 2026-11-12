@@ -853,10 +853,16 @@ a {
   margin: 0;
 }
 
-.creator-section h2 {
+.creator-section h2,
+.skill-review-evidence-title {
   font-size: 14px;
   font-weight: 620;
   letter-spacing: -0.01em;
+}
+
+.skill-review-evidence-title {
+  font-family: inherit;
+  line-height: 1.35;
 }
 
 .creator-section > p,

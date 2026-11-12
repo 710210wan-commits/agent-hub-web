@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
@@ -130,7 +131,7 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
 
   return (
     <section className="resource-page skill-draft-page">
-      <Link className="back-link" href="/skills/mine?mode=daily">← 返回我的 Skill</Link>
+      <SkillBackLink href="/skills/mine?mode=daily">返回我的 Skill</SkillBackLink>
       <header className="page-heading">
         <div><h1>{draft.name}</h1><p>状态：{draft.status} · 修订 r{draft.revision} · {draft.fileCount} 个文件</p></div>
       </header>

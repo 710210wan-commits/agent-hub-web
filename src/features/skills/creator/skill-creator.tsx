@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LoadingState } from "@/components/states/loading-state";
+import { SkillBackLink } from "@/features/skills/components/skill-back-link";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
 import { useAppMode } from "@/providers/mode-provider";
@@ -55,8 +57,10 @@ export function SkillCreator({ client, draftId }: { client?: SkillMarketClient; 
 }
 
 function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; draftId?: string }) {
+  const router = useRouter();
   const pendingRef = useRef<PendingAction | undefined>(undefined);
   const retryRef = useRef<(() => void) | undefined>(undefined);
+  const savedDraftRef = useRef<string | null>(null);
   const [state, setState] = useState<CreatorState>(() => ({ basic: loadSafeBasic() }));
   const [answers, setAnswers] = useState<string[]>([]);
   const [toolCatalog, setToolCatalog] = useState<CreatorToolListResponse>();
@@ -75,7 +79,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
   }, [state.basic]);
 
   useEffect(() => {
-    if (!draftId) return;
+    if (!draftId || savedDraftRef.current === draftId) return;
     const controller = new AbortController();
     client.query(
       { mode: "daily", operation: "getDraft", pathParameters: { id: draftId }, signal: controller.signal },
@@ -294,17 +298,21 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
     run("save", () => client.mutate({
       body: { files: bundle.files, metadata: creatorDraftMetadata(state), name: state.basic.name },
       mode: "daily", operation: "createDraft",
-    }, draftMutationAdapter), (response) => setState((current) => ({
-      ...current,
-      bundle: current.bundle ? { ...current.bundle, diagnostics: response.diagnostics } : current.bundle,
-      draft: response.draft, draftSaved: true,
-    })));
+    }, draftMutationAdapter), (response) => {
+      savedDraftRef.current = response.draft.id;
+      setState((current) => ({
+        ...current,
+        bundle: current.bundle ? { ...current.bundle, diagnostics: response.diagnostics } : current.bundle,
+        draft: response.draft, draftSaved: true,
+      }));
+      router.replace(`/skills/creator?mode=daily&draftId=${encodeURIComponent(response.draft.id)}`);
+    });
   }
 
   if (loadingDraft) return <LoadingState label="正在恢复 Creator 草稿…" />;
   if (state.draft && state.draft.status !== "editing") {
     return <section className="resource-page skill-creator-page">
-      <Link className="back-link" href={`/skills/drafts/${encodeURIComponent(state.draft.id)}?mode=daily`}>← 返回草稿</Link>
+      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
       <div className="skill-draft-notice" role="status">该草稿状态为 {state.draft.status}，Creator 不再发起变更。</div>
     </section>;
   }
@@ -313,7 +321,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
 
   return (
     <section className="resource-page skill-creator-page">
-      <Link className="back-link" href="/skills/mine?mode=daily">← 返回我的 Skill</Link>
+      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
       <header className="page-heading"><div><h1>Skill Creator</h1><p>当前阶段：{stepLabel(step)}。服务端结果优先，本地仅短期保留基本进度。</p></div></header>
       <nav className="creator-steps" aria-label="Creator 流程">
         {[
