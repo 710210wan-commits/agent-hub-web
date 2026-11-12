@@ -118,7 +118,7 @@ test("SSE 断开后手动重连，从 cursor 恢复且不重复执行", async ({
   expect(conversation?.turnCount).toBe(1);
   expect(conversation?.messageCount).toBe(2);
   expect(
-    state.calls.filter((call) => call.path.includes(`/${id}/events/stream`)).length,
+    state.calls.filter((call) => call.path.includes(`/${id}/stream`)).length,
   ).toBeGreaterThanOrEqual(2);
 });
 

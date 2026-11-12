@@ -325,7 +325,7 @@ describe("daily Session client", () => {
     const request = requestAt(fetchFn);
     const url = new URL(request.url, "https://agent-hub.test");
     expect(url.pathname).toBe(
-      `/agent-api/conversations/${conversationId}/events/stream`,
+      `/agent-api/conversations/${conversationId}/stream`,
     );
     expect(Object.fromEntries(url.searchParams)).toEqual({ afterSeq: "2" });
     expect(request.init).toMatchObject({

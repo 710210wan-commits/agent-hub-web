@@ -278,7 +278,7 @@ export function createDailySessionClient(
       let response: Response;
       try {
         response = await fetchFn(
-          `${apiBaseUrl}/conversations/${encodeURIComponent(id)}/events/stream${query}`,
+          `${apiBaseUrl}/conversations/${encodeURIComponent(id)}/stream${query}`,
           {
             method: "GET",
             credentials: "same-origin",

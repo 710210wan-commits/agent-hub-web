@@ -206,7 +206,7 @@ async function handleConversation(request, response, url, userKey) {
   }
 
   const match = url.pathname.match(
-    /^\/conversations\/([^/]+)(?:\/(snapshot|messages|turns|events)(?:\/([^/]+))?(?:\/(cancel|stream))?)?$/,
+    /^\/conversations\/([^/]+)(?:\/(snapshot|messages|turns|events|stream)(?:\/([^/]+))?(?:\/(cancel))?)?$/,
   );
   if (!match) {
     sendJson(response, 404, { error: "not_found" });
@@ -267,7 +267,7 @@ async function handleConversation(request, response, url, userKey) {
     });
     return;
   }
-  if (section === "events" && nestedId === "stream" && request.method === "GET") {
+  if (section === "stream" && !nestedId && request.method === "GET") {
     openStream(response, item, url.searchParams.get("afterSeq") ?? "0");
     return;
   }

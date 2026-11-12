@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +9,28 @@ import {
   parseNamedSseFrame,
   requireTerminalEvents,
 } from "./daily-session-j1-smoke.mjs";
+
+const smokeScript = fileURLToPath(new URL("./daily-session-j1-smoke.mjs", import.meta.url));
+
+describe("daily-session-j1 direct execution", () => {
+  it("initializes module declarations before running main", () => {
+    const result = spawnSync(process.execPath, [smokeScript], {
+      encoding: "utf8",
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        DAILY_SESSION_J1_ORIGIN: "http://127.0.0.1:1",
+        DAILY_SESSION_J1_USER_A: "user-a",
+        DAILY_SESSION_J1_PASSWORD_A: "password-a",
+        DAILY_SESSION_J1_USER_B: "user-b",
+        DAILY_SESSION_J1_PASSWORD_B: "password-b",
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).not.toContain("before initialization");
+  });
+});
 
 describe("daily-session-j1 smoke cleanup", () => {
   it("reports one logout failure without exposing the cause", () => {

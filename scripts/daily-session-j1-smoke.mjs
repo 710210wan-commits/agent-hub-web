@@ -27,10 +27,6 @@ export async function main() {
   }
 }
 
-if (isDirectExecution()) {
-  process.exitCode = await main();
-}
-
 async function run() {
   const origin = validateOrigin(process.env.DAILY_SESSION_J1_ORIGIN);
   const userA = credentials("A");
@@ -416,7 +412,7 @@ function eventsPath(id, afterSeq) {
 
 function streamPath(id, afterSeq) {
   const search = new URLSearchParams({ afterSeq });
-  return `/agent-api/conversations/${encodeURIComponent(id)}/events/stream?${search}`;
+  return `/agent-api/conversations/${encodeURIComponent(id)}/stream?${search}`;
 }
 
 function cancelPath(id, turnId) {
@@ -455,4 +451,8 @@ function requireTurn(value, step) {
 
 function anonymize(value) {
   return `…${value.slice(-4)}`;
+}
+
+if (isDirectExecution()) {
+  process.exitCode = await main();
 }
