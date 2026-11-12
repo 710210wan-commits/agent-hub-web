@@ -5,18 +5,43 @@ import { LoadingState } from "@/components/states/loading-state";
 import { ResourceDetailSlot } from "@/components/resources/resource-detail-slot";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
 import { useAppMode } from "@/providers/mode-provider";
-import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/providers/auth-provider";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import type { SkillMarketClient } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
+import type { WorkSkillsApi } from "../work/work-api";
+import { SkillEditor } from "../work/skill-editor";
 import { catalogPlazaHref, parseSkillCatalogFilter } from "./catalog-navigation";
-import { SkillMarketWorkPlaceholder } from "./skill-catalog-plaza";
 import { useSkillCatalog } from "./use-skill-catalog";
 
-export function SkillCatalogDetail({ client, id }: { client?: SkillMarketClient; id: string }) {
+export function SkillCatalogDetail({
+  client,
+  id,
+  workApi,
+}: {
+  client?: SkillMarketClient;
+  id: string;
+  workApi?: WorkSkillsApi;
+}) {
   const { mode } = useAppMode();
-  if (mode === "work") return <SkillMarketWorkPlaceholder />;
+  if (mode === "work") return <SkillCatalogDetailWork id={id} workApi={workApi} />;
   return <SkillCatalogDetailDaily client={client ?? getBrowserSkillMarketClient()} id={id} />;
+}
+
+function SkillCatalogDetailWork({ id, workApi }: { id: string; workApi?: WorkSkillsApi }) {
+  const { identityGeneration } = useAuth();
+  const router = useRouter();
+  const backToMarket = () => router.push("/skills?mode=work");
+  return (
+    <SkillEditor
+      key={identityGeneration}
+      api={workApi}
+      slug={id}
+      onBack={backToMarket}
+      onDeleted={backToMarket}
+    />
+  );
 }
 
 function SkillCatalogDetailDaily({ client, id }: { client: SkillMarketClient; id: string }) {

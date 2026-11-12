@@ -148,6 +148,14 @@ src/features/skills/work/
 
 ## 8. Execution tasks
 
+- [x] Task 0：批准绑定设计与实施计划
+- [x] Task 1：冻结 Work 接口契约
+- [x] Task 2：实现独立安全 BFF
+- [x] Task 3：实现 Work Skill Market
+- [x] Task 4：实现 Work Skill Editor
+- [ ] Task 5：接入路由并证明模式隔离
+- [ ] Task 6：最终验证与交付
+
 ### Task 0：批准绑定设计与实施计划
 
 - [x] 更新绑定设计，允许 `mode=work` 接入 Xiaozhi Skill API。
@@ -203,6 +211,8 @@ src/features/skills/work/
 6. 验证 `can_manage === false` 只读、内置不可删除、批量最多 50。
 
 ### Task 4：实现 Work Skill Editor
+
+**状态：已完成（2026-11-11）。** 路由接入仍属于 Task 5。
 
 **目标文件：** `skill-editor.tsx`、`skill-file-editor.tsx`、`skill-settings.tsx`、`skill-dependencies.tsx` 及对应测试。
 

@@ -1,20 +1,37 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AuthProvider } from "@/providers/auth-provider";
+import { ModeProvider } from "@/providers/mode-provider";
+
 import type { SkillMarketClient } from "../api/client";
 import { SkillMarketError } from "../contracts/error";
 import type { CatalogItemViewModel, SkillCatalogViewModel } from "../contracts/catalog-view-model";
-import { ModeProvider } from "@/providers/mode-provider";
+import skillFileFixture from "../work/fixtures/skill-file.json";
+import skillListFixture from "../work/fixtures/skill-list.json";
+import type { WorkSkillListEnvelope } from "../work/contracts";
+import type { WorkSkillsApi } from "../work/work-api";
 
 import { SkillCatalogPlaza } from "./skill-catalog-plaza";
 
 let mockSearch = "mode=daily";
+const push = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/skills",
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(mockSearch),
 }));
+
+const workListEnvelope = skillListFixture as unknown as WorkSkillListEnvelope;
+
+function workApiStub(overrides: Partial<WorkSkillsApi> = {}): WorkSkillsApi {
+  return {
+    listSkills: vi.fn(async () => structuredClone(workListEnvelope)),
+    getSkillFile: vi.fn(async () => skillFileFixture.data),
+    ...overrides,
+  } as unknown as WorkSkillsApi;
+}
 
 function catalogItem(overrides: Partial<CatalogItemViewModel> = {}): CatalogItemViewModel {
   return {
@@ -44,11 +61,13 @@ function clientStub(query: ReturnType<typeof vi.fn>): SkillMarketClient {
   return { query } as unknown as SkillMarketClient;
 }
 
-function renderPlaza(client?: SkillMarketClient) {
+function renderPlaza(client?: SkillMarketClient, workApi?: WorkSkillsApi) {
   return render(
-    <ModeProvider>
-      <SkillCatalogPlaza client={client} />
-    </ModeProvider>,
+    <AuthProvider>
+      <ModeProvider>
+        <SkillCatalogPlaza client={client} workApi={workApi} />
+      </ModeProvider>
+    </AuthProvider>,
   );
 }
 
@@ -98,15 +117,108 @@ const mixedCatalog = catalog([
 describe("SkillCatalogPlaza", () => {
   beforeEach(() => {
     mockSearch = "mode=daily";
+    push.mockClear();
   });
 
-  it("shows the work placeholder without requesting the catalog", async () => {
+  it("renders the Work market in work mode without requesting the daily catalog", async () => {
     mockSearch = "mode=work";
     const query = vi.fn();
-    renderPlaza(clientStub(query));
+    renderPlaza(clientStub(query), workApiStub());
 
-    expect(screen.getByRole("heading", { name: "办公场景暂未接入" })).toBeInTheDocument();
-    await waitFor(() => expect(query).not.toHaveBeenCalled());
+    expect(await screen.findByRole("searchbox", { name: "搜索技能" })).toBeInTheDocument();
+    expect(screen.getByText("MySQL Reporter")).toBeInTheDocument();
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("never calls the Work BFF client while in daily mode", async () => {
+    const workApi = workApiStub();
+    renderPlaza(clientStub(vi.fn(async () => mixedCatalog)), workApi);
+
+    await screen.findByRole("heading", { name: "Alpha Query" });
+    expect(workApi.listSkills).not.toHaveBeenCalled();
+  });
+
+  it("navigates to the Work editor from the preview manage action", async () => {
+    mockSearch = "mode=work";
+    renderPlaza(clientStub(vi.fn()), workApiStub());
+
+    fireEvent.click(await screen.findByRole("button", { name: "查看 MySQL Reporter 预览" }));
+    fireEvent.click(await screen.findByRole("button", { name: "去管理" }));
+
+    expect(push).toHaveBeenCalledWith("/skills/mysql-reporter?mode=work");
+  });
+
+  it("aborts the in-flight daily catalog request when switching to work mode", async () => {
+    let dailySignal: AbortSignal | undefined;
+    const query = vi.fn((...args: unknown[]) => {
+      dailySignal = (args[0] as { signal?: AbortSignal } | undefined)?.signal;
+      return new Promise<SkillCatalogViewModel>(() => undefined);
+    });
+    const view = renderPlaza(clientStub(query));
+    await waitFor(() => expect(dailySignal).toBeDefined());
+    expect(query).toHaveBeenCalledTimes(1);
+
+    mockSearch = "mode=work";
+    view.rerender(
+      <AuthProvider>
+        <ModeProvider>
+          <SkillCatalogPlaza client={clientStub(query)} workApi={workApiStub()} />
+        </ModeProvider>
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByRole("searchbox", { name: "搜索技能" })).toBeInTheDocument();
+    expect(dailySignal?.aborted).toBe(true);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts the in-flight Work request when switching back to daily mode", async () => {
+    let workSignal: AbortSignal | undefined;
+    const workApi = workApiStub({
+      listSkills: vi.fn((signal?: AbortSignal) => {
+        workSignal = signal;
+        return new Promise<WorkSkillListEnvelope>(() => undefined);
+      }),
+    });
+    mockSearch = "mode=work";
+    const view = renderPlaza(clientStub(vi.fn()), workApi);
+    await waitFor(() => expect(workSignal).toBeDefined());
+
+    const dailyQuery = vi.fn(async () => mixedCatalog);
+    mockSearch = "mode=daily";
+    view.rerender(
+      <AuthProvider>
+        <ModeProvider>
+          <SkillCatalogPlaza client={clientStub(dailyQuery)} workApi={workApi} />
+        </ModeProvider>
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Alpha Query" })).toBeInTheDocument();
+    expect(workSignal?.aborted).toBe(true);
+    expect(dailyQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the Work preview dialog and selection state when switching to daily mode", async () => {
+    mockSearch = "mode=work";
+    const workApi = workApiStub();
+    const view = renderPlaza(clientStub(vi.fn()), workApi);
+
+    fireEvent.click(await screen.findByRole("button", { name: "查看 MySQL Reporter 预览" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+
+    const dailyQuery = vi.fn(async () => mixedCatalog);
+    mockSearch = "mode=daily";
+    view.rerender(
+      <AuthProvider>
+        <ModeProvider>
+          <SkillCatalogPlaza client={clientStub(dailyQuery)} workApi={workApi} />
+        </ModeProvider>
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Alpha Query" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("renders a loading state before the first catalog arrives", () => {

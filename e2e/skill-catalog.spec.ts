@@ -64,14 +64,14 @@ test("daily Skill plaza loads the catalog and filters it without another request
   expect(catalogRequests).toBe(1);
 });
 
-test("work Skill placeholder never requests the daily catalog", async ({ page }) => {
+test("work Skill page never requests the daily catalog", async ({ page }) => {
   let catalogRequests = 0;
   page.on("request", (request) => {
     if (request.url().includes("/api/skill-market/")) catalogRequests += 1;
   });
 
   await page.goto("/skills?mode=work");
-  await expect(page.getByRole("heading", { name: "办公场景暂未接入" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "搜索技能" })).toBeVisible();
   await page.waitForTimeout(100);
   expect(catalogRequests).toBe(0);
 });

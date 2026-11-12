@@ -727,8 +727,11 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 #### **代码变更：**
 
-1. 新增 `src/features/skills/work/contracts.ts`、`contracts.test.ts` 与 `fixtures/`（13 个样本），聚焦测试 41 例全部通过。
-2. `pnpm typecheck`、ESLint 与全量 Vitest（554 例）无回归。
+1. 新增 `src/features/skills/work/contracts.ts`：冻结 Work Skill 常量、slug/草稿 ID/文件路径构造规则、上传文件名限制、批量上限、草稿 TTL，以及列表、文件树、文件内容、依赖、共享范围、安装草稿、远程发现和批量结果 DTO。
+2. 在同一契约模块中建立最小 Zod 运行时解析边界：合法响应转换为严格 TypeScript 类型，未知字段忽略，缺失关键字段、非法枚举、错误 success envelope 和越界路径统一 fail closed；错误响应只提取允许展示的 `detail`/`error` 文案。
+3. 新增 `src/features/skills/work/fixtures/` 下 13 个 JSON 样本，覆盖列表、变更、目录树、文件、依赖选项、上传/远程草稿、远程列表/搜索、确认/批量结果、简单成功与错误 envelope。
+4. 新增 `src/features/skills/work/contracts.test.ts`，以 41 个用例固定常量、准确接口路径、路径穿越拒绝、所有 fixture 解析和关键字段缺失的负向行为。
+5. 验证 Task 1 聚焦测试 41/41、全量 Vitest 554/554、TypeScript strict 与 ESLint 全部通过；未修改 Xiaozhi 后端、数据库或 daily Skill 契约。
 
 ### 28. Work Skill 独立安全 BFF（Task 2）
 
@@ -749,13 +752,16 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 #### **代码变更：**
 
-1. 新增 `src/server/xiaozhi/skills-proxy.ts`、`skills-proxy.test.ts`（47 例）与薄路由 `src/app/api/work-skills/[...path]/route.ts`（含 route 测试 2 例）。
-2. `contracts.ts` 补充 `isSafeWorkSkillFilePath` 与 BFF 错误体 `{code,error}` 解析。
-3. 聚焦测试 49/49、现有 Work Agent BFF 测试 34/34 无回归；typecheck 与 ESLint 通过。
+1. 新增 `src/server/xiaozhi/skills-proxy.ts`：建立 19 条显式 method/path/query 白名单，校验 slug、文件 path、dependency-options 查询与安装草稿路径，并拒绝未知路由、绝对 URL、编码绕过、额外查询参数和浏览器目标覆盖。
+2. 在 proxy 中实现 DSI Session 前置门禁：只从请求读取 `dsi_app_session` 并调用 `/auth/xiaozhi-status`；缺 Cookie、anonymous、demo、失效、超时和认证服务故障均在读取请求体或访问 Xiaozhi 前拒绝。
+3. 实现请求与响应边界：清除浏览器 Authorization、Cookie、Host、Origin、Forwarded 等不可信 Header，只向 Xiaozhi 注入 server-only API Key；流式转发 JSON、multipart 和 ZIP，保留安全下载头，并处理取消、60 秒上游超时、4xx 安全文案与泛化 5xx。
+4. 新增薄路由 `src/app/api/work-skills/[...path]/route.ts`，仅负责读取 server-only 配置并把各 HTTP method 交给 proxy；新增 `work-skills-route.test.ts` 验证 method 委托和配置失败边界。
+5. 新增 `src/server/xiaozhi/skills-proxy.test.ts` 的 47 个安全/传输用例；同步扩展 `contracts.ts` 的安全文件路径判断与 `{code,error}` BFF 错误解析。
+6. 验证 Task 2 聚焦测试 49/49、既有 Work Agent BFF 测试 34/34、TypeScript strict 与 ESLint 全部通过；没有扩大 `/api/work-agent/*` 或 daily BFF。
 
 ### 29. Work Skill Market 前端（Task 3）
 
-提交：未提交
+提交：0bd0c2f
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -773,9 +779,68 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 #### **代码变更：**
 
-1. 新增 `src/features/skills/work/` 下 8 个组件/模块与 7 个测试文件，聚焦测试 101 例全部通过。
-2. `globals.css` 追加 `work-*` 样式块（页面、卡片、弹窗、开关、toast 与移动端适配）。
-3. 路由接入（Task 5）前，页面经 `api` / `identityGeneration` / `onManageSkill` 注入，与 daily 完全隔离。
+1. 新增 `work-api.ts` 与 `work-api.test.ts`：浏览器只调用 `/api/work-skills/*`，统一解析 JSON/错误、multipart 上传、安装草稿 confirm/cancel、批量删除与 ZIP 文件名；网络、会话失效、4xx/5xx 和 AbortError 具有独立恢复语义。
+2. 新增 `use-work-skills.ts` 与测试：用 reducer 管理 idle/loading/success/empty/error/refreshing，单飞刷新、AbortController、请求 generation 和 `identityGeneration` 共同阻止过期数据与跨身份状态回写。
+3. 新增 `work-skills-page.tsx`、`skill-card.tsx` 和 `work-recommended.ts`：实现搜索、推荐/内置/上传三分组、启停、普通/批量工具栏替换、全选/反选/清空及最多 50 项批量删除；`can_manage === false` 和内置来源按后端权威状态限制写操作。
+4. 新增 `skill-preview-dialog.tsx`：居中渲染 `SKILL.md`，保留标题/来源、启停、卸载、关闭和“去管理”的固定区域与 footer 顺序；Markdown 只作为用户可见内容渲染。
+5. 新增 `remote-install-dialog.tsx`、`install-draft-dialog.tsx`、`work-confirm-dialog.tsx`：复现仓库拉取/全局搜索、来源历史、批量选择、prepare → confirm/cancel 两阶段安装、§6.1 范围单选和危险操作确认，并为重复提交设置 pending 门禁。
+6. 更新 `src/app/globals.css`，追加隔离的 `work-*` 页面、卡片、弹窗、开关、toast、空态和移动端样式，继续复用 Agent Hub 颜色、边框、圆角和间距 token。
+7. 新增 7 个组件/hook 测试文件，覆盖按钮与分组 DOM 顺序、批量模式、预览 footer、远程页签、草稿范围、权限只读、请求取消和错误恢复；Task 3 完成时 Work 聚焦测试 101/101 通过。
+8. 页面仅通过 `api`、`identityGeneration` 和 `onManageSkill` 注入，尚未修改 App Router；`mode=work` 路由接入及 daily/Work 切换证明仍明确留给 Task 5。
+
+### 30. Work Skill Editor 前端（Task 4）
+
+提交：`9e3356b`
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 4`
+
+#### 问题
+
+- Work Skill Market 已完成，但“去管理”所需的已安装 Skill 编辑器尚未实现，缺少文件树与文件写入、生效范围、依赖、导出和删除能力。
+- Editor 需要保持原 Vue 的顶栏、页签和操作顺序，同时落实路径穿越防护、写操作单飞、内置只读与 `can_manage` 权限边界。
+
+#### 修改方案
+
+- 新增独立 Editor 容器及代码管理、生效范围、依赖管理三个组件；顶栏固定为返回、名称/状态、导出/删除，页签固定为代码管理、生效范围、依赖管理。
+- 文件编辑支持树读取、默认加载 `SKILL.md`、保存、新建文件/目录、刷新和危险删除；组件与 API client 双层拒绝越界路径。
+- 生效范围遵守计划 §6.1：按 `allowed_access_levels` 单选，切换时保留载入的用户/部门数组，global 清空；内置范围固定 global，只读 Skill 不显示写入口。
+- 依赖按工具、MCP、Skill 顺序展示；可管理非内置 Skill 才请求选项和保存，只读/内置直接展示列表响应中的既有依赖，避免调用要求管理权限的接口。
+
+#### **代码变更：**
+
+1. 扩展 `work-api.ts`，增加文件树、节点创建/更新/删除、依赖选项/保存和生效范围 API，并在 fetch 前校验文件路径。
+2. 新增 `skill-editor.tsx`、`skill-file-editor.tsx`、`skill-settings.tsx`、`skill-dependencies.tsx` 及对应测试。
+3. 更新 `globals.css`，增加 Editor 双栏、顶栏、页签、设置卡、依赖卡和移动端布局。
+4. 验证 Work Skill 聚焦测试 114/114、全量 Vitest 676/676、TypeScript strict 与 ESLint 全部通过；Task 5 路由、Task 6 E2E/production build 尚未执行。
+
+### 31. Work Skill 路由接入与模式隔离（Task 5）
+
+提交：未提交
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 5`
+
+#### 问题
+
+- Work Market 与 Editor 此前只能通过注入 props 使用；`/skills?mode=work` 与 `/skills/[slug]?mode=work` 仍显示占位卡，用户无法从路由进入 Work Skill 管理。
+- 需要证明 daily/Work 两套后端在同一页面互发零请求，且模式切换时中止旧请求并清理弹窗与选择状态。
+
+#### 修改方案
+
+- `SkillCatalogPlaza` 在 `mode=work` 时挂载 `WorkSkillsPage`，`SkillCatalogDetail` 在 `mode=work` 时挂载 `SkillEditor`；daily 分支保持原有 client、查询参数解析与生命周期不变。
+- 路由层经 `useAuth().identityGeneration` 注入并在身份变化时重建 Work 页面与编辑器状态；预览“去管理”跳转 `/skills/[slug]?mode=work`，编辑器返回与删除后回到 `/skills?mode=work`。
+- 两个 catalog 组件新增可选 `workApi` 注入（与 daily `client` 同一测试接缝模式），浏览器默认仍走同源 Work BFF。
+- 其余 daily 页面（Creator、审核、发布、我的、草稿）继续保留 `SkillMarketWorkPlaceholder`，本次不扩大范围。
+
+#### **代码变更：**
+
+1. `skill-catalog-plaza.tsx` 与 `skill-catalog-detail.tsx` 按 mode 分流并接线 `useAuth`/`useRouter`；detail 移除占位引用，plaza 保留占位导出供其余 daily 页面复用。
+2. 改写 catalog 占位测试为 Task 5 验收：work 模式渲染真实 Work 页面且 daily client 零请求、daily 模式不触发 Work BFF、预览“去管理”与编辑器返回的导航目标、双向模式切换中止进行中的请求并清理预览弹窗与选择状态。
+3. 更新 `e2e/skill-catalog.spec.ts` 的 work 模式断言与部署 runbook 的 smoke 描述，使其与新页面一致。
+4. 验证 catalog Task 5 聚焦测试 26/26（plaza 18、detail 8）、全量 Vitest 687/687、TypeScript strict 与 ESLint 全部通过；Xiaozhi/DSI 后端零改动，Task 6 E2E 与 production build 尚未执行。
 
 ## 后续条目模板
 

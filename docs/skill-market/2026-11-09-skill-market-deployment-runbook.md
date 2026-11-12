@@ -70,7 +70,7 @@ docker build `
 
 运行容器时通过 Secret/Config 注入第 2 节变量。健康检查与 smoke：
 
-1. `GET /skills?mode=work` 返回 200，页面显示“办公场景暂未接入”，访问日志中无 `/api/skill-market/` 请求。
+1. `GET /skills?mode=work` 返回 200，页面加载 Work Skill Market（Work 后端不可用或未登录时展示其自带错误态），访问日志中无 `/api/skill-market/` 请求。
 2. `GET /api/skill-market/catalog?mode=daily` 返回 200 且通过运行时 Schema 校验。
 3. `GET /skills?mode=daily` 可展示与旧前端一致的市场 Publication ID/revision/status。
 4. 运行时日志不包含 HMAC Secret、Principal Header 或业务 Prompt。

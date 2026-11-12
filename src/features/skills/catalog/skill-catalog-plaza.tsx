@@ -2,18 +2,21 @@
 
 import { Search } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/states/empty-state";
 import { InlineError } from "@/components/states/inline-error";
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketErrorState } from "@/features/skills/components/skill-market-error-state";
+import { useAuth } from "@/providers/auth-provider";
 import { useAppMode } from "@/providers/mode-provider";
 
 import type { SkillMarketClient } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
 import type { CatalogItemViewModel, SkillCatalogViewModel } from "../contracts/catalog-view-model";
+import type { WorkSkillsApi } from "../work/work-api";
+import { WorkSkillsPage } from "../work/work-skills-page";
 import {
   areSkillCatalogCategoriesRedundant,
   buildSkillCatalogSearchIndex,
@@ -28,12 +31,30 @@ import { SkillCatalogCard } from "./skill-catalog-card";
 import { SkillCatalogDrawer } from "./skill-catalog-drawer";
 import { useSkillCatalog } from "./use-skill-catalog";
 
-export function SkillCatalogPlaza({ client }: { client?: SkillMarketClient }) {
+export function SkillCatalogPlaza({
+  client,
+  workApi,
+}: {
+  client?: SkillMarketClient;
+  workApi?: WorkSkillsApi;
+}) {
   const { mode } = useAppMode();
   const searchParams = useSearchParams();
-  if (mode === "work") return <SkillMarketWorkPlaceholder />;
+  if (mode === "work") return <SkillCatalogPlazaWork workApi={workApi} />;
   const filter = parseSkillCatalogFilter(searchParams);
   return <SkillCatalogPlazaDaily client={client} initialFilter={filter} key={searchParams.toString()} />;
+}
+
+function SkillCatalogPlazaWork({ workApi }: { workApi?: WorkSkillsApi }) {
+  const { identityGeneration } = useAuth();
+  const router = useRouter();
+  return (
+    <WorkSkillsPage
+      api={workApi}
+      identityGeneration={identityGeneration}
+      onManageSkill={(slug) => router.push(`/skills/${encodeURIComponent(slug)}?mode=work`)}
+    />
+  );
 }
 
 export function SkillMarketWorkPlaceholder() {
