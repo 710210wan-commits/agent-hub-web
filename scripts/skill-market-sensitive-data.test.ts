@@ -49,10 +49,27 @@ describe("assertSkillMarketSensitiveDataSafe", () => {
   });
 
   it.each([
+    "NEXT_PUBLIC_XIAOZHI_API_KEY",
+    "NEXT_PUBLIC_XIAOZHI_API_ORIGIN",
+    "NEXT_PUBLIC_DSI_SESSION_COOKIE",
+  ])("rejects Work Skill server configuration exposed as %s", async (key) => {
+    const fixture = await createFixture();
+    await writeFile(fixture.envExamplePath, `${key}=unsafe\n`);
+    await expect(assertSkillMarketSensitiveDataSafe({
+      buildRoot: fixture.buildRoot,
+      envExamplePath: fixture.envExamplePath,
+      forbiddenClientValues: [origin],
+      forbiddenEverywhereValues: [secret],
+    })).rejects.toThrow("NEXT_PUBLIC");
+  });
+
+  it.each([
     ["server artifact", "server/app.js", secret],
     ["client artifact", "static/chunks/app.js", origin],
     ["source map", "server/app.js.map", secret],
     ["client env key", "static/chunks/app.js", "SKILL_MARKET_GATEWAY_HMAC_SECRET"],
+    ["Xiaozhi client env key", "static/chunks/app.js", "XIAOZHI_API_KEY"],
+    ["DSI session cookie marker", "static/chunks/app.js", "dsi_app_session"],
   ])("rejects a leak in a %s", async (_label, relativePath, leakedValue) => {
     const fixture = await createFixture();
     const target = path.join(fixture.buildRoot, relativePath);

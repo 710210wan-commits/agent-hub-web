@@ -17,7 +17,11 @@ const SERVER_ONLY_ENV_KEYS = [
   "SKILL_MARKET_PRINCIPAL_MANAGED_SCENARIOS",
   "SKILL_MARKET_PRINCIPAL_PERMISSIONS",
   "SKILL_MARKET_PRINCIPAL_ROLES",
+  "XIAOZHI_API_KEY",
+  "XIAOZHI_API_ORIGIN",
+  "XIAOZHI_WORK_AGENT_SLUG",
 ] as const;
+const PRIVATE_CLIENT_MARKERS = ["dsi_app_session"] as const;
 const TEXT_ARTIFACT_EXTENSIONS = new Set([
   ".css",
   ".html",
@@ -43,9 +47,11 @@ export async function assertSkillMarketSensitiveDataSafe(
     const isClientArtifact = relative.startsWith("static/");
     const leakedValue = forbiddenEverywhere.some((value) => content.includes(value)) ||
       (isClientArtifact && forbiddenClient.some((value) => content.includes(value)));
-    const leakedServerKey = isClientArtifact &&
-      SERVER_ONLY_ENV_KEYS.some((key) => content.includes(key));
-    if (leakedValue || leakedServerKey) {
+    const leakedServerMarker = isClientArtifact && (
+      SERVER_ONLY_ENV_KEYS.some((key) => content.includes(key)) ||
+      PRIVATE_CLIENT_MARKERS.some((marker) => content.includes(marker))
+    );
+    if (leakedValue || leakedServerMarker) {
       throw new Error(`Skill Market sensitive data found in build artifact: ${relative}`);
     }
   }
@@ -62,7 +68,7 @@ async function assertPublicEnvSafe(
     ...Object.keys(environment).filter((key) => key.startsWith("NEXT_PUBLIC_")),
   ];
   const unsafe = publicKeys.find((key) =>
-    /(?:SKILL_MARKET|SECRET|HMAC|PRINCIPAL)/.test(key)
+    /(?:SKILL_MARKET|XIAOZHI|DSI_SESSION|SECRET|HMAC|PRINCIPAL|COOKIE|CREDENTIAL|TOKEN)/.test(key)
   );
   if (unsafe) {
     throw new Error(`Server-only Skill Market configuration must not use NEXT_PUBLIC: ${unsafe}`);

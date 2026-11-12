@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import type { Page, Request, Route } from "@playwright/test";
 
+import { installGlobalAuthFixture } from "./global-auth";
+
 const NOW = "2026-11-09T08:00:00.000Z";
 const CONTENT_HASH = "a".repeat(64);
 const DEFINITION_HASH = "b".repeat(64);
@@ -28,6 +30,7 @@ export async function installSkillMarketFixture(
   page: Page,
   options: SkillMarketFixtureOptions = {},
 ): Promise<SkillMarketFixture> {
+  await installGlobalAuthFixture(page);
   const calls: SkillMarketFixture["calls"] = [];
   const state: SkillMarketFixture["state"] = {
     draftRevision: 1,

@@ -4,6 +4,7 @@ import { assertSkillMarketSensitiveDataSafe } from "./skill-market-sensitive-dat
 
 async function main(): Promise<void> {
   const secret = requiredEnv("SKILL_MARKET_GATEWAY_HMAC_SECRET");
+  const xiaozhiApiKey = requiredEnv("XIAOZHI_API_KEY");
   await assertSkillMarketSensitiveDataSafe({
     buildRoot: path.resolve(".next"),
     environment: process.env,
@@ -15,10 +16,12 @@ async function main(): Promise<void> {
       process.env.SKILL_MARKET_PRINCIPAL_MANAGED_SCENARIOS ?? "",
       process.env.SKILL_MARKET_PRINCIPAL_PERMISSIONS ?? "",
       process.env.SKILL_MARKET_PRINCIPAL_ROLES ?? "",
+      process.env.XIAOZHI_API_ORIGIN ?? "",
+      process.env.XIAOZHI_WORK_AGENT_SLUG ?? "",
     ],
-    forbiddenEverywhereValues: [secret],
+    forbiddenEverywhereValues: [secret, xiaozhiApiKey],
   });
-  console.log("Skill Market build artifacts contain no configured sensitive values.");
+  console.log("Skill Market and Work Skill build artifacts contain no configured sensitive values.");
 }
 
 function requiredEnv(name: string): string {

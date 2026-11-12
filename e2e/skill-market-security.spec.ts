@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installGlobalAuthFixture } from "./fixtures/global-auth";
 import { installSkillMarketFixture } from "./fixtures/skill-market-api";
 
 test("URL scope injection cannot expand the fixed daily installation target", async ({ page }) => {
@@ -10,6 +11,7 @@ test("URL scope injection cannot expand the fixed daily installation target", as
 });
 
 test("an invalid upstream response fails at the client boundary and offers recovery", async ({ page }) => {
+  await installGlobalAuthFixture(page);
   await page.route("**/api/skill-market/catalog**", async (route) => {
     await route.fulfill({
       body: JSON.stringify({ generatedAt: "not-a-date", items: [], total: "zero" }),
