@@ -153,8 +153,8 @@ src/features/skills/work/
 - [x] Task 2：实现独立安全 BFF
 - [x] Task 3：实现 Work Skill Market
 - [x] Task 4：实现 Work Skill Editor
-- [ ] Task 5：接入路由并证明模式隔离
-- [ ] Task 6：最终验证与交付
+- [x] Task 5：接入路由并证明模式隔离
+- [x] Task 6：最终验证与交付
 
 ### Task 0：批准绑定设计与实施计划
 
@@ -227,6 +227,8 @@ src/features/skills/work/
 
 ### Task 5：接入路由并证明模式隔离
 
+**状态：已完成（2026-11-11）。** Work Market 与 Editor 已接入批准路由，daily/Work 请求和临时状态隔离已由组件、路由与 E2E 证明。
+
 **目标文件：**
 
 - Modify: `src/features/skills/catalog/skill-catalog-plaza.tsx`
@@ -242,6 +244,8 @@ src/features/skills/work/
 5. 测试模式切换中止旧请求并清理选择、弹窗、草稿和页面缓存。
 
 ### Task 6：最终验证与交付
+
+**状态：已完成（2026-11-12）。** Work Skill 关键旅程、daily 生命周期、Work Chat/历史、安全门禁、production build 与敏感信息扫描均已完成；真实 Xiaozhi 后端 E2E 因本机未配置临时 API Key 而跳过，已用同源契约 fixture 完成浏览器回归，后端源码保持零改动。
 
 1. 运行 Work 契约、BFF、组件和路由 focused tests。
 2. 运行 `pnpm test`、`pnpm lint`、`pnpm typecheck` 和 `pnpm build`。

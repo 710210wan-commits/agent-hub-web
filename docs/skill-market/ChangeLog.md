@@ -817,7 +817,7 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 ### 31. Work Skill 路由接入与模式隔离（Task 5）
 
-提交：未提交
+提交：`47b3441`
 
 Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
 
@@ -837,10 +837,42 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 
 #### **代码变更：**
 
-1. `skill-catalog-plaza.tsx` 与 `skill-catalog-detail.tsx` 按 mode 分流并接线 `useAuth`/`useRouter`；detail 移除占位引用，plaza 保留占位导出供其余 daily 页面复用。
-2. 改写 catalog 占位测试为 Task 5 验收：work 模式渲染真实 Work 页面且 daily client 零请求、daily 模式不触发 Work BFF、预览“去管理”与编辑器返回的导航目标、双向模式切换中止进行中的请求并清理预览弹窗与选择状态。
-3. 更新 `e2e/skill-catalog.spec.ts` 的 work 模式断言与部署 runbook 的 smoke 描述，使其与新页面一致。
-4. 验证 catalog Task 5 聚焦测试 26/26（plaza 18、detail 8）、全量 Vitest 687/687、TypeScript strict 与 ESLint 全部通过；Xiaozhi/DSI 后端零改动，Task 6 E2E 与 production build 尚未执行。
+1. 修改 `src/features/skills/catalog/skill-catalog-plaza.tsx`：在 `mode=work` 分支挂载 `WorkSkillsPage`，注入 `identityGeneration` 与可测试的 `workApi`，并把预览弹窗“去管理”导航固定为 `/skills/[slug]?mode=work`；daily 分支仍按原查询参数创建 daily Catalog 页面。
+2. 修改 `src/features/skills/catalog/skill-catalog-detail.tsx`：在 `mode=work` 分支挂载 `SkillEditor`，将返回和删除成功统一导航到 `/skills?mode=work`；daily 详情继续使用原 `SkillMarketClient`、drawer 和安装生命周期，不共享 Work API 或状态。
+3. 保留 `SkillMarketWorkPlaceholder` 作为 Creator、我的 Skill、Draft、审核和发布管理等 daily-only 路由的 Work 防误入边界；本次只开放批准的 Work Market 与已安装 Skill Editor 两条路由。
+4. 重写 `skill-catalog-plaza.test.tsx` 的 Work 验收：覆盖真实 Work 页面渲染、daily client 零请求、daily 模式 Work BFF 零请求、“去管理”目标、身份代际重建，以及 daily ↔ Work 切换时取消在途请求并清除预览/批量选择状态。
+5. 扩展 `skill-catalog-detail.test.tsx`：覆盖 Work Editor 渲染、daily client 零请求、返回/删除导航、daily 模式 Work BFF 零请求，以及双向模式切换时清理 Editor 在途加载和临时状态。
+6. 更新 `e2e/skill-catalog.spec.ts`，把历史 Work 占位断言替换为 Work Market 搜索框可见且 `/api/skill-market/*` 零请求；更新部署 Runbook 的 smoke 描述，明确 Work 访问独立 `/api/work-skills/*`。
+7. 验证 Task 5 聚焦测试 26/26（plaza 18、detail 8）、全量 Vitest 687/687、TypeScript strict 与 ESLint 全部通过；Xiaozhi/DSI 后端零改动，Playwright 全旅程、敏感信息扫描和 production build 明确保留到 Task 6。
+
+## 2026-11-12
+
+### 32. Work Skill 最终验证与交付（Task 6）
+
+提交：`6429dde`
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Task 6`
+
+#### 问题
+
+- Task 5 完成路由接入后，尚缺覆盖完整 Work Market/Editor 操作链路的 Playwright 验收、Work Chat/历史与 daily 生命周期回归，以及 production build 的 Xiaozhi 凭据泄漏扫描。
+- 原敏感信息扫描仅识别 daily Skill Market 配置，不能阻止 `XIAOZHI_API_KEY`、Xiaozhi server-only 配置名或 DSI 会话 Cookie 标记进入客户端产物。
+
+#### 修改方案
+
+- 建立状态化 Work Skill 浏览器 fixture，完整模拟批准的同源 BFF 契约，并以用户可见角色/名称断言 Market → 预览 → 去管理 → 详情 → 返回、安装、批量管理和 Editor 写操作。
+- 抽取完整登录态 fixture，供 Work/daily Skill E2E 复用；新增不依赖外部密钥的 Work 历史恢复与继续对话回归，同时保留真实 Xiaozhi 后端测试的显式环境门禁。
+- 扩展构建敏感信息扫描：客户端禁止出现 Xiaozhi server-only 配置名和 `dsi_app_session` 标记，构建全域禁止出现实际 Skill Market 密钥和 Xiaozhi API Key 值。
+
+#### **代码变更：**
+
+1. 新增 `e2e/fixtures/work-skills-api.ts` 与 `e2e/work-skills.spec.ts`：覆盖列表、关键控件顺序、预览、启停、上传、远程安装草稿、批量删除、文件保存、生效范围、依赖、ZIP 导出、只读权限，以及 Market → Editor → Market 路径闭环。
+2. 新增 `e2e/fixtures/global-auth.ts` 与 `e2e/work-chat-history-regression.spec.ts`，并更新 daily Skill fixture、catalog 与安全用例：统一模拟完整登录态，回归 Work 历史列表、恢复会话、继续发送、daily 生命周期、模式隔离和既有安全门禁。
+3. 扩展 `scripts/skill-market-sensitive-data.ts`、对应测试与执行脚本：新增 Xiaozhi/DSI 公共环境名阻断、客户端 server-only 标记扫描，并将 Xiaozhi API Key canary 纳入全构建产物扫描。
+4. 验证 Work focused tests 201/201、完整 Vitest 692/692、目标 Playwright 17/17（真实后端用例因无临时 API Key 跳过 1 项）、ESLint、TypeScript strict 与 production build 全部通过；临时 canary 构建扫描未发现密钥、Cookie 或私有配置泄漏。
+5. 只读核对 `DSI-agent-loop` 工作树为 clean；Xiaozhi 工作区仅有实施文档勾选，`xiaozhi-offline-deploy` 后端源码、配置结构和数据库 Schema 均无 diff。
 
 ## 后续条目模板
 
