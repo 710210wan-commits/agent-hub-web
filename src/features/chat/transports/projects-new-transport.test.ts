@@ -36,7 +36,7 @@ async function nextEvent(stream: AsyncIterable<ChatStreamEvent>) {
 const emptySelection = {
   knowledgeBaseIds: [],
   skillIds: [],
-  mcpIds: [],
+  mcpServerIds: [],
 };
 
 function jsonResponse(body: unknown, status = 200) {

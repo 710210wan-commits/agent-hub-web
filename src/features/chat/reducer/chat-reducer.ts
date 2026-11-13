@@ -32,7 +32,7 @@ function cloneSelection(
   return {
     knowledgeBaseIds: [...selection.knowledgeBaseIds],
     skillIds: [...selection.skillIds],
-    mcpIds: [...selection.mcpIds],
+    mcpServerIds: [...selection.mcpServerIds],
   };
 }
 

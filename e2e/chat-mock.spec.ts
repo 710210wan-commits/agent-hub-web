@@ -1,27 +1,20 @@
 import { expect, test } from "@playwright/test";
+import { installGlobalAuthFixture } from "./fixtures/global-auth";
 
 test.beforeEach(async ({ page }) => {
-  await page.route("**/agent-api/auth/xiaozhi-status", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        enabled: true,
-        xiaozhiUrl: "http://xiaozhi.test",
-        user: { id: "chat-mock-user", displayName: "Mock 用户" },
-      }),
-    }),
-  );
+  await installGlobalAuthFixture(page);
 });
 
-test("minimal chat streams final text and keeps selection defaults", async ({ page }) => {
+test("mock chat streams final text without fabricating selectable capabilities", async ({ page }) => {
   await page.goto("/chat?mode=daily&scenario=completed&delay=600");
   await expect(page.getByRole("heading", { name: "今天想聊些什么？" })).toBeVisible();
   await expect(page.getByRole("button", { name: "附件（待接入）" })).toBeDisabled();
   await page.screenshot({ path: "e2e/screenshots/chat-empty.png" });
 
-  await page.getByRole("button", { name: "知识库" }).click();
-  await page.getByText("项目资料库", { exact: true }).click();
-  await expect(page.getByRole("button", { name: /知识库 · 1/ })).toBeVisible();
+  for (const name of ["知识库", "Skill", "MCP"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
+  }
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
 
   await page.getByRole("textbox", { name: "消息" }).fill("分析本周风险");
   await page.getByRole("button", { name: "发送" }).click();
@@ -29,7 +22,7 @@ test("minimal chat streams final text and keeps selection defaults", async ({ pa
   await page.screenshot({ path: "e2e/screenshots/chat-running.png" });
   await expect(page.getByText("综合现有资料，本周需重点关注三类风险。")).toBeVisible();
   await expect(page.getByRole("button", { name: "已完成 3 个步骤" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /知识库 · 1/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "知识库", exact: true })).toBeDisabled();
 });
 
 test("manual stop preserves partial text and offers mock continuation", async ({ page }) => {

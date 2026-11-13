@@ -114,6 +114,44 @@
         ],
         "type": "object"
       },
+      "CapabilitySelection": {
+        "additionalProperties": false,
+        "properties": {
+          "knowledgeBaseIds": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "type": "array"
+          },
+          "mcpServerIds": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "type": "array"
+          },
+          "skillIds": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "type": "array"
+          }
+        },
+        "required": [
+          "knowledgeBaseIds",
+          "skillIds",
+          "mcpServerIds"
+        ],
+        "type": "object"
+      },
       "ChangeConversationStateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -225,6 +263,269 @@
         },
         "required": [
           "conversation"
+        ],
+        "type": "object"
+      },
+      "ConversationCapabilityCatalog": {
+        "additionalProperties": false,
+        "properties": {
+          "knowledgeBases": {
+            "additionalProperties": false,
+            "properties": {
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "description": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    },
+                    "id": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "name": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    },
+                    "supportsDocuments": {
+                      "type": "boolean"
+                    },
+                    "type": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "type",
+                    "supportsDocuments"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reasonCode": {
+                "enum": [
+                  "KNOWLEDGE_BASE_DISABLED",
+                  "KNOWLEDGE_BASE_CATALOG_UNAVAILABLE",
+                  "SKILL_CATALOG_UNAVAILABLE",
+                  "MCP_PROVIDER_NOT_CONFIGURED",
+                  "MCP_CATALOG_UNAVAILABLE"
+                ],
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "available",
+                  "disabled",
+                  "unavailable"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "items"
+            ],
+            "type": "object"
+          },
+          "mcpServers": {
+            "additionalProperties": false,
+            "properties": {
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "description": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    },
+                    "id": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "name": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reasonCode": {
+                "enum": [
+                  "KNOWLEDGE_BASE_DISABLED",
+                  "KNOWLEDGE_BASE_CATALOG_UNAVAILABLE",
+                  "SKILL_CATALOG_UNAVAILABLE",
+                  "MCP_PROVIDER_NOT_CONFIGURED",
+                  "MCP_CATALOG_UNAVAILABLE"
+                ],
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "available",
+                  "disabled",
+                  "unavailable"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "items"
+            ],
+            "type": "object"
+          },
+          "scenarioId": {
+            "const": "daily",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": 1,
+            "type": "number"
+          },
+          "skills": {
+            "additionalProperties": false,
+            "properties": {
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "argumentHint": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    },
+                    "id": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "name": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    },
+                    "revision": {
+                      "anyOf": [
+                        {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source": {
+                      "enum": [
+                        "built-in",
+                        "market"
+                      ],
+                      "type": "string"
+                    },
+                    "title": {
+                      "maxLength": 4000,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "title",
+                    "description",
+                    "source",
+                    "revision"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reasonCode": {
+                "enum": [
+                  "KNOWLEDGE_BASE_DISABLED",
+                  "KNOWLEDGE_BASE_CATALOG_UNAVAILABLE",
+                  "SKILL_CATALOG_UNAVAILABLE",
+                  "MCP_PROVIDER_NOT_CONFIGURED",
+                  "MCP_CATALOG_UNAVAILABLE"
+                ],
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "available",
+                  "disabled",
+                  "unavailable"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "items"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "scenarioId",
+          "knowledgeBases",
+          "skills",
+          "mcpServers"
+        ],
+        "type": "object"
+      },
+      "ConversationCapabilityError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "data": {
+            "type": "null"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "additionalProperties": {},
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "data",
+          "details"
         ],
         "type": "object"
       },
@@ -1455,6 +1756,51 @@
                               "items": {},
                               "type": "array"
                             },
+                            "capabilitySelection": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "knowledgeBaseIds": {
+                                      "items": {
+                                        "maxLength": 200,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "maxItems": 50,
+                                      "type": "array"
+                                    },
+                                    "mcpServerIds": {
+                                      "items": {
+                                        "maxLength": 200,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "maxItems": 50,
+                                      "type": "array"
+                                    },
+                                    "skillIds": {
+                                      "items": {
+                                        "maxLength": 200,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "maxItems": 50,
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "knowledgeBaseIds",
+                                    "skillIds",
+                                    "mcpServerIds"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "content": {
                               "additionalProperties": {},
                               "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
@@ -1512,6 +1858,7 @@
                             "content",
                             "revision",
                             "status",
+                            "capabilitySelection",
                             "artifactRefs",
                             "createdAt"
                           ],
@@ -2506,6 +2853,122 @@
         ],
         "type": "object"
       },
+      "ConversationMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "artifactRefs": {
+            "description": "Current executor emits ConversationTaskResultReference (kind=task_result, taskId); user messages have none. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
+            "items": {},
+            "type": "array"
+          },
+          "capabilitySelection": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "knowledgeBaseIds": {
+                    "items": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  },
+                  "mcpServerIds": {
+                    "items": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  },
+                  "skillIds": {
+                    "items": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "knowledgeBaseIds",
+                  "skillIds",
+                  "mcpServerIds"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "additionalProperties": {},
+            "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "conversationId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "messageId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "ordinal": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "revision": {
+            "const": 1,
+            "type": "number"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "const": "committed",
+            "type": "string"
+          },
+          "turnId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "messageId",
+          "conversationId",
+          "turnId",
+          "ordinal",
+          "role",
+          "content",
+          "revision",
+          "status",
+          "capabilitySelection",
+          "artifactRefs",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "ConversationMessagePage": {
         "additionalProperties": false,
         "properties": {
@@ -2521,6 +2984,51 @@
                   "description": "Current executor emits ConversationTaskResultReference (kind=task_result, taskId); user messages have none. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
                   "items": {},
                   "type": "array"
+                },
+                "capabilitySelection": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "knowledgeBaseIds": {
+                          "items": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        },
+                        "mcpServerIds": {
+                          "items": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        },
+                        "skillIds": {
+                          "items": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "knowledgeBaseIds",
+                        "skillIds",
+                        "mcpServerIds"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "content": {
                   "additionalProperties": {},
@@ -2579,6 +3087,7 @@
                 "content",
                 "revision",
                 "status",
+                "capabilitySelection",
                 "artifactRefs",
                 "createdAt"
               ],
@@ -3603,6 +4112,51 @@
                         "items": {},
                         "type": "array"
                       },
+                      "capabilitySelection": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "knowledgeBaseIds": {
+                                "items": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "maxItems": 50,
+                                "type": "array"
+                              },
+                              "mcpServerIds": {
+                                "items": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "maxItems": 50,
+                                "type": "array"
+                              },
+                              "skillIds": {
+                                "items": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "maxItems": 50,
+                                "type": "array"
+                              }
+                            },
+                            "required": [
+                              "knowledgeBaseIds",
+                              "skillIds",
+                              "mcpServerIds"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "content": {
                         "additionalProperties": {},
                         "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
@@ -3660,6 +4214,7 @@
                       "content",
                       "revision",
                       "status",
+                      "capabilitySelection",
                       "artifactRefs",
                       "createdAt"
                     ],
@@ -4636,6 +5191,51 @@
                   "items": {},
                   "type": "array"
                 },
+                "capabilitySelection": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "knowledgeBaseIds": {
+                          "items": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        },
+                        "mcpServerIds": {
+                          "items": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        },
+                        "skillIds": {
+                          "items": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "knowledgeBaseIds",
+                        "skillIds",
+                        "mcpServerIds"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "content": {
                   "additionalProperties": {},
                   "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
@@ -4693,6 +5293,7 @@
                 "content",
                 "revision",
                 "status",
+                "capabilitySelection",
                 "artifactRefs",
                 "createdAt"
               ],
@@ -5202,6 +5803,44 @@
       "SubmitConversationTurnRequest": {
         "additionalProperties": false,
         "properties": {
+          "capabilitySelection": {
+            "additionalProperties": false,
+            "properties": {
+              "knowledgeBaseIds": {
+                "items": {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              "mcpServerIds": {
+                "items": {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              "skillIds": {
+                "items": {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              }
+            },
+            "required": [
+              "knowledgeBaseIds",
+              "skillIds",
+              "mcpServerIds"
+            ],
+            "type": "object"
+          },
           "clientRequestId": {
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -5276,7 +5915,7 @@
   "info": {
     "description": "C01 backend proposal. Runtime Zod exported using the same pattern as Skill Market. Frontend TypeScript/Zod generation is a separate repository step, not implemented here.",
     "title": "DSI Conversation API",
-    "version": "0.1.2"
+    "version": "0.1.5"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -5506,6 +6145,122 @@
           }
         ],
         "x-availability": "requires DSI_CONVERSATION_MODE=enabled|paused and DSI_CONVERSATION_LEGACY_ENABLED=1; default disabled; real acceptance pending"
+      }
+    },
+    "/api/conversation-capabilities": {
+      "get": {
+        "operationId": "getConversationCapabilities",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scenarioId",
+            "required": true,
+            "schema": {
+              "enum": [
+                "daily"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityCatalog"
+                }
+              }
+            },
+            "description": "Completed"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCapabilityError"
+                }
+              }
+            },
+            "description": "Structured error"
+          }
+        },
+        "security": [
+          {
+            "DsiSessionCookie": []
+          }
+        ],
+        "x-availability": "implemented; real proxy acceptance pending"
       }
     },
     "/api/conversations": {
@@ -7559,6 +8314,7 @@
       "/api/conversations"
     ],
     "bff": "Forward trusted login Cookie and permitted Origin, Last-Event-ID; preserve Set-Cookie, structured errors, download and streaming headers. Never use Skill Market fixed principal for conversations.",
+    "capabilitySelection": "Daily Agent Loop only. Malformed or forged fields return 400 INVALID_REQUEST; other profiles return 422 CAPABILITY_SELECTION_NOT_ALLOWED; missing, inaccessible, revoked, or unavailable selections return 422 CAPABILITY_UNAVAILABLE with a generic message. Matching receipt retries reuse the stored snapshot without repeating external preflight. MCP tools come only from explicitly selected enabled/healthy read-only servers; an empty or omitted MCP selection never queries the provider. Catalog outages degrade only the MCP section with MCP_CATALOG_UNAVAILABLE. The worker re-reads the DB snapshot and revalidates before model use; a selected resource revoked after acceptance ends with CAPABILITY_UNAVAILABLE. Process restart loses the execution identity handle and never replays a pending Turn.",
     "legacy": "Controlled legacy adapter only. QA/daily aliases: /agent and /api/agent. taskId and legacy task status retained; conversationId/turnId added. userId/sessionId ignored. Preserve clientRequestId on retries; without one, each request starts a new single-turn conversation. Nonempty legacy task context/daily category require typed input via the dedicated API; fixed demos and internal task-only services remain separate. Admission disabled returns 503 CONVERSATION_EXECUTION_DISABLED, never falls back to the old pipeline. Receipt retries may still return an existing committed turn.",
     "retry": "Same send retries retain clientRequestId and normalized input, including after timeout or 503 with an unknown commit result. acceptedEventSeq is a receipt watermark, not permission to skip unapplied events. Unknown commit retains the original execution identity; retries never rebind credentials.",
     "stream": "Client fetches snapshot separately. Use snapshot.lastEventSeq for future updates only after installing that snapshot. Recover historical failed/interrupted turn state by replaying /events from afterSeq=0 (or a proven cached projection) through the snapshot watermark; activeTurn alone is not terminal history. Preserve an applied cursor only together with its projection. Last-Event-ID overrides afterSeq and is conversation-scoped. : connected/: heartbeat are comments. Named events require event listeners or a streaming parser; x-event-schema is descriptive and does not generate that parser. No token-delta replay. RESYNC_REQUIRED discards stale cursor/preview and reloads snapshot; if historical events remain unavailable, mark historical status unknown, retain readable messages, and do not infinitely reconnect or rerun the model."

@@ -233,7 +233,7 @@ function hasSelections(input: CreateChatRunInput): boolean {
   return (
     input.selection.knowledgeBaseIds.length > 0 ||
     input.selection.skillIds.length > 0 ||
-    input.selection.mcpIds.length > 0
+    input.selection.mcpServerIds.length > 0
   );
 }
 

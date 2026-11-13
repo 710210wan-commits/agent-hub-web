@@ -29,10 +29,10 @@ describe("verifyPinnedConversationSchema", () => {
     expect(verified.lock).toEqual({
       artifact: "conversation.v1.json",
       contractId: "conversation.v1",
-      operationCount: 18,
-      schemaVersion: "0.1.2",
-      sha256: "d5bd3ae1b98758366c1e9a6e61f1b6c32cb0502c0739823a6d0e7367fe467472",
-      sourceCommit: "c45f990d5afb7d82932958ee4e0bb8bce4d48b48",
+      operationCount: 19,
+      schemaVersion: "0.1.5",
+      sha256: "67b3aa7ec3d3871fee2a4f7ac8af169344e4e1af6cda3513efb6b6d7b244c81d",
+      sourceCommit: "8624c4f79307e8d0ee63bb512a391f9a8a2dde05",
       sourcePath: "api/openapi/conversation.v1.json",
       sourceRepository: "DSI",
     });

@@ -80,17 +80,10 @@ describe("ChatPage", () => {
     expect(screen.queryByText(/能力介绍/)).not.toBeInTheDocument();
   });
 
-  it("blocks real submission when a capability is selected", async () => {
-    const transport = makeTransport("projects-new", []);
-    renderChat(transport);
-
-    fireEvent.click(screen.getByRole("button", { name: /^知识库/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "项目资料库" }));
-    submit();
-
-    expect(await screen.findByText("当前后端尚未接入所选能力")).toBeInTheDocument();
-    expect(transport.createRun).not.toHaveBeenCalled();
-    expect(screen.getByRole("textbox", { name: "消息" })).toHaveValue("分析本周风险");
+  it("does not offer static capability choices on the legacy task transport", () => {
+    renderChat(makeTransport("projects-new", []));
+    expect(screen.getByRole("button", { name: /^知识库/ })).toBeDisabled();
+    expect(screen.queryByRole("checkbox", { name: "项目资料库" })).not.toBeInTheDocument();
   });
 
   it("does not submit while a Chinese IME composition is being confirmed", () => {
@@ -218,21 +211,14 @@ describe("ChatPage", () => {
     expect(screen.getByText("已保留正文")).toBeInTheDocument();
   });
 
-  it("retains selected capabilities as the next-turn default", async () => {
+  it("sends empty capability arrays from the legacy mock page", async () => {
     const transport = makeTransport("mock", [{ type: "answer.done", content: "完成" }]);
     renderChat(transport);
-    fireEvent.click(screen.getByRole("button", { name: /^知识库/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "项目资料库" }));
     submit();
-
     await waitFor(() => expect(transport.createRun).toHaveBeenCalledOnce());
-    expect(transport.createRun).toHaveBeenCalledWith(
-      expect.objectContaining({
-        selection: expect.objectContaining({ knowledgeBaseIds: ["project"] }),
-      }),
-      expect.any(AbortSignal),
-    );
-    expect(screen.getByRole("button", { name: "知识库 · 1" })).toBeInTheDocument();
+    expect(transport.createRun).toHaveBeenCalledWith(expect.objectContaining({
+      selection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
+    }), expect.any(AbortSignal));
   });
 
   it("shows work capabilities as server-preconfigured and not selectable", () => {

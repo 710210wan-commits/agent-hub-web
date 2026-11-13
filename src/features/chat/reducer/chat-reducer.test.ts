@@ -8,7 +8,7 @@ import { createInitialChatState } from "./chat-state";
 const selections: ChatSelectionSnapshot = {
   knowledgeBaseIds: ["kb-project"],
   skillIds: ["risk-review"],
-  mcpIds: ["weather"],
+  mcpServerIds: ["weather"],
 };
 
 function submit() {
@@ -97,7 +97,7 @@ describe("chatReducer", () => {
       selection: {
         knowledgeBaseIds: ["kb-other"],
         skillIds: [],
-        mcpIds: [],
+        mcpServerIds: [],
       },
     });
 

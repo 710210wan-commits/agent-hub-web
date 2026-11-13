@@ -11,12 +11,14 @@ export interface CapabilityOption {
 export function CapabilitySelector({
   label,
   disabled = false,
+  statusText,
   options,
   selectedIds,
   onChange,
 }: {
   label: string;
   disabled?: boolean;
+  statusText?: string;
   options: CapabilityOption[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
@@ -36,6 +38,7 @@ export function CapabilitySelector({
         {buttonLabel}
         <ChevronDown aria-hidden="true" size={12} />
       </button>
+      {statusText ? <span className="composer-capability-note">{label}：{statusText}</span> : null}
       {open && !disabled ? (
         <div className="capability-menu">
           {options.map((option) => {

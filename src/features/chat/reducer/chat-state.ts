@@ -29,7 +29,7 @@ export interface ChatState {
 }
 
 export function createEmptySelection(): ChatSelectionSnapshot {
-  return { knowledgeBaseIds: [], skillIds: [], mcpIds: [] };
+  return { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] };
 }
 
 export function createInitialChatState(sessionId?: string): ChatState {

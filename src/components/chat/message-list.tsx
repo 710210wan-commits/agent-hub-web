@@ -22,6 +22,18 @@ export function MessageList({
             </div>
           ) : null}
           {message.content ? <MessageContent content={message.content} /> : null}
+          {message.role === "user" && message.selection ? (
+            <div aria-label="本轮能力" className="message-capabilities">
+              {([
+                ["知识库", message.selection.knowledgeBaseIds],
+                ["Skill", message.selection.skillIds],
+                ["MCP", message.selection.mcpServerIds],
+              ] as const).flatMap(([label, ids]) => ids.map(id => (
+                <span className="capability-history-chip" key={`${label}:${id}`}>{label} · {id}</span>
+              )))}
+              {Object.values(message.selection).every(ids => ids.length === 0) ? <span>未选择扩展能力</span> : null}
+            </div>
+          ) : null}
           {message.role === "assistant" && message.id === run?.assistantMessageId ? (
             <ActivityLine run={run} />
           ) : null}

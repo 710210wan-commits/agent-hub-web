@@ -3,7 +3,7 @@ import type { AppMode } from "@/config/modes";
 export interface ChatSelectionSnapshot {
   knowledgeBaseIds: string[];
   skillIds: string[];
-  mcpIds: string[];
+  mcpServerIds: string[];
 }
 
 export interface ChatMessage {

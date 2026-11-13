@@ -13,7 +13,7 @@ async function collect(stream: AsyncIterable<ChatStreamEvent>) {
 const emptySelection = {
   knowledgeBaseIds: [],
   skillIds: [],
-  mcpIds: [],
+  mcpServerIds: [],
 };
 
 describe("mock transport", () => {

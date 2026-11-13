@@ -25,12 +25,24 @@ function message(
     revision: 1,
     status: "committed",
     artifactRefs: [],
+    capabilitySelection: null,
     createdAt: "2026-11-09T01:03:04.000Z",
     ...overrides,
   };
 }
 
 describe("daily Session message adapter", () => {
+  it("preserves historical selection independently of current catalog or caller edits", () => {
+    const input = message("old-message", { role: "user", capabilitySelection: {
+      knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: ["old-server"],
+    } });
+    const projected = adaptDailySessionMessage(input);
+    input.capabilitySelection!.knowledgeBaseIds.push("later");
+    input.capabilitySelection!.mcpServerIds.push("later-server");
+    expect(projected.selection).toEqual({ knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: ["old-server"] });
+    expect(Object.isFrozen(projected.selection!.knowledgeBaseIds)).toBe(true);
+    expect(Object.isFrozen(projected.selection!.mcpServerIds)).toBe(true);
+  });
   it.each(["user", "assistant"] as const)(
     "maps %s text while preserving stable metadata",
     (role) => {
@@ -143,6 +155,7 @@ describe("daily Session message adapter", () => {
       clientRequestId: "50000000-0000-4000-8000-000000000005",
       content: "待确认问题",
       status: "unknown" as const,
+      capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
       userMessageId: "40000000-0000-4000-8000-000000000013",
     };
 
@@ -176,6 +189,7 @@ describe("daily Session message adapter", () => {
       clientRequestId: "50000000-0000-4000-8000-000000000005",
       content: "仍在编辑器中的草稿",
       status: "blocked",
+      capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
     });
 
     expect(projected).toEqual([]);
