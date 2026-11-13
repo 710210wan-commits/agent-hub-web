@@ -541,3 +541,22 @@ describe("daily Session client", () => {
     });
   });
 });
+
+
+describe("conversation soft deletion", () => {
+  it("accepts an empty 204 without parsing JSON and sends the exact DELETE", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    await expect(createDailySessionClient({ fetchFn }).deleteConversation(conversationId)).resolves.toBeUndefined();
+    expect(requestAt(fetchFn).url).toBe(`/agent-api/conversations/${conversationId}`);
+    expect(requestAt(fetchFn).init).toMatchObject({ method: "DELETE", credentials: "same-origin" });
+  });
+  it.each([401, 403, 503])("preserves HTTP %s for delete failures", async status => {
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ error: { code: "DELETE_REJECTED", message: "private detail", requestId } }, status));
+    await expect(createDailySessionClient({ fetchFn }).deleteConversation(conversationId)).rejects.toMatchObject({ status });
+  });
+  it("rejects a malformed ID without a request", async () => {
+    const fetchFn = vi.fn();
+    await expect(createDailySessionClient({ fetchFn }).deleteConversation("../other")).rejects.toThrow();
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});

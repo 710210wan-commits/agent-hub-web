@@ -143,6 +143,7 @@ function makeClient(
     loadSnapshot: vi.fn(async () => snapshot()),
     loadMessages: vi.fn(),
     renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
     submitTurn: vi.fn(),
     listEvents: vi.fn(async (_id, input) => emptyPage(input.afterSeq)),
     streamEvents: vi.fn((_id, _input, signal) => waitStream([], signal)),

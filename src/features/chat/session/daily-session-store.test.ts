@@ -43,6 +43,7 @@ function createClient(): DailySessionClient {
     loadSnapshot: vi.fn(),
     loadMessages: vi.fn(),
     renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
     submitTurn: vi.fn(),
     listEvents: vi.fn(),
     streamEvents: vi.fn(),
@@ -348,6 +349,70 @@ describe("useDailySessionStore", () => {
 
     expect(onAuthRequired).toHaveBeenCalledOnce();
     expect(result.current.conversations).toHaveLength(0);
+  });
+});
+
+
+describe("history deletion", () => {
+  it("removes only the confirmed ID after success and keeps same-title siblings", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations).mockResolvedValue({ conversations: [conversation(FIRST_ID), conversation(SECOND_ID, { title: conversation(FIRST_ID).title })], nextCursor: null });
+    const pending = deferred<void>();
+    vi.mocked(client.deleteConversation).mockReturnValue(pending.promise);
+    const { result } = renderHook(() => useDailySessionStore(client, 1));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    let done!: Promise<boolean>;
+    act(() => { done = result.current.deleteConversation(FIRST_ID); });
+    expect(result.current.conversations).toHaveLength(2);
+    expect(result.current.deletingId).toBe(FIRST_ID);
+    await act(async () => { pending.resolve(); await done; });
+    expect(result.current.conversations.map(x => x.conversationId)).toEqual([SECOND_ID]);
+  });
+  it("retains the row and exposes a local error for forbidden deletion", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations).mockResolvedValue({ conversations: [conversation(FIRST_ID)], nextCursor: null });
+    vi.mocked(client.deleteConversation).mockRejectedValue(new DailySessionClientError({ status: 403, code: "FORBIDDEN", message: "权限不足" }));
+    const { result } = renderHook(() => useDailySessionStore(client, 1));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => { expect(await result.current.deleteConversation(FIRST_ID)).toBe(false); });
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.deleteError).toBe("权限不足");
+    expect(result.current.deletingId).toBeUndefined();
+  });
+  it("invalidates auth on 401", async () => {
+    const client = createClient(), onAuthRequired = vi.fn();
+    vi.mocked(client.listConversations).mockResolvedValue({ conversations: [conversation(FIRST_ID)], nextCursor: null });
+    vi.mocked(client.deleteConversation).mockRejectedValue(authRequired());
+    const { result } = renderHook(() => useDailySessionStore(client, 1, { onAuthRequired }));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => { await result.current.deleteConversation(FIRST_ID); });
+    expect(onAuthRequired).toHaveBeenCalledOnce();
+    expect(result.current.conversations).toHaveLength(0);
+  });
+  it("does not resurrect a deleted row when an older page response arrives", async () => {
+    const client = createClient(), page = deferred<{ conversations: ConversationMetadata[]; nextCursor: string | null }>();
+    vi.mocked(client.listConversations).mockResolvedValueOnce({ conversations: [conversation(FIRST_ID)], nextCursor: "page-2" }).mockReturnValueOnce(page.promise);
+    vi.mocked(client.deleteConversation).mockResolvedValue(undefined);
+    const { result } = renderHook(() => useDailySessionStore(client, 1));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    let loading!: Promise<void>;
+    act(() => { loading = result.current.loadMore(); });
+    await act(async () => { await result.current.deleteConversation(FIRST_ID); });
+    await act(async () => { page.resolve({ conversations: [conversation(FIRST_ID), conversation(SECOND_ID)], nextCursor: null }); await loading; });
+    expect(result.current.conversations.map(x => x.conversationId)).toEqual([SECOND_ID]);
+  });
+
+  it("ignores deletion completion after identity changes", async () => {
+    const client = createClient(), pending = deferred<void>();
+    vi.mocked(client.listConversations).mockResolvedValueOnce({ conversations: [conversation(FIRST_ID)], nextCursor: null }).mockResolvedValue({ conversations: [conversation(FIRST_ID, { title: "新用户会话" })], nextCursor: null });
+    vi.mocked(client.deleteConversation).mockReturnValue(pending.promise);
+    const { result, rerender } = renderHook(({ identity }) => useDailySessionStore(client, identity), { initialProps: { identity: 1 } });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    let done!: Promise<boolean>;act(() => { done=result.current.deleteConversation(FIRST_ID); });
+    rerender({ identity: 2 });
+    await waitFor(() => expect(result.current.conversations[0]?.title).toBe("新用户会话"));
+    await act(async () => { pending.resolve(); await done; });
+    expect(result.current.conversations[0]?.title).toBe("新用户会话");
   });
 });
 

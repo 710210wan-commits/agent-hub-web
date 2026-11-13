@@ -1545,13 +1545,13 @@ a {
 }
 
 .daily-history-link {
-  padding-right: 52px;
+  padding-right: 86px;
 }
 
 .daily-history-rename-button {
   position: absolute;
   top: 50%;
-  right: 14px;
+  right: 48px;
   display: grid;
   width: 28px;
   height: 28px;
@@ -1562,6 +1562,15 @@ a {
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
+}
+
+.daily-history-delete-button {
+  right: 14px;
+}
+
+.daily-history-rename-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .daily-history-rename-button:hover {

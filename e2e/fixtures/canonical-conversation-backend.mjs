@@ -249,6 +249,12 @@ async function handleConversation(request, response, url, userKey) {
     return;
   }
 
+  if (!section && request.method === "DELETE") {
+    conversations.delete(conversationId);
+    response.writeHead(204);
+    response.end();
+    return;
+  }
   if (!section && request.method === "PATCH") {
     const body = await readJson(request);
     item.metadata.title = body?.title ?? item.metadata.title;

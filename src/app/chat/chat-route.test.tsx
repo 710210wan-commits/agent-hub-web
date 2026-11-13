@@ -55,6 +55,7 @@ const mocks = vi.hoisted(() => {
     loadSnapshot,
     loadMessages,
     renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
     submitTurn,
     listEvents,
     streamEvents,

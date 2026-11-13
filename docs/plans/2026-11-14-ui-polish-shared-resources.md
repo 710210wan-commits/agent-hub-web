@@ -50,9 +50,9 @@ Files: src/config/copy.ts; mode-related visible strings in src; corresponding as
 ### Task 4 — 历史软删除（项 2）
 Files: src/features/chat/transports/daily-session-client.ts; src/features/chat/session/daily-session-store.ts; src/components/chat/daily-session-history.tsx; corresponding tests.
 Interfaces: DailySessionClient.deleteConversation(id, signal?): Promise<void>; store.deleteConversation(id): Promise<boolean>.
-- [ ] RED: 按 ID 删除及 204；失败不移除；401 与身份 generation 防串；工作删除不纳入本批。
-- [ ] 增加请求与状态管理、确认 UI、busy/error；仅复用原生 DELETE /conversations/:id，不改工作网关、后端或数据库。
-- [ ] 聚焦 Vitest / history E2E；自审、提交。
+- [x] RED: 按 ID 删除及 204；失败不移除；401 与身份 generation 防串；工作删除不纳入本批。
+- [x] 增加请求与状态管理、确认 UI、busy/error；仅复用原生 DELETE /conversations/:id，不改工作网关、后端或数据库。
+- [x] 聚焦 Vitest / history E2E；自审、提交。
 
 ### Task 5 — URL 数字映射（项 3）
 Files: src/config/modes.ts; src/providers/mode-provider.tsx; navigation/session/skill URL builders and affected route parsers/tests.
@@ -87,3 +87,5 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - Ruling (user): 工作删除延期；本批只接原生删除。现有 Work BFF 未验证全局登录，未来开启破坏性 endpoint 前需独立补认证/同源校验。
 
 - Batch A independent review: no Critical/Major; one Minor tablet logout clipping. RED browser assertion reproduces; fixed collapsed account layout, GREEN 7/7 desktop/tablet/mobile layout. Added failed-login empty-field assertion. Lint, typecheck, production build passed before Batch B.
+
+- Task 4 (Daily only): initial RED 9 missing-delete behaviors; GREEN focused 69/69, deletion browser flow 1/1 (cancel confirmation / delete / refresh / old URL 404), typecheck passed. Full suite first had existing 500-entry Skill timing timeout under parallel load; unchanged assertions passed with maxWorkers=2: 809/809. Deleted-ID tombstones prevent old pagination responses resurrecting rows. Work deletion deferred explicitly.

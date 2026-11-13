@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock3, Pencil } from "lucide-react";
+import { Clock3, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -81,9 +81,9 @@ function AuthenticatedDailySessionHistory({
         </button>
       </div>
 
-      {store.renameError ? (
+      {store.renameError || store.deleteError ? (
         <div className="inline-error daily-history-feedback" role="alert">
-          {store.renameError}
+          {store.renameError || store.deleteError}
         </div>
       ) : null}
 
@@ -94,6 +94,11 @@ function AuthenticatedDailySessionHistory({
         setDraftTitle,
         startRename,
         submitRename,
+        removeConversation: (conversation) => {
+          if (window.confirm(`删除“${conversation.title || "未命名会话"}”？删除后无法继续查看此会话。`)) {
+            void store.deleteConversation(conversation.conversationId);
+          }
+        },
         cancelRename: () => {
           setEditingId(null);
           setDraftTitle("");
@@ -113,6 +118,7 @@ function renderHistoryContent(input: {
   startRename(conversation: ConversationMetadata): void;
   submitRename(event: FormEvent<HTMLFormElement>): Promise<void>;
   cancelRename(): void;
+  removeConversation(conversation: ConversationMetadata): void;
 }) {
   const { store } = input;
   if (store.status === "loading") {
@@ -181,10 +187,20 @@ function renderHistoryContent(input: {
                   <button
                     aria-label={`重命名 ${conversation.title || "未命名会话"}`}
                     className="daily-history-rename-button"
+                    disabled={Boolean(store.deletingId)}
                     onClick={() => input.startRename(conversation)}
                     type="button"
                   >
                     <Pencil aria-hidden="true" size={14} />
+                  </button>
+                  <button
+                    aria-label={`删除 ${conversation.title || "未命名会话"}`}
+                    className="daily-history-rename-button daily-history-delete-button"
+                    disabled={Boolean(store.deletingId) || Boolean(store.renamingId)}
+                    onClick={() => input.removeConversation(conversation)}
+                    type="button"
+                  >
+                    <Trash2 aria-hidden="true" size={14} />
                   </button>
                 </>
               )}

@@ -228,3 +228,21 @@ async function fixtureState(request: APIRequestContext): Promise<FixtureState> {
   expect(response.ok()).toBe(true);
   return response.json();
 }
+
+test("原生历史删除需确认，成功后刷新和旧链接均不可见", async ({ page }) => {
+  await loginFrom(page, "alice", "/history?mode=daily");
+  const history = page.getByRole("link", { name: /Alice 历史会话/ });
+  await history.waitFor();
+  const id = new URL((await history.getAttribute("href"))!, "http://local.test").searchParams.get("conversation")!;
+  const remove = page.getByRole("button", { name: "删除 Alice 历史会话" });
+  page.once("dialog", dialog => dialog.dismiss());
+  await remove.click();
+  await expect(history).toBeVisible();
+  page.once("dialog", dialog => dialog.accept());
+  await remove.click();
+  await expect(history).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("Alice 历史会话")).toHaveCount(0);
+  await page.goto(`/chat?mode=daily&conversation=${id}`);
+  await expect(page.getByText("会话不存在、已删除或不属于当前用户")).toBeVisible();
+});

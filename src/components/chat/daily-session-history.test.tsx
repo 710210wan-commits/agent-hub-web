@@ -49,6 +49,7 @@ function createClient(): DailySessionClient {
     loadSnapshot: vi.fn(),
     loadMessages: vi.fn(),
     renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
     submitTurn: vi.fn(),
     listEvents: vi.fn(),
     streamEvents: vi.fn(),
@@ -246,4 +247,37 @@ describe("DailySessionHistory", () => {
     expect(client.listConversations).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "退出登录" })).not.toBeInTheDocument();
   });
+  it("cancels confirmation without deleting, then removes only the selected history row", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations).mockResolvedValue({ conversations: [conversation(FIRST_ID), conversation(SECOND_ID, { title: "保留会话" })], nextCursor: null });
+    vi.mocked(client.deleteConversation).mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    try {
+      renderHistory(client);
+      const button = await screen.findByRole("button", { name: "删除 边境态势分析" });
+      fireEvent.click(button);
+      expect(screen.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
+      expect(client.deleteConversation).not.toHaveBeenCalled();
+      confirm.mockReturnValue(true);
+      fireEvent.click(button);
+      await waitFor(() => expect(screen.queryByRole("link", { name: /边境态势分析/ })).not.toBeInTheDocument());
+      expect(screen.getByRole("link", { name: /保留会话/ })).toBeInTheDocument();
+      expect(client.deleteConversation).toHaveBeenCalledWith(FIRST_ID, expect.any(AbortSignal));
+    } finally { confirm.mockRestore(); }
+  });
+
+  it("keeps the history link and shows a safe message when deletion fails", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations).mockResolvedValue({ conversations: [conversation(FIRST_ID)], nextCursor: null });
+    vi.mocked(client.deleteConversation).mockRejectedValue(new Error("private upstream detail"));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    try {
+      renderHistory(client);
+      fireEvent.click(await screen.findByRole("button", { name: "删除 边境态势分析" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("会话删除失败，请稍后重试");
+      expect(screen.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
+      expect(screen.queryByText("private upstream detail")).not.toBeInTheDocument();
+    } finally { confirm.mockRestore(); }
+  });
+
 });

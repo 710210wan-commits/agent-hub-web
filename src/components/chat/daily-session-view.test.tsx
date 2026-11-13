@@ -136,6 +136,7 @@ function makeClient(overrides: Partial<DailySessionClient> = {}): DailySessionCl
     loadSnapshot: vi.fn(async () => snapshot()),
     loadMessages: vi.fn(),
     renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
     submitTurn: vi.fn(),
     listEvents: vi.fn(async (_id, input) => ({
       events: [],
