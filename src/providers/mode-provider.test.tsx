@@ -31,6 +31,7 @@ describe("ModeProvider Skill route memory", () => {
     navigation.search = "mode=work";
     navigation.replace.mockClear();
     window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
   });
 
   it("opens the Daily Skill home and restores the previous Work detail route", () => {
@@ -89,6 +90,16 @@ describe("ModeProvider Skill route memory", () => {
     expect(screen.getByRole("button", { name: "工作" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "决策" }));
     expect(navigation.replace).toHaveBeenLastCalledWith("/chat?mode=1&panel=open");
+  });
+
+  it("preserves the fragment during normalization and explicit mode switching", () => {
+    navigation.pathname = "/chat";
+    navigation.search = "mode=daily&panel=open";
+    window.history.replaceState({}, "", "/chat?mode=daily&panel=open#answer");
+    renderModeSwitch();
+    expect(navigation.replace).toHaveBeenLastCalledWith("/chat?mode=1&panel=open#answer");
+    fireEvent.click(screen.getByRole("button", { name: "工作" }));
+    expect(navigation.replace).toHaveBeenLastCalledWith("/chat?mode=2&panel=open#answer");
   });
 
 });

@@ -78,8 +78,8 @@ test("daily chat remains usable when switching to the work agent", async ({ page
 });
 
 test("legacy mode links normalize to numbers without losing deep-link state", async ({ page }) => {
-  await page.goto("/chat?mode=daily&panel=open");
-  await expect(page).toHaveURL(/mode=1&panel=open/);
+  await page.goto("/chat?mode=daily&panel=open#answer");
+  await expect(page).toHaveURL(/mode=1&panel=open#answer/);
   await expect(page.getByRole("button", { name: "决策", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.goto("/settings?mode=work&section=model");
   await expect(page).toHaveURL(/mode=2&section=model/);

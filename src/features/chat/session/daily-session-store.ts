@@ -297,6 +297,7 @@ export function useDailySessionStore(
         ...current,
         renamingId: conversationId,
         renameError: undefined,
+        deleteError: undefined,
       }));
       try {
         const renamed = await client.renameConversation(
@@ -347,7 +348,7 @@ export function useDailySessionStore(
     const generation = generationRef.current, epoch = epochRef.current;
     const controller = beginRequest();
     deletingRef.current = conversationId;
-    setState(current => ({ ...current, deletingId: conversationId, deleteError: undefined }));
+    setState(current => ({ ...current, deletingId: conversationId, deleteError: undefined, renameError: undefined }));
     try {
       await client.deleteConversation(conversationId, controller.signal);
       if (!isCurrent(generation, epoch, controller.signal)) return false;

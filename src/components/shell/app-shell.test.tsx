@@ -105,8 +105,8 @@ describe("AppShell", () => {
   it.each(["/knowledge", "/knowledge/kb-1", "/mcp", "/mcp/server-1"])("hides mode switching on shared resource %s without losing work navigation", pathname => {
     pageState.pathname = pathname;
     render(<AuthProvider><ModeProvider><AppShell title="共享资源">资源</AppShell></ModeProvider></AuthProvider>);
-    expect(screen.queryByRole("button", { name: "决策", exact: true })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "工作", exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "决策" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "工作" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "新对话" })).toHaveAttribute("href", "/chat?mode=2");
   });
 

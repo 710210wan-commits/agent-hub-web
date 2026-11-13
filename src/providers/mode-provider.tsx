@@ -25,7 +25,8 @@ function isSkillPath(pathname: string): boolean {
 }
 
 function routeHref(pathname: string, search: string): string {
-  return search ? `${pathname}?${search}` : pathname;
+  const hash = typeof window === "undefined" ? "" : window.location.hash;
+  return `${pathname}${search ? `?${search}` : ""}${hash}`;
 }
 
 function rememberSkillRoute(mode: AppMode, href: string): void {
@@ -41,7 +42,7 @@ function readSkillRoute(mode: AppMode): string | null {
     const url = new URL(stored, "https://agent-hub.local");
     if (url.origin !== "https://agent-hub.local" || !isSkillPath(url.pathname)) return null;
     if (parseMode(url.searchParams.get("mode")) !== mode) return null;
-    return withMode(`${url.pathname}${url.search}`, mode);
+    return withMode(`${url.pathname}${url.search}${url.hash}`, mode);
   } catch {
     return null;
   }
@@ -78,7 +79,7 @@ export function ModeProvider({ children }: { children: ReactNode }) {
         next.delete("conversation");
         next.delete("draft");
       }
-      router.replace(`${pathname}?${next.toString()}`);
+      router.replace(routeHref(pathname, next.toString()));
     },
     [mode, pathname, router, search, searchParams],
   );

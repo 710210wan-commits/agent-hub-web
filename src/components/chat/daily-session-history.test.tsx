@@ -280,4 +280,22 @@ describe("DailySessionHistory", () => {
     } finally { confirm.mockRestore(); }
   });
 
+  it("shows the latest deletion error instead of a previous rename failure", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations).mockResolvedValue({ conversations: [conversation(FIRST_ID)], nextCursor: null });
+    vi.mocked(client.renameConversation).mockRejectedValue(new DailySessionClientError({ status: 403, code: "FORBIDDEN", message: "重命名权限不足" }));
+    vi.mocked(client.deleteConversation).mockRejectedValue(new DailySessionClientError({ status: 403, code: "FORBIDDEN", message: "删除权限不足" }));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    try {
+      renderHistory(client);
+      fireEvent.click(await screen.findByRole("button", { name: "重命名 边境态势分析" }));
+      fireEvent.click(screen.getByRole("button", { name: "保存" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("重命名权限不足");
+      fireEvent.click(screen.getByRole("button", { name: "取消" }));
+      fireEvent.click(screen.getByRole("button", { name: "删除 边境态势分析" }));
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("删除权限不足"));
+      expect(screen.queryByText("重命名权限不足")).not.toBeInTheDocument();
+    } finally { confirm.mockRestore(); }
+  });
+
 });
