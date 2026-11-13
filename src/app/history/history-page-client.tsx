@@ -83,8 +83,8 @@ export function HistoryPageClient({
             <h1>历史对话</h1>
             <p>
               {mode === "work"
-                ? "查看并继续办公智能体会话"
-                : "查看、创建并管理日常持久会话"}
+                ? "查看并继续工作智能体会话"
+                : "查看、创建并管理决策持久会话"}
             </p>
           </div>
         </header>
@@ -115,7 +115,7 @@ function renderContent(
     return <ErrorState message="当前模式不支持历史会话" />;
   }
   if (!result) {
-    return <LoadingState label="正在加载办公历史…" />;
+    return <LoadingState label="正在加载工作历史…" />;
   }
   if (result.status === "error") {
     return <ErrorState message="历史会话加载失败，请稍后重试" />;
@@ -123,13 +123,13 @@ function renderContent(
   if (result.sessions.length === 0) {
     return (
       <EmptyState
-        description="开始一次办公对话后，会话将显示在这里"
-        title="暂无办公历史会话"
+        description="开始一次工作对话后，会话将显示在这里"
+        title="暂无工作历史会话"
       />
     );
   }
   return (
-    <ul aria-label="办公历史会话" className="history-list">
+    <ul aria-label="工作历史会话" className="history-list">
       {result.sessions.map((session) => (
         <li key={session.id}>
           <Link

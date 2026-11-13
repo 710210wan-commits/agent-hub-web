@@ -133,7 +133,7 @@ describe("SkillMine", () => {
     mockMode = "work";
     const query = vi.fn();
     render(<ModeProvider><SkillMine client={clientStub(query)} /></ModeProvider>);
-    expect(screen.getByRole("heading", { name: "办公场景暂未接入" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "工作场景暂未接入" })).toBeInTheDocument();
     await waitFor(() => expect(query).not.toHaveBeenCalled());
   });
 });

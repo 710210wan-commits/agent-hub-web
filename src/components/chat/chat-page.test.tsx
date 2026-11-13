@@ -226,7 +226,7 @@ describe("ChatPage", () => {
     renderChat(makeTransport("xiaozhi", []));
 
     expect(
-      screen.getByText("办公智能体已预配置知识库、Skill 与 MCP"),
+      screen.getByText("工作智能体已预配置知识库、Skill 与 MCP"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^知识库/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /^Skill/ })).toBeDisabled();

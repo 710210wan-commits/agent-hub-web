@@ -9,7 +9,7 @@ import { useAuth } from "@/providers/auth-provider";
  *
  * 双入口：
  * - 账号登录：xiaozhi 账号密码 → 完整态（对话/知识库可用）
- * - 演示模式：DSI 基础会话 → 演示态（Skill/MCP/办公/设置可用；
+ * - 演示模式：DSI 基础会话 → 演示态（Skill/MCP/工作/设置可用；
  *   面向未部署 xiaozhi 的开发与演示场景）
  *
  * 不改动 URL：登录成功后 AuthBoundary 直接放行原页面，天然实现"回跳原目标"。

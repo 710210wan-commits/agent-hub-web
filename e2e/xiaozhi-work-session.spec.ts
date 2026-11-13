@@ -132,7 +132,7 @@ test("work mode persists, restores, continues, cancels, and stays isolated from 
     )
     .toMatch(/^(aborted|canceled|cancelled|stopped)$/);
 
-  await page.getByRole("button", { name: "日常" }).click();
+  await page.getByRole("button", { name: "决策" }).click();
   await expect(page.getByRole("heading", { name: "今天想聊些什么？" })).toBeVisible();
   await expect(page.getByText(marker, { exact: false })).toHaveCount(0);
   await page.goto("/history?mode=daily");

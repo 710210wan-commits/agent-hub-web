@@ -78,7 +78,7 @@ describe("AppShell", () => {
       </AuthProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "日常" }));
+    fireEvent.click(screen.getByRole("button", { name: "决策" }));
 
     expect(replace).toHaveBeenCalledWith("/chat?mode=daily&panel=open");
   });

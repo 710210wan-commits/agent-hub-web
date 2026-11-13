@@ -134,7 +134,7 @@ describe("SkillCreator", () => {
     mockMode = "work";
     const client = { mutate: vi.fn(), query: vi.fn() } as unknown as SkillMarketClient;
     render(<ModeProvider><SkillCreator client={client} /></ModeProvider>);
-    expect(screen.getByRole("heading", { name: "办公场景暂未接入" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "工作场景暂未接入" })).toBeInTheDocument();
     await waitFor(() => {
       expect(client.query).not.toHaveBeenCalled();
       expect(client.mutate).not.toHaveBeenCalled();

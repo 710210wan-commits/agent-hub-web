@@ -36,13 +36,13 @@ describe("ModeProvider Skill route memory", () => {
   it("opens the Daily Skill home and restores the previous Work detail route", () => {
     const view = renderModeSwitch();
 
-    fireEvent.click(screen.getByRole("button", { name: "日常" }));
+    fireEvent.click(screen.getByRole("button", { name: "决策" }));
     expect(navigation.replace).toHaveBeenLastCalledWith("/skills?mode=daily");
 
     navigation.pathname = "/skills";
     navigation.search = "mode=daily";
     view.rerender(<ModeProvider><ModeSwitch /></ModeProvider>);
-    fireEvent.click(screen.getByRole("button", { name: "办公" }));
+    fireEvent.click(screen.getByRole("button", { name: "工作" }));
 
     expect(navigation.replace).toHaveBeenLastCalledWith(
       "/skills/workspace-files?mode=work",
@@ -54,13 +54,13 @@ describe("ModeProvider Skill route memory", () => {
     navigation.search = "mode=daily&draftId=draft-1";
     const view = renderModeSwitch();
 
-    fireEvent.click(screen.getByRole("button", { name: "办公" }));
+    fireEvent.click(screen.getByRole("button", { name: "工作" }));
     expect(navigation.replace).toHaveBeenLastCalledWith("/skills?mode=work");
 
     navigation.pathname = "/skills";
     navigation.search = "mode=work";
     view.rerender(<ModeProvider><ModeSwitch /></ModeProvider>);
-    fireEvent.click(screen.getByRole("button", { name: "日常" }));
+    fireEvent.click(screen.getByRole("button", { name: "决策" }));
 
     expect(navigation.replace).toHaveBeenLastCalledWith(
       "/skills/creator?mode=daily&draftId=draft-1",
@@ -72,7 +72,7 @@ describe("ModeProvider Skill route memory", () => {
     navigation.search = "mode=work&panel=open";
     renderModeSwitch();
 
-    fireEvent.click(screen.getByRole("button", { name: "日常" }));
+    fireEvent.click(screen.getByRole("button", { name: "决策" }));
 
     expect(navigation.replace).toHaveBeenCalledWith("/chat?mode=daily&panel=open");
   });

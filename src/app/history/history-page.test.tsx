@@ -140,7 +140,7 @@ describe("HistoryPage", () => {
 
     renderPage();
 
-    const list = await screen.findByRole("list", { name: "办公历史会话" });
+    const list = await screen.findByRole("list", { name: "工作历史会话" });
     expect(
       within(list)
         .getAllByRole("link")
@@ -162,13 +162,13 @@ describe("HistoryPage", () => {
     mocks.listSessions.mockReturnValue(pending.promise);
     renderPage();
 
-    expect(screen.getByRole("status")).toHaveTextContent("正在加载办公历史");
+    expect(screen.getByRole("status")).toHaveTextContent("正在加载工作历史");
 
     await act(async () => {
       pending.resolve([]);
       await pending.promise;
     });
-    expect(await screen.findByText("暂无办公历史会话")).toBeInTheDocument();
+    expect(await screen.findByText("暂无工作历史会话")).toBeInTheDocument();
   });
 
   it("shows a safe error state when session loading fails", async () => {
@@ -194,7 +194,7 @@ describe("HistoryPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("暂无日常历史会话")).toBeInTheDocument();
+    expect(await screen.findByText("暂无决策历史会话")).toBeInTheDocument();
     expect(screen.getByText("日常用户")).toBeInTheDocument();
     expect(screen.queryByText("不应出现的办公记录")).not.toBeInTheDocument();
     expect(mocks.createXiaozhiTransport).not.toHaveBeenCalled();
@@ -244,7 +244,8 @@ describe("HistoryPage", () => {
       ]);
       await pending.promise;
     });
-    expect(await screen.findByText("暂无日常历史会话")).toBeInTheDocument();
+    expect(await screen.findByText("暂无决策历史会话")).toBeInTheDocument();
     expect(screen.queryByText("迟到的办公记录")).not.toBeInTheDocument();
   });
 });
+

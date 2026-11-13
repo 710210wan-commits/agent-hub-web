@@ -116,12 +116,12 @@ function renderHistoryContent(input: {
 }) {
   const { store } = input;
   if (store.status === "loading") {
-    return <LoadingState label="正在加载日常历史…" />;
+    return <LoadingState label="正在加载决策历史…" />;
   }
   if (store.status === "error") {
     return (
       <div className="daily-history-state">
-        <ErrorState message={store.errorMessage ?? "日常历史加载失败，请稍后重试"} />
+        <ErrorState message={store.errorMessage ?? "决策历史加载失败，请稍后重试"} />
         <button className="secondary-button" onClick={() => void store.retry()} type="button">
           重试加载
         </button>
@@ -134,10 +134,10 @@ function renderHistoryContent(input: {
       {store.conversations.length === 0 ? (
         <EmptyState
           description="首次发送消息后，会话将显示在这里"
-          title="暂无日常历史会话"
+          title="暂无决策历史会话"
         />
       ) : (
-        <ul aria-label="日常历史会话" className="history-list">
+        <ul aria-label="决策历史会话" className="history-list">
           {store.conversations.map((conversation) => (
             <li className="daily-history-item" key={conversation.conversationId}>
               {input.editingId === conversation.conversationId ? (

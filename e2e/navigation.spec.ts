@@ -29,7 +29,7 @@ test("all shell routes render and preserve work mode", async ({ page }) => {
     }
   }
 
-  await page.getByRole("button", { name: "日常" }).click();
+  await page.getByRole("button", { name: "决策" }).click();
   await expect(page).toHaveURL(/mode=daily/);
 });
 
@@ -72,7 +72,7 @@ test("daily chat remains usable when switching to the work agent", async ({ page
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("综合现有资料，本周需重点关注三类风险。")).toBeVisible();
 
-  await page.getByRole("button", { name: "办公" }).click();
+  await page.getByRole("button", { name: "工作" }).click();
   await expect(page.getByRole("heading", { name: "今天要处理什么工作？" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "消息" })).toBeVisible();
 });

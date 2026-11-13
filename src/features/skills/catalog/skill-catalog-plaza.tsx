@@ -61,8 +61,8 @@ function SkillCatalogPlazaWork({ workApi }: { workApi?: WorkSkillsApi }) {
 export function SkillMarketWorkPlaceholder() {
   return (
     <section className="state-card empty-state">
-      <h1>办公场景暂未接入</h1>
-      <p>办公 Skill Market 将使用独立后端，当前不会调用日常场景服务。</p>
+      <h1>工作场景暂未接入</h1>
+      <p>工作 Skill Market 将使用独立后端，当前不会调用决策场景服务。</p>
     </section>
   );
 }
@@ -126,7 +126,7 @@ function SkillCatalogPlazaDaily({
             <h1>Skill 广场</h1>
             {catalog ? <span className="skill-count-badge">共 {catalog.total} 个</span> : null}
           </div>
-          <p>浏览日常后端返回的内置与市场 Skill</p>
+          <p>浏览决策后端返回的内置与市场 Skill</p>
         </div>
         <div className="skill-page-actions skill-catalog-actions">
           <Link className="skill-page-action skill-page-action-primary skill-action-primary" href="/skills/creator?mode=daily">创建 Skill</Link>
@@ -219,7 +219,7 @@ function SkillCatalogPlazaDaily({
             </div>
           ) : catalog.items.length === 0 ? (
             <EmptyState
-              description="日常后端尚未返回任何内置或市场 Skill，可稍后刷新重试。"
+              description="决策后端尚未返回任何内置或市场 Skill，可稍后刷新重试。"
               title="Skill 广场暂无内容"
             />
           ) : (
@@ -231,7 +231,7 @@ function SkillCatalogPlazaDaily({
         </>
       ) : state.kind === "empty" ? (
         <EmptyState
-          description="日常后端尚未返回任何内置或市场 Skill，可稍后刷新重试。"
+          description="决策后端尚未返回任何内置或市场 Skill，可稍后刷新重试。"
           title="Skill 广场暂无内容"
         />
       ) : state.kind === "error" ? (

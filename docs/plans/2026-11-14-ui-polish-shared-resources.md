@@ -43,9 +43,9 @@ Files: src/app/globals.css; e2e/shell-layout.spec.ts (new).
 
 ### Task 3 — 决策/工作显示名（项 6）
 Files: src/config/copy.ts; mode-related visible strings in src; corresponding assertions in tests.
-- [ ] 确认切换控件与历史等用户可见文案应为“决策/工作”；保留内部 daily/work 和来源标识。
-- [ ] 实施集中 copy 与散落场景提示的对应修改；更新因明确文案变更而受影响的断言。
-- [ ] 模式切换、历史与登录聚焦测试；自审、提交。
+- [x] 确认切换控件与历史等用户可见文案应为“决策/工作”；保留内部 daily/work 和来源标识。
+- [x] 实施集中 copy 与散落场景提示的对应修改；更新因明确文案变更而受影响的断言。
+- [x] 模式切换、历史与登录聚焦测试；自审、提交。
 
 ### Task 4 — 历史软删除（项 2）
 Files: src/features/chat/transports/daily-session-client.ts; src/features/chat/session/daily-session-store.ts; src/components/chat/daily-session-history.tsx; src/features/chat/contracts/session.ts; src/features/chat/transports/xiaozhi-transport.ts; src/server/xiaozhi/proxy.ts; src/app/history/history-page-client.tsx; corresponding tests.
@@ -81,3 +81,5 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - Task 1: RED 2 failures (default values / empty submit); GREEN auth 23/23; full suite 797/797. No production auth behavior changed beyond blank initial form.
 
 - Task 2: RED Skill footer bottom 1744 > 900; MCP footer bottom 3485.78 > 900. GREEN desktop 1440x900 / 1280x720 plus mobile navigation: 5/5 Playwright. Content scroll reaches final card; account stays in viewport.
+
+- Task 3: RED 4 mode-label/legacy DTO display failures; GREEN 797/797 Vitest and combined navigation/layout/mobile 9/9 Playwright. Public labels decision/work; internal daily/work untouched; legacy scenario names mapped only in display model.

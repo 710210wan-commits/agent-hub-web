@@ -50,7 +50,7 @@ interface PendingCreate {
   title?: string;
 }
 
-const LIST_ERROR = "日常历史加载失败，请稍后重试";
+const LIST_ERROR = "决策历史加载失败，请稍后重试";
 const CREATE_ERROR = "持久会话创建失败，请稍后重试";
 const CREATE_UNKNOWN = "创建结果暂未确认，请使用原请求重试";
 const RENAME_ERROR = "会话重命名失败，请稍后重试";

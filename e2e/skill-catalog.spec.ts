@@ -14,7 +14,7 @@ const catalogResponse = {
       categorySource: "inferred",
       description: "查询日常目标",
       id: "built-in:alpha-query",
-      loadedByScenarios: [{ id: "daily", name: "日常" }],
+      loadedByScenarios: [{ id: "daily", name: "决策" }],
       name: "alpha-query",
       relativePath: "skills/alpha-query/SKILL.md",
       source: "built-in",

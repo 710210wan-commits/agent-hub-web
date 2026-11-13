@@ -49,7 +49,7 @@ describe("SkillReviewQueue", () => {
     mockMode = "work";
     const query = vi.fn();
     render(<ModeProvider><SkillReviewQueue client={{ query } as unknown as SkillMarketClient} /></ModeProvider>);
-    expect(screen.getByRole("heading", { name: "办公场景暂未接入" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "工作场景暂未接入" })).toBeInTheDocument();
     await waitFor(() => expect(query).not.toHaveBeenCalled());
   });
 });

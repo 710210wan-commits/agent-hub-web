@@ -73,9 +73,9 @@ describe("skillCatalogViewModelAdapter", () => {
       installState: "built-in-active",
       conflict: null,
     });
-    expect(item.loadedScenarios).toEqual([{ id: "daily", name: "日常" }]);
+    expect(item.loadedScenarios).toEqual([{ id: "daily", name: "决策" }]);
     expect(item).toHaveProperty("scopes", [
-      { type: "scenario", id: "daily", name: "日常" },
+      { type: "scenario", id: "daily", name: "决策" },
     ]);
     expect(item.tools).toEqual(["gis-query"]);
   });
@@ -242,7 +242,7 @@ describe("skillCatalogViewModelAdapter", () => {
     dtoItem.loadedByScenarios.push({ id: "work", name: "办公" });
 
     expect(viewModel.items[0].tools).toEqual(["gis-query"]);
-    expect(viewModel.items[0].loadedScenarios).toEqual([{ id: "daily", name: "日常" }]);
+    expect(viewModel.items[0].loadedScenarios).toEqual([{ id: "daily", name: "决策" }]);
   });
 
   it("fits the SkillMarketViewModelAdapter contract", () => {

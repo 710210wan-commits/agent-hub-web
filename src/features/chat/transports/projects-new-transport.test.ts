@@ -96,7 +96,7 @@ describe("projects-new transport", () => {
         content: "生成办公报告",
         selection: emptySelection,
       }),
-    ).rejects.toThrow("办公场景 Loop 尚未接入");
+    ).rejects.toThrow("工作场景 Loop 尚未接入");
     expect(fetchFn).not.toHaveBeenCalled();
   });
 

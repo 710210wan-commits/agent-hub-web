@@ -113,16 +113,16 @@ describe("DailySessionHistory", () => {
       });
 
     renderHistory(client);
-    expect(await screen.findByText("正在加载日常历史…")).toBeInTheDocument();
+    expect(await screen.findByText("正在加载决策历史…")).toBeInTheDocument();
 
     await act(async () => {
       initial.resolve({ conversations: [], nextCursor: "opaque/+==" });
       await initial.promise;
     });
-    expect(await screen.findByText("暂无日常历史会话")).toBeInTheDocument();
+    expect(await screen.findByText("暂无决策历史会话")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
-    const list = await screen.findByRole("list", { name: "日常历史会话" });
+    const list = await screen.findByRole("list", { name: "决策历史会话" });
     expect(within(list).getByRole("link", { name: /第二页/ })).toHaveAttribute(
       "href",
       `/chat?mode=daily&conversation=${SECOND_ID}`,
@@ -179,11 +179,11 @@ describe("DailySessionHistory", () => {
     renderHistory(client);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "日常历史加载失败，请稍后重试",
+      "决策历史加载失败，请稍后重试",
     );
     expect(screen.queryByText(/upstream secret/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "重试加载" }));
-    expect(await screen.findByText("暂无日常历史会话")).toBeInTheDocument();
+    expect(await screen.findByText("暂无决策历史会话")).toBeInTheDocument();
   });
 
   it("shows a pagination failure beside loaded rows and allows retry", async () => {
@@ -204,7 +204,7 @@ describe("DailySessionHistory", () => {
     fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "日常历史加载失败，请稍后重试",
+      "决策历史加载失败，请稍后重试",
     );
     expect(screen.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
@@ -241,7 +241,7 @@ describe("DailySessionHistory", () => {
     renderHistory(client, createAuthClient(false));
 
     expect(
-      await screen.findByRole("heading", { name: "完整登录后使用日常会话" }),
+      await screen.findByRole("heading", { name: "完整登录后使用决策会话" }),
     ).toBeInTheDocument();
     expect(client.listConversations).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "退出登录" })).not.toBeInTheDocument();

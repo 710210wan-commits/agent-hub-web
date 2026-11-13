@@ -138,7 +138,7 @@ describe("xiaozhi transport", () => {
         content: "错误入口",
         selection: emptySelection,
       }),
-    ).rejects.toThrow("办公场景");
+    ).rejects.toThrow("工作场景");
     await expect(
       transport.createRun({
         mode: "work",

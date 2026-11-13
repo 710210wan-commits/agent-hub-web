@@ -166,7 +166,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
 
       {submission.status === "approved" || publication || publishAndEnable ? (
         <section className="creator-section">
-          <h2 className="skill-review-evidence-title">发布</h2><p>目标范围由当前日常场景契约固定为 scenario:daily。</p>
+          <h2 className="skill-review-evidence-title">发布</h2><p>目标范围由当前决策场景契约固定为 scenario:daily。</p>
           {submission.status === "approved" ? <div className="skill-draft-actions">
             <button disabled={Boolean(action)} type="button" onClick={() => void publish(false)}>仅发布</button>
             <button disabled={Boolean(action)} type="button" onClick={() => void publish(true)}>发布并启用</button>

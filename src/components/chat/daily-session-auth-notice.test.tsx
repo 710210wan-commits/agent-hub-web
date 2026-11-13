@@ -28,7 +28,7 @@ describe("DailySessionAuthNotice", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "完整登录后使用日常会话" }),
+      await screen.findByRole("heading", { name: "完整登录后使用决策会话" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/演示模式/)).toBeInTheDocument();
   });
