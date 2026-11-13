@@ -7,3 +7,5 @@
 验收：focused/full unit、lint/types/build、既有E2E与真实MCP容器链路；最终线上验收另记证据，不将fixture称为线上测试。
 
 Task4完成：MCP定向20/20、full unit 830/830（maxWorkers=2，默认高并发使既有500条Skill渲染用例超时，未改断言/阈值）、lint/types/build、3组生成客户端检查与canary泄漏扫描通过。默认E2E35通过+1真实Xiaozhi opt-in跳过；canonical18/18。原生创建worktree未返回且未落盘，Git fallback创建codex/mcp-container-auth；无业务数据迁移。
+
+Task6完成：pnpm test:e2e:mcp-container 实测1条完整真实镜像浏览器流程通过（27秒），含实际登录验证、MCP发现/授权/只读试调用、Loop选择/SSE/最终正文/历史、取消、停服不登出及无MCP对话可用、换号历史隔离、双file secret轮换+recreate后旧会话失效/重新登录/cache unknown。身份stub与模型适配器受控，MCP网络及ships执行真实；不冒充云端验收。Task4独立AI审查无Major/Critical。
