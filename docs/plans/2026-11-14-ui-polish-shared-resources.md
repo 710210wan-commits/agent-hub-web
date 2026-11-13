@@ -31,9 +31,9 @@
 
 ### Task 1 — 清空登录初值（项 1）
 Files: src/components/auth/login-page.tsx; src/components/auth/auth-boundary.test.tsx; dependent auth E2E tests.
-- [ ] 将旧“预填”断言改为初次与失败后空初值/显式输入登录行为，先运行确认旧实现失败。
-- [ ] username/password 初值改为空，删除默认凭据注释；保留 autocomplete。
-- [ ] 执行 auth 聚焦测试；检查依赖默认值的测试显式填入测试凭据；自审、提交。
+- [x] 将旧“预填”断言改为初次与失败后空初值/显式输入登录行为，先运行确认旧实现失败。
+- [x] username/password 初值改为空，删除默认凭据注释；保留 autocomplete。
+- [x] 执行 auth 聚焦测试；检查依赖默认值的测试显式填入测试凭据；自审、提交。
 
 ### Task 2 — 修复外壳滚动（项 4）
 Files: src/app/globals.css; e2e/shell-layout.spec.ts (new).
@@ -77,3 +77,5 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 ## Execution Ledger
 
 - 2026-11-14: 读取最新 main，SHA 未变；线上只读复现密码预填和用户栏离屏。复用 clean native frontend worktree，新建 codex/ui-polish-shared-resources；准备 pnpm 依赖及基线验证。
+
+- Task 1: RED 2 failures (default values / empty submit); GREEN auth 23/23; full suite 797/797. No production auth behavior changed beyond blank initial form.

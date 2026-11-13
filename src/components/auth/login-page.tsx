@@ -16,9 +16,8 @@ import { useAuth } from "@/providers/auth-provider";
  */
 export function LoginPage() {
   const { login, loginDemo, status, errorMessage } = useAuth();
-  // 预填 xiaozhi 本地部署默认账号（seed_admin：uid=admin / admin123），便于一键登录
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [localError, setLocalError] = useState("");
 
   const busy = status === "checking";
