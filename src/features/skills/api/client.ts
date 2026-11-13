@@ -256,7 +256,7 @@ function assertDaily(mode: SkillMarketMode): asserts mode is "daily" {
       recovery: "back",
       retryable: false,
       status: 409,
-      userMessage: "办公场景暂未接入 Skill Market。",
+      userMessage: "工作场景暂未接入 Skill Market。",
     });
   }
 }

@@ -337,7 +337,7 @@ function WorkSkillsMarket({
             <h1>Skill</h1>
             {skills.length > 0 ? <span className="work-count-badge">{skills.length} 个已安装</span> : null}
           </div>
-          <p>发现、安装并维护办公智能体的 Skill。</p>
+          <p>发现、安装并维护工作智能体的 Skill。</p>
         </div>
       </header>
 

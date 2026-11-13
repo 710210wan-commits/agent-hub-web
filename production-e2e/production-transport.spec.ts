@@ -6,7 +6,7 @@ test("production build defaults to real transport and blocks unsupported selecti
     if (request.url().includes("/agent-api/")) agentApiRequests += 1;
   });
 
-  await page.goto("/chat?mode=daily&backend=mock&scenario=completed");
+  await page.goto("/chat?mode=1&backend=mock&scenario=completed");
   await page.getByRole("button", { name: "知识库" }).click();
   await page.getByText("项目资料库", { exact: true }).click();
   await page.getByRole("textbox", { name: "消息" }).fill("生产配置检查");

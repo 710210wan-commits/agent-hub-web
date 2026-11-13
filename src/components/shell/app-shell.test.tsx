@@ -6,18 +6,20 @@ import { AuthProvider } from "@/providers/auth-provider";
 
 import { AppShell } from "./app-shell";
 
+const pageState = vi.hoisted(() => ({ pathname: "/chat" }));
 const replace = vi.fn();
 const push = vi.fn();
 const randomUUID = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/chat",
+  usePathname: () => pageState.pathname,
   useRouter: () => ({ push, replace }),
   useSearchParams: () => new URLSearchParams("mode=work&panel=open"),
 }));
 
 describe("AppShell", () => {
   beforeEach(() => {
+    pageState.pathname = "/chat";
     replace.mockClear();
     push.mockClear();
     randomUUID.mockReset();
@@ -62,7 +64,7 @@ describe("AppShell", () => {
         expect(link).toHaveAttribute("target", "_blank");
         expect(link).toHaveAttribute("rel", "noopener noreferrer");
       } else {
-        expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
+        expect(link).toHaveAttribute("href", expect.stringContaining("mode=2"));
       }
       expect(link).toHaveAccessibleName(link.textContent?.trim());
       expect(link).toHaveAttribute("aria-label", link.textContent?.trim());
@@ -78,9 +80,9 @@ describe("AppShell", () => {
       </AuthProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "日常" }));
+    fireEvent.click(screen.getByRole("button", { name: "决策" }));
 
-    expect(replace).toHaveBeenCalledWith("/chat?mode=daily&panel=open");
+    expect(replace).toHaveBeenCalledWith("/chat?mode=1&panel=open");
   });
 
   it("starts each new chat with a draft nonce rather than a fake conversation", () => {
@@ -96,8 +98,16 @@ describe("AppShell", () => {
     fireEvent.click(newChat);
     fireEvent.click(newChat);
 
-    expect(push).toHaveBeenNthCalledWith(1, "/chat?mode=work&draft=draft-1");
-    expect(push).toHaveBeenNthCalledWith(2, "/chat?mode=work&draft=draft-2");
+    expect(push).toHaveBeenNthCalledWith(1, "/chat?mode=2&draft=draft-1");
+    expect(push).toHaveBeenNthCalledWith(2, "/chat?mode=2&draft=draft-2");
     expect(push.mock.calls.flat().join(" ")).not.toContain("conversation=");
   });
+  it.each(["/knowledge", "/knowledge/kb-1", "/mcp", "/mcp/server-1"])("hides mode switching on shared resource %s without losing work navigation", pathname => {
+    pageState.pathname = pathname;
+    render(<AuthProvider><ModeProvider><AppShell title="共享资源">资源</AppShell></ModeProvider></AuthProvider>);
+    expect(screen.queryByRole("button", { name: "决策" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "工作" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "新对话" })).toHaveAttribute("href", "/chat?mode=2");
+  });
+
 });

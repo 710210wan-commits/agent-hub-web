@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock3, Pencil } from "lucide-react";
+import { Clock3, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -74,16 +74,16 @@ function AuthenticatedDailySessionHistory({
       <div className="daily-history-toolbar">
         <button
           className="primary-button"
-          onClick={() => router.push("/chat?mode=daily")}
+          onClick={() => router.push("/chat?mode=1")}
           type="button"
         >
           新对话
         </button>
       </div>
 
-      {store.renameError ? (
+      {store.renameError || store.deleteError ? (
         <div className="inline-error daily-history-feedback" role="alert">
-          {store.renameError}
+          {store.renameError || store.deleteError}
         </div>
       ) : null}
 
@@ -94,6 +94,11 @@ function AuthenticatedDailySessionHistory({
         setDraftTitle,
         startRename,
         submitRename,
+        removeConversation: (conversation) => {
+          if (window.confirm(`删除“${conversation.title || "未命名会话"}”？删除后无法继续查看此会话。`)) {
+            void store.deleteConversation(conversation.conversationId);
+          }
+        },
         cancelRename: () => {
           setEditingId(null);
           setDraftTitle("");
@@ -113,15 +118,16 @@ function renderHistoryContent(input: {
   startRename(conversation: ConversationMetadata): void;
   submitRename(event: FormEvent<HTMLFormElement>): Promise<void>;
   cancelRename(): void;
+  removeConversation(conversation: ConversationMetadata): void;
 }) {
   const { store } = input;
   if (store.status === "loading") {
-    return <LoadingState label="正在加载日常历史…" />;
+    return <LoadingState label="正在加载决策历史…" />;
   }
   if (store.status === "error") {
     return (
       <div className="daily-history-state">
-        <ErrorState message={store.errorMessage ?? "日常历史加载失败，请稍后重试"} />
+        <ErrorState message={store.errorMessage ?? "决策历史加载失败，请稍后重试"} />
         <button className="secondary-button" onClick={() => void store.retry()} type="button">
           重试加载
         </button>
@@ -134,10 +140,10 @@ function renderHistoryContent(input: {
       {store.conversations.length === 0 ? (
         <EmptyState
           description="首次发送消息后，会话将显示在这里"
-          title="暂无日常历史会话"
+          title="暂无决策历史会话"
         />
       ) : (
-        <ul aria-label="日常历史会话" className="history-list">
+        <ul aria-label="决策历史会话" className="history-list">
           {store.conversations.map((conversation) => (
             <li className="daily-history-item" key={conversation.conversationId}>
               {input.editingId === conversation.conversationId ? (
@@ -168,7 +174,7 @@ function renderHistoryContent(input: {
                 <>
                   <Link
                     className="history-item daily-history-link"
-                    href={`/chat?mode=daily&conversation=${encodeURIComponent(conversation.conversationId)}`}
+                    href={`/chat?mode=1&conversation=${encodeURIComponent(conversation.conversationId)}`}
                   >
                     <Clock3 aria-hidden="true" size={17} />
                     <span className="history-item-copy">
@@ -181,10 +187,20 @@ function renderHistoryContent(input: {
                   <button
                     aria-label={`重命名 ${conversation.title || "未命名会话"}`}
                     className="daily-history-rename-button"
+                    disabled={Boolean(store.deletingId)}
                     onClick={() => input.startRename(conversation)}
                     type="button"
                   >
                     <Pencil aria-hidden="true" size={14} />
+                  </button>
+                  <button
+                    aria-label={`删除 ${conversation.title || "未命名会话"}`}
+                    className="daily-history-rename-button daily-history-delete-button"
+                    disabled={Boolean(store.deletingId) || Boolean(store.renamingId)}
+                    onClick={() => input.removeConversation(conversation)}
+                    type="button"
+                  >
+                    <Trash2 aria-hidden="true" size={14} />
                   </button>
                 </>
               )}

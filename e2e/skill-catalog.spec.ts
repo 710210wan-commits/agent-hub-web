@@ -14,7 +14,7 @@ const catalogResponse = {
       categorySource: "inferred",
       description: "查询日常目标",
       id: "built-in:alpha-query",
-      loadedByScenarios: [{ id: "daily", name: "日常" }],
+      loadedByScenarios: [{ id: "daily", name: "决策" }],
       name: "alpha-query",
       relativePath: "skills/alpha-query/SKILL.md",
       source: "built-in",
@@ -53,7 +53,7 @@ test("daily Skill plaza loads the catalog and filters it without another request
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(catalogResponse) });
   });
 
-  await page.goto("/skills?mode=daily");
+  await page.goto("/skills?mode=1");
   await expect(page.getByRole("heading", { name: "Alpha Query" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Beta Report" })).toBeVisible();
   await expect(page.getByRole("button", { name: "查看 Alpha Query 详情" }).locator(".skill-card-icon")).toBeVisible();
@@ -82,7 +82,7 @@ test("work Skill page never requests the daily catalog", async ({ page }) => {
     if (request.url().includes("/api/skill-market/")) catalogRequests += 1;
   });
 
-  await page.goto("/skills?mode=work");
+  await page.goto("/skills?mode=2");
   await expect(page.getByRole("searchbox", { name: "搜索技能" })).toBeVisible();
   await expect(page.getByRole("button", { name: "查看 MySQL Reporter 预览" })).toBeVisible();
   await page.waitForTimeout(100);

@@ -2,6 +2,13 @@
 
 面向桌面 Web 的独立 UI 壳。统一展示对话、知识库、Skill、MCP 与平台设置；GIS 入口通过新 tab 打开现有老前端 Cesium 首页。当前阶段以前端结构和可替换展示槽位为主，不修改 `projects_new`。
 
+## 模式与共享资源
+
+- 对话 URL：`mode=1` 为决策，`mode=2` 为工作。
+- 旧 `mode=daily/work` 链接兼容，进入后归一为数字 URL；后端与内部场景 ID 仍为 `daily/work`。
+- 原生决策历史支持确认后软删除；工作历史删除暂未开放。
+- 知识库、MCP 统一管理入口；Skill 保留两套后端的场景区分。
+
 ## 技术栈
 
 - Next.js 16 / React 19 / TypeScript 5
@@ -89,8 +96,8 @@ corepack pnpm@9.0.0 dev
 | Agent Hub | `http://127.0.0.1:3000`（可用 `--port 3100` 改端口） |
 | 日常模式 | `projects_new` canonical Session，经 `/agent-api/conversations/*`；新对话、历史、多轮、SSE、取消与恢复已接入 |
 | 办公模式 | Xiaozhi，浏览器只访问同源 `/api/work-agent/*` |
-| 办公历史 | `/history?mode=work` |
-| 办公会话 | `/chat?mode=work&conversation=<xiaozhi-thread-id>` |
+| 办公历史 | `/history?mode=2` |
+| 办公会话 | `/chat?mode=2&conversation=<xiaozhi-thread-id>` |
 
 日常模式以 canonical Conversation/Turn/Event 为唯一会话链路。旧 `/tasks` 只保留给非 canonical 兼容入口和固定 demo；Agent Hub Daily 不用它创建或恢复历史会话，也不以 `localStorage` 作为会话事实源。
 

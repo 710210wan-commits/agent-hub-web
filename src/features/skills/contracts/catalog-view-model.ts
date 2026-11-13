@@ -1,3 +1,4 @@
+import { copy } from "@/config/copy";
 import type { MarketCatalogResponse } from "./generated";
 import { defineSkillMarketViewModelAdapter } from "./view-models";
 
@@ -62,6 +63,10 @@ function toCatalogItemViewModel(dto: CatalogItemDto): CatalogItemViewModel {
   const conflict = dto.status === "conflict"
     ? { reasonCode: dto.availability?.reasonCode ?? "skill.protected_name_conflict" as const }
     : null;
+  const scenarios = dto.loadedByScenarios.map(scenario => ({
+    ...scenario,
+    name: scenario.id === "daily" ? copy.mode.daily : scenario.id === "work" ? copy.mode.work : scenario.name,
+  }));
   return {
     id: dto.id,
     name: dto.name,
@@ -74,8 +79,8 @@ function toCatalogItemViewModel(dto: CatalogItemDto): CatalogItemViewModel {
     categoryLabel: dto.categoryLabel,
     categorySource: dto.categorySource,
     tools: [...dto.allowedTools],
-    loadedScenarios: dto.loadedByScenarios.map((scenario) => ({ ...scenario })),
-    scopes: dto.loadedByScenarios.map((scenario) => ({ type: "scenario", ...scenario })),
+    loadedScenarios: scenarios,
+    scopes: scenarios.map((scenario) => ({ type: "scenario", ...scenario })),
     installState: resolveInstallState(dto, source, conflict),
     conflict,
   };

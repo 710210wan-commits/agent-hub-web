@@ -16,6 +16,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 
 import { copy } from "@/config/copy";
+import { serializeMode } from "@/config/modes";
 import {
   getNavigation,
   type NavigationIcon,
@@ -129,7 +130,7 @@ export function Sidebar({
             typeof crypto.randomUUID === "function"
               ? crypto.randomUUID()
               : `${Date.now()}`;
-          router.push(`/chat?mode=${mode}&draft=${draftId}`);
+          router.push(`/chat?mode=${serializeMode(mode)}&draft=${draftId}`);
         }
         onNavigate();
       }}

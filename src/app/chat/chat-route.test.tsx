@@ -55,6 +55,7 @@ const mocks = vi.hoisted(() => {
     loadSnapshot,
     loadMessages,
     renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
     submitTurn,
     listEvents,
     streamEvents,
@@ -67,7 +68,7 @@ const mocks = vi.hoisted(() => {
     logout: vi.fn(),
   };
   return {
-    search: "mode=work",
+    search: "mode=2",
     replace,
     push,
     dailyLoadSession,
@@ -136,7 +137,7 @@ function renderRoute() {
 
 describe("ChatRoute", () => {
   beforeEach(() => {
-    mocks.search = "mode=work";
+    mocks.search = "mode=2";
     mocks.replace.mockClear();
     mocks.push.mockClear();
     mocks.dailyLoadSession.mockReset();
@@ -233,7 +234,7 @@ describe("ChatRoute", () => {
   });
 
   it("routes default daily mode to the canonical conversation client", async () => {
-    mocks.search = "mode=daily";
+    mocks.search = "mode=1";
     renderRoute();
 
     expect(await screen.findByRole("textbox", { name: "消息" })).toBeInTheDocument();
@@ -244,7 +245,7 @@ describe("ChatRoute", () => {
 
   it("routes a daily conversation to the canonical Session client", async () => {
     mocks.search =
-      "mode=daily&conversation=10000000-0000-4000-8000-000000000001";
+      "mode=1&conversation=10000000-0000-4000-8000-000000000001";
     renderRoute();
 
     expect(await screen.findByText("日常持久回答")).toBeInTheDocument();
@@ -263,7 +264,7 @@ describe("ChatRoute", () => {
   });
 
   it("replaces the first daily URL without restarting its canonical controller", async () => {
-    mocks.search = "mode=daily&panel=open";
+    mocks.search = "mode=1&panel=open";
     const view = renderRoute();
 
     fireEvent.change(await screen.findByRole("textbox", { name: "消息" }), {
@@ -276,14 +277,14 @@ describe("ChatRoute", () => {
       String(mocks.replace.mock.calls[0]?.[0]),
       "https://agent-hub.test",
     );
-    expect(replaced.searchParams.get("mode")).toBe("daily");
+    expect(replaced.searchParams.get("mode")).toBe("1");
     expect(replaced.searchParams.get("conversation")).toBe(
       "10000000-0000-4000-8000-000000000001",
     );
     expect(replaced.searchParams.get("panel")).toBe("open");
 
     mocks.search =
-      "mode=daily&conversation=10000000-0000-4000-8000-000000000001&panel=open";
+      "mode=1&conversation=10000000-0000-4000-8000-000000000001&panel=open";
     view.rerender(
       <AuthProvider client={mocks.globalAuthClient}>
         <ModeProvider>
@@ -298,7 +299,7 @@ describe("ChatRoute", () => {
   });
 
   it("never lets the E2E real-backend override replace work transport", () => {
-    mocks.search = "mode=work&backend=real";
+    mocks.search = "mode=2&backend=real";
     renderRoute();
 
     expect(mocks.createXiaozhiTransport).toHaveBeenCalledOnce();
@@ -306,7 +307,7 @@ describe("ChatRoute", () => {
   });
 
   it("loads work conversations only through the work transport", async () => {
-    mocks.search = "mode=work&conversation=thread-work";
+    mocks.search = "mode=2&conversation=thread-work";
     mocks.workLoadSession.mockResolvedValue({
       session: {
         id: "thread-work",
@@ -330,7 +331,7 @@ describe("ChatRoute", () => {
   });
 
   it("replaces draft URL with the newly persisted work conversation", async () => {
-    mocks.search = "mode=work&draft=nonce-1&panel=open";
+    mocks.search = "mode=2&draft=nonce-1&panel=open";
     renderRoute();
     fireEvent.change(screen.getByRole("textbox", { name: "消息" }), {
       target: { value: "生成周报" },
@@ -343,14 +344,14 @@ describe("ChatRoute", () => {
       "https://agent-hub.test",
     );
     expect(replaced.pathname).toBe("/chat");
-    expect(replaced.searchParams.get("mode")).toBe("work");
+    expect(replaced.searchParams.get("mode")).toBe("2");
     expect(replaced.searchParams.get("conversation")).toBe("thread/created");
     expect(replaced.searchParams.get("panel")).toBe("open");
     expect(replaced.searchParams.has("draft")).toBe(false);
   });
 
   it("keeps the active stream mounted when its new conversation reaches the URL", async () => {
-    mocks.search = "mode=work&draft=nonce-live";
+    mocks.search = "mode=2&draft=nonce-live";
     const view = renderRoute();
     fireEvent.change(screen.getByRole("textbox", { name: "消息" }), {
       target: { value: "保持当前回答" },
@@ -358,7 +359,7 @@ describe("ChatRoute", () => {
     fireEvent.click(screen.getByRole("button", { name: "发送" }));
     expect(await screen.findByText("办公回答")).toBeInTheDocument();
 
-    mocks.search = "mode=work&conversation=thread%2Fcreated";
+    mocks.search = "mode=2&conversation=thread%2Fcreated";
     view.rerender(
       <AuthProvider client={mocks.globalAuthClient}>
         <ModeProvider>

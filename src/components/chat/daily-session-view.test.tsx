@@ -136,6 +136,7 @@ function makeClient(overrides: Partial<DailySessionClient> = {}): DailySessionCl
     loadSnapshot: vi.fn(async () => snapshot()),
     loadMessages: vi.fn(),
     renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
     submitTurn: vi.fn(),
     listEvents: vi.fn(async (_id, input) => ({
       events: [],
@@ -215,7 +216,7 @@ describe("DailySessionView", () => {
   it("does not request capability catalog without authenticated identity", async () => {
     const capabilityClient = { getCatalog: vi.fn() };
     render(<AuthProvider client={makeAuthClient(vi.fn().mockResolvedValue({ enabled: true, user: null }))}><DailySessionView client={makeClient()} capabilityClient={capabilityClient} /></AuthProvider>);
-    await screen.findByRole("heading", { name: "完整登录后使用日常会话" });
+    await screen.findByRole("heading", { name: "完整登录后使用决策会话" });
     expect(capabilityClient.getCatalog).not.toHaveBeenCalled();
   });
   it("shows section-specific disabled and unavailable states", async () => {
@@ -621,7 +622,7 @@ describe("DailySessionView", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "完整登录后使用日常会话" }),
+      await screen.findByRole("heading", { name: "完整登录后使用决策会话" }),
     ).toBeInTheDocument();
     expect(client.loadSnapshot).not.toHaveBeenCalled();
   });

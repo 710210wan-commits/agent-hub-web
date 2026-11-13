@@ -43,10 +43,10 @@ export function createXiaozhiTransport(
     signal?: AbortSignal,
   ) {
     if (input.mode !== "work") {
-      throw new Error("Xiaozhi transport 仅用于办公场景");
+      throw new Error("Xiaozhi transport 仅用于工作场景");
     }
     if (hasSelections(input)) {
-      throw new Error("办公智能体能力由服务端预配置，暂不支持逐次选择");
+      throw new Error("工作智能体能力由服务端预配置，暂不支持逐次选择");
     }
 
     let sessionId = input.sessionId;

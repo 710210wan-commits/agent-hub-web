@@ -65,6 +65,7 @@ export interface StreamEventsInput {
 }
 
 export interface DailySessionClient {
+  deleteConversation(conversationId: string, signal?: AbortSignal): Promise<void>;
   listConversations(
     input?: ListConversationsInput,
     signal?: AbortSignal,
@@ -189,6 +190,10 @@ export function createDailySessionClient(
   const fetchFn = options.fetchFn ?? fetch;
 
   return {
+    async deleteConversation(conversationId, signal) {
+      const id = conversationIdSchema.parse(conversationId);
+      await request(`/conversations/${encodeURIComponent(id)}`, z.void(), { method: "DELETE", signal });
+    },
     async listConversations(input = {}, signal) {
       const limit = pageLimitSchema.parse(input.limit ?? 100);
       const search = new URLSearchParams({
@@ -385,6 +390,7 @@ function normalizeSameOriginBase(raw: string): string {
 }
 
 async function readUnknownJson(response: Response): Promise<unknown> {
+  if (response.status === 204) return undefined;
   try {
     return await response.json();
   } catch (error) {

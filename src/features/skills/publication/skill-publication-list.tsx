@@ -42,7 +42,7 @@ function SkillPublicationListDaily({ client }: { client: SkillMarketClient }) {
 
   if (state.kind === "loading") return <LoadingState label="正在加载发布记录…" />;
   if (state.kind === "error") {
-    return <section className="resource-page"><SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink><SkillMarketErrorState error={state.error} onRecover={state.error.recovery === "back" ? undefined : refresh} /></section>;
+    return <section className="resource-page"><SkillBackLink href="/skills?mode=1">返回 Skill 广场</SkillBackLink><SkillMarketErrorState error={state.error} onRecover={state.error.recovery === "back" ? undefined : refresh} /></section>;
   }
 
   function begin(id: string): boolean {
@@ -98,7 +98,7 @@ function SkillPublicationListDaily({ client }: { client: SkillMarketClient }) {
     const result = await client.mutate({ mode: "daily", operation: "revisePublication", pathParameters: { id: publication.id } }, revisePublicationAdapter);
     if (result.ok) {
       const query = new URLSearchParams({
-        mode: "daily",
+        mode: "1",
         draftId: result.value.id,
         sourcePublication: publication.id,
         revision: String(result.value.revision),
@@ -110,7 +110,7 @@ function SkillPublicationListDaily({ client }: { client: SkillMarketClient }) {
 
   return (
     <section className="resource-page skill-publication-list">
-      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
+      <SkillBackLink href="/skills?mode=1">返回 Skill 广场</SkillBackLink>
       <header className="page-heading">
         <div><h1>发布管理</h1><p>按场景启用、停用或下架不可变 Skill 修订；安装目标固定为 scenario:daily</p></div>
       </header>

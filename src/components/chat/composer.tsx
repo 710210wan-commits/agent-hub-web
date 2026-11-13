@@ -101,7 +101,7 @@ export function Composer({
           />
           {resolvedCapabilityMode === "preconfigured" ? (
             <span className="composer-capability-note">
-              办公智能体已预配置知识库、Skill 与 MCP
+              工作智能体已预配置知识库、Skill 与 MCP
             </span>
           ) : resolvedCapabilityMode === "unavailable" ? (
             <span className="composer-capability-note">

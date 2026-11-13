@@ -6,10 +6,12 @@ export function Topbar({
   title,
   menuButton,
   centerControl,
+  showModeSwitch = true,
 }: {
   title: string;
   menuButton?: ReactNode;
   centerControl?: ReactNode;
+  showModeSwitch?: boolean;
 }) {
   return (
     <header className="topbar">
@@ -17,7 +19,7 @@ export function Topbar({
         {menuButton}
         <span className="topbar-title">{title}</span>
       </div>
-      {centerControl ?? <ModeSwitch />}
+      {centerControl ?? (showModeSwitch ? <ModeSwitch /> : <div aria-hidden="true" />)}
       <div className="topbar-trailing" aria-hidden="true" />
     </header>
   );

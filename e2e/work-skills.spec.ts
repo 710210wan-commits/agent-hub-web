@@ -9,7 +9,7 @@ test("Work Market completes preview, enable, manage, detail, and return journey 
     if (request.url().includes("/api/skill-market/")) dailyRequests += 1;
   });
 
-  await page.goto("/skills?mode=work");
+  await page.goto("/skills?mode=2");
   await expect(page.getByRole("button", { name: "查看 MySQL Reporter 预览" })).toBeVisible();
   await expect(page.locator(".work-actions").locator("button, label")).toHaveText([
     "批量管理",
@@ -32,7 +32,7 @@ test("Work Market completes preview, enable, manage, detail, and return journey 
   await expect.poll(() => fixture.state.skills.find((skill) => skill.slug === "mysql-reporter")?.enabled).toBe(false);
 
   await preview.getByRole("button", { name: "去管理" }).click();
-  await expect(page).toHaveURL(/\/skills\/mysql-reporter\?mode=work$/);
+  await expect(page).toHaveURL(/\/skills\/mysql-reporter\?mode=2$/);
   await expect(page.getByRole("heading", { name: "MySQL Reporter" })).toBeVisible();
   await expect(page.locator(".work-detail-identity .skill-detail-slug")).toHaveText("mysql-reporter");
   await expect(page.getByRole("tablist", { name: "Skill 管理" }).getByRole("tab")).toHaveText([
@@ -42,14 +42,14 @@ test("Work Market completes preview, enable, manage, detail, and return journey 
   ]);
 
   await page.getByRole("button", { name: /返回 Work Skill/ }).click();
-  await expect(page).toHaveURL(/\/skills\?mode=work$/);
+  await expect(page).toHaveURL(/\/skills\?mode=2$/);
   await expect(page.getByRole("searchbox", { name: "搜索技能" })).toBeVisible();
   expect(dailyRequests).toBe(0);
 });
 
 test("Work Market handles upload, remote draft, and batch deletion", async ({ page }) => {
   const fixture = await installWorkSkillsFixture(page);
-  await page.goto("/skills?mode=work");
+  await page.goto("/skills?mode=2");
   await expect(page.getByRole("button", { name: "查看 MySQL Reporter 预览" })).toBeVisible();
 
   await page.locator("#work-skill-upload").setInputFiles({
@@ -96,7 +96,7 @@ test("Work Market handles upload, remote draft, and batch deletion", async ({ pa
 
 test("Work Editor saves file, scope, dependencies, and exports the archive", async ({ page }) => {
   const fixture = await installWorkSkillsFixture(page);
-  await page.goto("/skills/mysql-reporter?mode=work");
+  await page.goto("/skills/mysql-reporter?mode=2");
 
   const editor = page.getByRole("textbox", { name: "SKILL.md 内容" });
   await expect(editor).toContainText("MySQL Reporter");
@@ -127,7 +127,7 @@ test("Work Editor saves file, scope, dependencies, and exports the archive", asy
 
 test("Work Editor keeps a non-manageable Skill fully read-only", async ({ page }) => {
   await installWorkSkillsFixture(page);
-  await page.goto("/skills/meeting-notes?mode=work");
+  await page.goto("/skills/meeting-notes?mode=2");
 
   await expect(page.getByText("你可以查看并使用此 Skill，但没有管理权限。")).toBeVisible();
   await expect(page.getByRole("button", { name: "导出" })).toHaveCount(0);

@@ -32,6 +32,6 @@ describe("catalog navigation", () => {
     const detail = catalogDetailHref("market:publication-1", filter, "daily");
     expect(detail).toContain("/skills/market%3Apublication-1?");
     expect(parseSkillCatalogFilter(new URL(detail, "https://local").searchParams)).toEqual(filter);
-    expect(catalogPlazaHref(filter, "daily")).toContain("/skills?mode=daily");
+    expect(catalogPlazaHref(filter, "daily")).toContain("/skills?mode=1");
   });
 });

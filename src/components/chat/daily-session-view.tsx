@@ -110,7 +110,7 @@ function AuthenticatedDailySessionView({
   const showEmpty = controller.messages.length === 0 && !controller.state.conversation;
 
   return (
-    <section aria-label="日常持久会话" className="daily-session-view">
+    <section aria-label="决策持久会话" className="daily-session-view">
       {controller.state.conversation ? (
         <header className="daily-session-view-heading">
           <div>

@@ -135,7 +135,7 @@ export function createProjectsNewTransport(
         throw new Error("当前后端尚未接入所选能力");
       }
       if (input.mode === "work") {
-        throw new Error("办公场景 Loop 尚未接入");
+        throw new Error("工作场景 Loop 尚未接入");
       }
 
       const response = await fetchFn(`${apiBaseUrl}/tasks`, {

@@ -56,6 +56,6 @@ describe("Daily MCP composer", () => {
   it("keeps Work preconfigured even with an available Daily catalog", () => {
     render(<SelectableComposer mode="work" />);
     expect(screen.getByRole("button", { name: "MCP" })).toBeDisabled();
-    expect(screen.getByText("办公智能体已预配置知识库、Skill 与 MCP")).toBeInTheDocument();
+    expect(screen.getByText("工作智能体已预配置知识库、Skill 与 MCP")).toBeInTheDocument();
   });
 });

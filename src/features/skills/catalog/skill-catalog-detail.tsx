@@ -32,7 +32,7 @@ export function SkillCatalogDetail({
 function SkillCatalogDetailWork({ id, workApi }: { id: string; workApi?: WorkSkillsApi }) {
   const { identityGeneration } = useAuth();
   const router = useRouter();
-  const backToMarket = () => router.push("/skills?mode=work");
+  const backToMarket = () => router.push("/skills?mode=2");
   return (
     <SkillEditor
       key={identityGeneration}

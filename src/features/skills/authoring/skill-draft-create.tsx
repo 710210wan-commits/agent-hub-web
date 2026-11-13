@@ -74,7 +74,7 @@ function SkillDraftCreateDaily({ client }: { client: SkillMarketClient }) {
 
   return (
     <section className="resource-page skill-draft-page">
-      <SkillBackLink href="/skills/mine?mode=daily">返回我的 Skill</SkillBackLink>
+      <SkillBackLink href="/skills/mine?mode=1">返回我的 Skill</SkillBackLink>
       <header className="page-heading"><div><h1>上传草稿</h1><p>后端校验结果是最终依据，前端仅做文件选择检查。</p></div></header>
       <div className="skill-draft-panel">
         <label>草稿名称<input maxLength={64} value={name} onChange={(event) => setName(event.target.value)} /></label>
@@ -92,7 +92,7 @@ function SkillDraftCreateDaily({ client }: { client: SkillMarketClient }) {
         {result ? (
           <div className="skill-draft-success" role="status">
             <strong>草稿已创建</strong>
-            <Link href={`/skills/drafts/${encodeURIComponent(result.draft.id)}?mode=daily`}>打开草稿</Link>
+            <Link href={`/skills/drafts/${encodeURIComponent(result.draft.id)}?mode=1`}>打开草稿</Link>
           </div>
         ) : null}
         {result?.diagnostics.length ? <Diagnostics diagnostics={result.diagnostics} /> : null}

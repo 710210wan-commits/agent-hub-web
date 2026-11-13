@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  redirect("/chat?mode=daily");
+  redirect("/chat?mode=1");
 }

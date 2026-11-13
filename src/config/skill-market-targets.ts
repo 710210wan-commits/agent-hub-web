@@ -107,7 +107,7 @@ export function resolveSkillMarketRequestTarget(
   if (input.mode === "work") {
     throw new SkillMarketTargetError(
       "SKILL_MARKET_MODE_UNAVAILABLE",
-      "办公场景 Skill Market 暂未接入",
+      "工作场景 Skill Market 暂未接入",
     );
   }
   if (input.mode !== "daily") {

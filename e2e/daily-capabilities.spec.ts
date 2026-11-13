@@ -6,7 +6,7 @@ async function control(request: APIRequestContext, data: Record<string, unknown>
 }
 async function state(request: APIRequestContext) { return (await request.get(`${origin}/__state`)).json(); }
 async function login(page: Page) {
-  await page.goto("/chat?mode=daily");
+  await page.goto("/chat?mode=1");
   await page.getByRole("textbox", { name: "用户名" }).fill("alice");
   await page.getByLabel("密码").fill("test-only-password");
   await page.getByRole("button", { name: "登录", exact: true }).click();
@@ -50,7 +50,7 @@ test("catalog → selection → activity → final → history; edits only affec
   await control(request, { action: "advance", conversationId: id, phase: "complete" });
   await page.reload();
   await expect(page.getByText("知识库 · kb-alice", { exact: true })).toBeVisible();
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await page.getByRole("link", { name: /能力验收问题/ }).click();
   await expect(page.getByText("能力验收最终正文")).toBeVisible();
   expect(await page.getByLabel("本轮能力").first().locator("input,button").count()).toBe(0);
@@ -149,7 +149,7 @@ test("MCP IDs-only selection → activity → final → persisted history withou
     return JSON.stringify(await Promise.all(paths.map(async path => (await fetch(path)).json())));
   }, id);
   expect(exposed).not.toMatch(/RAW_MCP|PRIVATE_UPSTREAM|credentialRef|inputSchema|access_token|\bat fixture\b/);
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await page.getByRole("link", { name: /MCP 只读验收/ }).click();
   await expect(page.getByText("MCP 查询最终正文")).toBeVisible();
 });

@@ -2,16 +2,16 @@ export const copy = {
   productName: "智能体平台",
   productTagline: "AGENT HUB",
   mode: {
-    daily: "日常",
-    work: "办公",
+    daily: "决策",
+    work: "工作",
   },
   user: {
     name: "演示用户",
-    workspace: "办公空间",
+    workspace: "工作空间",
   },
   dailySessionAuth: {
     checking: "正在恢复登录状态…",
-    title: "登录日常会话",
+    title: "登录决策会话",
     description: "使用现有账号验证后查看持久会话。",
     username: "用户名",
     password: "密码",

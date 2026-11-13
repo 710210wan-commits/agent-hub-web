@@ -26,6 +26,8 @@ interface StoreState {
   createError?: string;
   renamingId?: string;
   renameError?: string;
+  deletingId?: string;
+  deleteError?: string;
 }
 
 export interface DailySessionStore extends Omit<StoreState, "owner"> {
@@ -38,6 +40,7 @@ export interface DailySessionStore extends Omit<StoreState, "owner"> {
     title: string,
   ): Promise<"renamed" | "conflict" | "failed">;
   clearRenameError(): void;
+  deleteConversation(conversationId: string): Promise<boolean>;
 }
 
 interface DailySessionStoreOptions {
@@ -50,7 +53,7 @@ interface PendingCreate {
   title?: string;
 }
 
-const LIST_ERROR = "日常历史加载失败，请稍后重试";
+const LIST_ERROR = "决策历史加载失败，请稍后重试";
 const CREATE_ERROR = "持久会话创建失败，请稍后重试";
 const CREATE_UNKNOWN = "创建结果暂未确认，请使用原请求重试";
 const RENAME_ERROR = "会话重命名失败，请稍后重试";
@@ -74,6 +77,8 @@ export function useDailySessionStore(
   generationRef.current = identityGeneration;
   const epochRef = useRef(0);
   const controllersRef = useRef(new Set<AbortController>());
+  const deletingRef = useRef<string | null>(null);
+  const deletedIdsRef = useRef(new Set<string>());
   const pendingCreateRef = useRef<PendingCreate | null>(null);
   const failedCreateTitleRef = useRef<string | undefined>(undefined);
 
@@ -128,8 +133,8 @@ export function useDailySessionStore(
             ...base,
             status: "ready",
             conversations: input.replace
-              ? page.conversations
-              : mergeConversations(base.conversations, page.conversations),
+              ? page.conversations.filter(item => !deletedIdsRef.current.has(item.conversationId))
+              : mergeConversations(base.conversations, page.conversations).filter(item => !deletedIdsRef.current.has(item.conversationId)),
             nextCursor: page.nextCursor,
             errorMessage: undefined,
             isLoadingMore: false,
@@ -164,6 +169,8 @@ export function useDailySessionStore(
     for (const controller of controllers) controller.abort();
     controllers.clear();
     pendingCreateRef.current = null;
+    deletingRef.current = null;
+    deletedIdsRef.current.clear();
     failedCreateTitleRef.current = undefined;
     void loadPage({
       generation: identityGeneration,
@@ -290,6 +297,7 @@ export function useDailySessionStore(
         ...current,
         renamingId: conversationId,
         renameError: undefined,
+        deleteError: undefined,
       }));
       try {
         const renamed = await client.renameConversation(
@@ -297,7 +305,7 @@ export function useDailySessionStore(
           { title: title.trim(), expectedVersion: currentConversation.version },
           controller.signal,
         );
-        if (!isCurrent(generation, epoch, controller.signal)) return "failed" as const;
+        if (!isCurrent(generation, epoch, controller.signal) || deletedIdsRef.current.has(conversationId)) return "failed" as const;
         setState((current) => ({
           ...current,
           conversations: mergeConversations(current.conversations, [renamed]),
@@ -334,6 +342,32 @@ export function useDailySessionStore(
     [beginRequest, client, finishRequest, invalidateAuth, isCurrent, loadPage, state],
   );
 
+  const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
+    if (deletingRef.current || state.owner !== generationRef.current ||
+      !state.conversations.some(item => item.conversationId === conversationId)) return false;
+    const generation = generationRef.current, epoch = epochRef.current;
+    const controller = beginRequest();
+    deletingRef.current = conversationId;
+    setState(current => ({ ...current, deletingId: conversationId, deleteError: undefined, renameError: undefined }));
+    try {
+      await client.deleteConversation(conversationId, controller.signal);
+      if (!isCurrent(generation, epoch, controller.signal)) return false;
+      deletedIdsRef.current.add(conversationId);
+      setState(current => ({ ...current, deletingId: undefined,
+        conversations: current.conversations.filter(item => item.conversationId !== conversationId) }));
+      return true;
+    } catch (error) {
+      if (!isCurrent(generation, epoch, controller.signal)) return false;
+      if (isAuthRequired(error)) invalidateAuth();
+      else setState(current => ({ ...current, deletingId: undefined,
+        deleteError: safeMessage(error, "会话删除失败，请稍后重试") }));
+      return false;
+    } finally {
+      if (isCurrent(generation, epoch, controller.signal)) deletingRef.current = null;
+      finishRequest(controller);
+    }
+  }, [beginRequest, client, finishRequest, invalidateAuth, isCurrent, state]);
+
   const clearRenameError = useCallback(() => {
     setState((current) => ({ ...current, renameError: undefined }));
   }, []);
@@ -348,6 +382,9 @@ export function useDailySessionStore(
     createError: visibleState.createError,
     renamingId: visibleState.renamingId,
     renameError: visibleState.renameError,
+    deletingId: visibleState.deletingId,
+    deleteError: visibleState.deleteError,
+    deleteConversation,
     loadMore,
     retry,
     createConversation,
