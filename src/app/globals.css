@@ -270,6 +270,12 @@ a {
   .sidebar-user {
     justify-content: center;
   }
+
+  .sidebar-user {
+    flex-direction: column;
+    gap: 4px;
+    padding-inline: 0;
+  }
 }
 
 @media (max-width: 767px) {

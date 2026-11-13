@@ -3,7 +3,7 @@
 > **For agentic workers:** Use superpowers:executing-plans task-by-task; checked steps record actual verification.
 
 **Goal:** 按用户确认顺序完成 1/4/6，再完成 2/3/5；MCP 服务部署及真实模型设置另行处理。
-**Architecture:** 保留全局 AuthProvider；只修复登录初值、外壳滚动和展示文案。URL 使用 mode=1/2，内部 AppMode 和后端 scenarioId 仍为 daily/work。现有 Daily 与 Xiaozhi 软删除接口复用，资源页面共用入口不合并 Skill 后端。
+**Architecture:** 保留全局 AuthProvider；只修复登录初值、外壳滚动和展示文案。URL 使用 mode=1/2，内部 AppMode 和后端 scenarioId 仍为 daily/work。仅复用现有 Daily 软删除接口；工作删除经用户确认延期，资源页面共用入口不合并 Skill 后端。
 **Tech Stack:** Next.js 16 / React 19 / TypeScript / pnpm / Vitest / Playwright。
 **Spec:** 本对话用户已批准的七项评估和顺序；第 5 项已纠正为知识库和 MCP 共享，Skill 维持双场景。
 **Approval:** 用户已授权上述动作；本文记录既有决定，不引入新的权限、DB 或部署设计。仅本地提交；未授权本轮 push、PR、merge、线上部署。
@@ -48,10 +48,10 @@ Files: src/config/copy.ts; mode-related visible strings in src; corresponding as
 - [x] 模式切换、历史与登录聚焦测试；自审、提交。
 
 ### Task 4 — 历史软删除（项 2）
-Files: src/features/chat/transports/daily-session-client.ts; src/features/chat/session/daily-session-store.ts; src/components/chat/daily-session-history.tsx; src/features/chat/contracts/session.ts; src/features/chat/transports/xiaozhi-transport.ts; src/server/xiaozhi/proxy.ts; src/app/history/history-page-client.tsx; corresponding tests.
-Interfaces: DailySessionClient.deleteConversation(id, signal?): Promise<void>; ChatSessionTransport.deleteSession(id, signal?): Promise<void>.
-- [ ] RED: 按 ID 删除及 204；失败不移除；401 与身份 generation 防串；Work BFF 只允许精确 DELETE /api/chat/thread/:id。
-- [ ] 增加请求与状态管理、确认 UI、busy/error；复用原生 DELETE /conversations/:id 与 Xiaozhi DELETE /api/chat/thread/:id，不改后端或数据库。
+Files: src/features/chat/transports/daily-session-client.ts; src/features/chat/session/daily-session-store.ts; src/components/chat/daily-session-history.tsx; corresponding tests.
+Interfaces: DailySessionClient.deleteConversation(id, signal?): Promise<void>; store.deleteConversation(id): Promise<boolean>.
+- [ ] RED: 按 ID 删除及 204；失败不移除；401 与身份 generation 防串；工作删除不纳入本批。
+- [ ] 增加请求与状态管理、确认 UI、busy/error；仅复用原生 DELETE /conversations/:id，不改工作网关、后端或数据库。
 - [ ] 聚焦 Vitest / history E2E；自审、提交。
 
 ### Task 5 — URL 数字映射（项 3）
@@ -83,3 +83,7 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - Task 2: RED Skill footer bottom 1744 > 900; MCP footer bottom 3485.78 > 900. GREEN desktop 1440x900 / 1280x720 plus mobile navigation: 5/5 Playwright. Content scroll reaches final card; account stays in viewport.
 
 - Task 3: RED 4 mode-label/legacy DTO display failures; GREEN 797/797 Vitest and combined navigation/layout/mobile 9/9 Playwright. Public labels decision/work; internal daily/work untouched; legacy scenario names mapped only in display model.
+
+- Ruling (user): 工作删除延期；本批只接原生删除。现有 Work BFF 未验证全局登录，未来开启破坏性 endpoint 前需独立补认证/同源校验。
+
+- Batch A independent review: no Critical/Major; one Minor tablet logout clipping. RED browser assertion reproduces; fixed collapsed account layout, GREEN 7/7 desktop/tablet/mobile layout. Added failed-login empty-field assertion. Lint, typecheck, production build passed before Batch B.

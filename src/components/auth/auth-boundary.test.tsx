@@ -174,6 +174,8 @@ describe("AuthBoundary（统一登录边界）", () => {
       expect(screen.getByText("账号或授权无效")).toBeInTheDocument(),
     );
     expect(screen.queryByText("业务内容")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("用户名")).toHaveValue("");
+    expect(screen.getByLabelText("密码")).toHaveValue("");
   });
 
   it("演示模式入口：点击后建立演示会话并放行", async () => {

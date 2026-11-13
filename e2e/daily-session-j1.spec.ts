@@ -173,7 +173,7 @@ test("demo 可访问壳页，但 Daily/KB 仅提示且不发受保护请求", as
   await page.goto("/chat?mode=daily");
   await page.getByRole("button", { name: "暂不登录，不使用知识库" }).click();
   await expect(
-    page.getByRole("heading", { name: "完整登录后使用日常会话" }),
+    page.getByRole("heading", { name: "完整登录后使用决策会话" }),
   ).toBeVisible();
   await page.goto("/knowledge");
   await expect(page.getByRole("heading", { name: "登录后使用知识库" })).toBeVisible();

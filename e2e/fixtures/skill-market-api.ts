@@ -385,12 +385,12 @@ function catalog(state: SkillMarketFixture["state"]) {
   const marketVisible = state.publicationStatus === "published";
   const items: Array<Record<string, unknown>> = [{
     allowedTools: [], availability: { installable: false, runnable: true }, category: "other", categoryLabel: "内置 Skill", categorySource: "inferred",
-    description: "Built in", id: "built-in:k03", loadedByScenarios: [{ id: "daily", name: "日常" }], name: "built-in-k03",
+    description: "Built in", id: "built-in:k03", loadedByScenarios: [{ id: "daily", name: "决策" }], name: "built-in-k03",
     relativePath: "skills/built-in-k03/SKILL.md", source: "built-in", sourceDir: "skills", status: "available", title: "Built In K03",
   }];
   if (marketVisible) items.push({
     allowedTools: ["Read"], availability: { installable: true, runnable: state.installationStatus === "enabled" }, category: "other", categoryLabel: "市场发布", categorySource: "inferred",
-    description: "K03 lifecycle Skill", id: "market:publication-k03", loadedByScenarios: state.installationStatus === "enabled" ? [{ id: "daily", name: "日常" }] : [],
+    description: "K03 lifecycle Skill", id: "market:publication-k03", loadedByScenarios: state.installationStatus === "enabled" ? [{ id: "daily", name: "决策" }] : [],
     market: { publicationId: "publication-k03", revision: 1 }, name: "market-k03", relativePath: "market://publication-k03/SKILL.md", source: "market", sourceDir: "Skill Market", status: "available", title: "Market K03",
   });
   return { generatedAt: NOW, items, total: items.length };

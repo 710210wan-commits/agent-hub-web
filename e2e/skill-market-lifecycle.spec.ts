@@ -139,7 +139,7 @@ test("does not leak daily Creator description or requests into work mode", async
   await page.goto("/skills/creator?mode=daily");
   await page.getByLabel("需求描述").fill(secretDescription);
   await page.goto("/skills/creator?mode=work");
-  await expect(page.getByRole("heading", { name: "办公场景暂未接入" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "工作场景暂未接入" })).toBeVisible();
   await expect(page.getByText(secretDescription)).toHaveCount(0);
   const stored = await page.evaluate(() => sessionStorage.getItem("skill-creator-safe-progress"));
   expect(stored).not.toContain(secretDescription);

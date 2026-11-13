@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { installGlobalAuthFixture } from "./fixtures/global-auth";
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }]) {
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 900, height: 760 }]) {
   for (const kind of ["skills", "mcp"] as const) {
     test(`${kind} keeps the account visible while long content scrolls at ${viewport.width}x${viewport.height}`, async ({ page }) => {
       await page.setViewportSize(viewport);
@@ -11,7 +11,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720
           id: `built-in:layout-skill-${i}`, name: `layout-skill-${i}`, title: `长列表技能 ${i}`,
           description: "用于验证长内容布局", source: "built-in", sourceDir: "skills",
           relativePath: `skills/layout-skill-${i}/SKILL.md`, allowedTools: [],
-          loadedByScenarios: [{ id: "daily", name: "日常" }], status: "available",
+          loadedByScenarios: [{ id: "daily", name: "决策" }], status: "available",
           availability: { runnable: true, installable: false }, category: "other",
           categoryLabel: "内置 Skill", categorySource: "inferred",
         }));
@@ -35,6 +35,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720
       await last.scrollIntoViewIfNeeded();
       await expect(last).toBeInViewport();
       await expect(footer).toBeInViewport();
+      const sidebarBox = (await page.locator(".sidebar").boundingBox())!;
+      const logoutBox = (await page.getByRole("button", { name: "退出登录" }).boundingBox())!;
+      expect(logoutBox.x).toBeGreaterThanOrEqual(sidebarBox.x);
+      expect(logoutBox.x + logoutBox.width).toBeLessThanOrEqual(sidebarBox.x + sidebarBox.width);
       expect(await content.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
       expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(viewport.height);
     });

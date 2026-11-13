@@ -248,4 +248,3 @@ describe("HistoryPage", () => {
     expect(screen.queryByText("迟到的办公记录")).not.toBeInTheDocument();
   });
 });
-
