@@ -970,6 +970,63 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 3. 同步更新 mine、发布、审核队列与 Skill 详情的相关测试断言。
 4. 验证全量 Vitest 696/696、目标 Playwright 14/14、TypeScript strict 与 ESLint 全部通过。
 
+## 2026-11-13
+
+### 37. 统一 Daily/Work Skill 卡片、详情与筛选视觉
+
+提交：`de84701`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`、`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`C-02`、`Work Task 3/4 后续视觉修正`
+
+#### 问题
+
+- Daily Skill 卡片与 Work 的图标语言不一致，点击后仍从右侧展开详情；用户要求保留说明、来源和运行状态的同时改为彩色图标与居中详情。
+- Work Skill 预览直接把 `SKILL.md` YAML frontmatter 当正文展示，Markdown 字号、层级、行距和代码样式较粗糙；详情页标题也缺少稳定的 slug 层级。
+- Daily 与 Work 操作按钮的主次颜色不一致；Work 通用 hover 选择器优先级高于主按钮，导致蓝色按钮悬停/点击时变成近白或灰色。
+- Daily 来源筛选仍使用“内置/市场”，状态筛选只区分“可用/名称冲突”，与卡片展示的“运行中/已启用/可安装/不可用”不一致；两个原生下拉框的选中文字视觉偏左。
+
+#### 修改方案
+
+- 抽取确定性彩色 Skill 图标供 Daily/Work 共用；Daily 保留描述、元信息与状态徽标，并把详情改为带遮罩、焦点恢复和移动端适配的居中弹窗。
+- Work 预览渲染前只剥离标准 YAML frontmatter，正文继续由 `react-markdown` + GFM 安全渲染；统一标题、段落、列表、代码、引用、链接与表格层级，并在预览和 Editor 标题区展示 slug。
+- Daily/Work 共用蓝色主按钮、白底描边次按钮；补齐 hover/active/disabled 的专用优先级，使异步禁用保持浅蓝而不是退化为灰色。
+- 来源筛选复用 `SKILL_SOURCE_LABELS`，状态筛选改为精确匹配 `installState`，并同步 URL 深链白名单；来源/状态控件使用固定箭头、对称内边距和居中文字，保留“查看全部”和清除筛选能力。
+
+#### **代码变更：**
+
+1. 新增 `src/features/skills/components/skill-card-icon.tsx`，并更新 Daily `skill-catalog-card.tsx`、Work `skill-card.tsx` 与 `skill-preview-dialog.tsx` 共用同一套确定性色调图标。
+2. 更新 `skill-catalog-drawer.tsx` 与 `globals.css`，把 Daily 详情从右侧抽屉改为居中弹窗，并统一 Daily/Work 标题、slug、正文和响应式排版。
+3. 更新 `skill-preview-dialog.tsx`，剥离标准 frontmatter 后再渲染 Markdown；更新 Work Editor 标题层级与按钮主次样式，修复主按钮 hover/disabled 变白或变灰。
+4. 更新 `catalog-filter.ts`、`catalog-navigation.ts` 与 `skill-catalog-plaza.tsx`，提供“内置 Skill/市场发布”和“运行中/已启用/可安装/不可用”筛选，按真实安装状态过滤并使用居中的自定义下拉控件。
+5. 扩展 Catalog、Work 预览、导航与 E2E 断言；相关组件测试 47/47、最终 Catalog 聚焦测试 32/32、TypeScript strict 与 ESLint 通过。全量 Vitest 756/764，8 个失败均为既有 Conversation Schema 锁文件 SHA-256 漂移；初始卡片/弹窗改动后的 Skill Playwright 6/6 通过，后续按钮颜色与筛选断言因本地浏览器提权未获批准未复跑。Webpack build 完成编译与类型检查后，在静态生成 `/mcp` 时因沙箱目录创建权限 `EPERM` 中止。
+
+### 38. 修复 Skill 跨模式路由与 Conversation 契约行尾漂移
+
+提交：`76f7dea`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`、`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`C-02`、`Work Task 5 后续路由修正`
+
+#### 问题
+
+- 顶部模式切换此前只替换当前 URL 的 `mode` 参数；从 `/skills/[slug]?mode=work` 切到 Daily 时，会把 Work slug 原样交给 Daily Catalog，因两套后端 ID 空间独立而显示“未找到该 Skill”。Daily 详情、Creator、审核、发布、草稿和“我的 Skill”等子路由反向切到 Work 时存在同类错配。
+- Conversation Schema 在 Git 索引中是 LF，但 `.gitattributes` 没有覆盖该目录，Windows 工作区被检出为 CRLF；字节级 SHA-256 因 7,566 个行尾变化而与锁文件不一致，连带造成 3 个 Schema lock 测试和 5 个 client generator 测试失败。
+
+#### 修改方案
+
+- ModeProvider 对 `/skills` 路由建立 daily/work 双槽位会话记忆：首次切到另一模式进入该模式 Skill 主界面，离开前记录当前路径与查询参数，切回时恢复原详情或子页面。非 Skill 页面继续保持原路径只替换 mode 的既有行为。
+- 路由记忆只接受同源 `/skills` 相对路径且要求存储值的 mode 与目标模式一致；Work 计划要求清理的弹窗、批量选择、安装草稿、页面缓存和未提交编辑内容仍不跨模式保留。
+- 为 Conversation Schema JSON 与生成 TypeScript 增加 `text eol=lf`，并机械规范化本地工作区字节；不修改 Schema 内容、版本、operation 数量或锁文件期望 hash。
+
+#### **代码变更：**
+
+1. 更新 `src/providers/mode-provider.tsx`，增加 Skill 路由识别、安全 sessionStorage 读写、主界面回退和双向恢复；新增 `mode-provider.test.tsx` 覆盖 Work 详情 → Daily 主界面 → Work 详情、Daily Creator → Work 主界面 → Daily Creator，以及非 Skill 页面兼容行为。
+2. 更新 `.gitattributes`，固定 `src/features/chat/conversation/contracts/schema/*.json` 与 `generated/*.ts` 使用 LF；规范化后 Schema SHA-256 恢复为锁文件记录的 `d5bd3ae1b98758366c1e9a6e61f1b6c32cb0502c0739823a6d0e7367fe467472`，Git blob 内容未变化。
+3. 验证模式切换聚焦测试 34/34、Conversation lock/generator 测试 11/11、全量 Vitest 767/767、TypeScript strict 与 ESLint 全部通过。
+
 ## 后续条目模板
 
 ```markdown
