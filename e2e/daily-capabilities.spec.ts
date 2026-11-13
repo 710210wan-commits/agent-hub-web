@@ -120,3 +120,73 @@ test("catalog 401 triggers global logout", async ({ page, request }) => {
   await expect(page.getByRole("heading", { name: "登录", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "退出登录" })).toHaveCount(0);
 });
+
+const mcpServerId = "10000000-0000-4000-8000-000000000010";
+async function chooseMcp(page: Page) {
+  await expect(page.getByRole("button", { name: /^MCP/ })).toBeEnabled();
+  await page.getByRole("button", { name: /^MCP/ }).click();
+  await page.getByRole("checkbox", { name: "只读船舶服务" }).check();
+  await page.getByRole("button", { name: /^MCP/ }).click();
+}
+
+test("MCP IDs-only selection → activity → final → persisted history without internal payloads", async ({ page, request }) => {
+  await control(request, { action: "catalog", mcpAvailable: true });
+  await login(page); await chooseMcp(page); await send(page, "MCP 只读验收");
+  const id = await conversationId(page);
+  const body = (await state(request)).submissions[0].body;
+  expect(body).toEqual({ clientRequestId: expect.any(String), input: { kind: "text", text: "MCP 只读验收" },
+    capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [mcpServerId] } });
+  await control(request, { action: "advance", conversationId: id, phase: "tool" });
+  await expect(page.getByText("正在使用工具…")).toBeVisible();
+  await expect(page.getByText(/SECRET_TOOL|RAW_MCP|PRIVATE_UPSTREAM/)).toHaveCount(0);
+  await control(request, { action: "advance", conversationId: id, phase: "complete", answer: "MCP 查询最终正文" });
+  await expect(page.getByText("MCP 查询最终正文")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(`MCP · ${mcpServerId}`, { exact: true })).toBeVisible();
+  expect(await page.getByLabel("本轮能力").locator("input,button").count()).toBe(0);
+  const exposed = await page.evaluate(async conversation => {
+    const paths = [`/agent-api/conversations/${conversation}/snapshot`, `/agent-api/conversations/${conversation}/events?afterSeq=0`];
+    return JSON.stringify(await Promise.all(paths.map(async path => (await fetch(path)).json())));
+  }, id);
+  expect(exposed).not.toMatch(/RAW_MCP|PRIVATE_UPSTREAM|credentialRef|inputSchema|access_token|\bat fixture\b/);
+  await page.goto("/history?mode=daily");
+  await page.getByRole("link", { name: /MCP 只读验收/ }).click();
+  await expect(page.getByText("MCP 查询最终正文")).toBeVisible();
+});
+
+test("MCP unknown retry keeps original selection despite composer edits", async ({ page, request }) => {
+  await control(request, { action: "catalog", mcpAvailable: true });
+  await login(page); await chooseMcp(page);
+  await control(request, { action: "unknown-next-submit" });
+  await send(page, "MCP 未知回执");
+  await expect(page.getByRole("button", { name: "重试发送" })).toBeVisible();
+  await page.getByRole("button", { name: /^MCP/ }).click();
+  await page.getByRole("checkbox", { name: "只读船舶服务" }).uncheck();
+  await page.getByRole("button", { name: /^MCP/ }).click();
+  await page.getByRole("button", { name: "重试发送" }).click();
+  const id = await conversationId(page), current = await state(request);
+  expect(current.submissions).toHaveLength(2);
+  expect(current.submissions[0].body).toEqual(current.submissions[1].body);
+  expect(current.submissions[0].body.capabilitySelection.mcpServerIds).toEqual([mcpServerId]);
+  expect(current.conversations.find((item: { conversationId: string }) => item.conversationId === id).turnCount).toBe(1);
+});
+
+test("MCP terminal failure and catalog outage preserve login and KB/Skill-only next Turn", async ({ page, request }) => {
+  await control(request, { action: "catalog", mcpAvailable: true });
+  await login(page); await chooseMcp(page); await send(page, "MCP 故障验收");
+  const id = await conversationId(page);
+  await control(request, { action: "revoke", conversationId: id });
+  await expect(page.getByText("任务执行失败")).toBeVisible();
+  await expect(page.locator("article.message-assistant")).toHaveCount(0);
+  await control(request, { action: "catalog", mcpUnavailable: true });
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^MCP/ })).toBeDisabled();
+  await expect(page.getByText("MCP：暂不可用")).toBeVisible();
+  await expect(page.getByRole("button", { name: "退出登录" })).toBeVisible();
+  await choose(page); await send(page, "KB Skill 故障隔离");
+  await expect.poll(async () => (await state(request)).submissions.length).toBe(2);
+  expect((await state(request)).submissions[1].body.capabilitySelection).toEqual(selected);
+  await control(request, { action: "advance", conversationId: id, phase: "complete", answer: "其他能力仍可用" });
+  await expect(page.getByText("其他能力仍可用")).toBeVisible();
+  await expect(page.getByText(/RAW_MCP|PRIVATE_UPSTREAM/)).toHaveCount(0);
+});

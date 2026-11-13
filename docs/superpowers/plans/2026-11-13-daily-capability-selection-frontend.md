@@ -1,6 +1,6 @@
 # Daily Capability Selection Frontend Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 用后端真实 capability catalog 替换 Daily 静态选项，把每轮 KB/Skill/MCP Server 选择纳入 canonical Turn、unknown retry 与历史回放。
 
@@ -54,11 +54,11 @@ Corresponds to master Plan Task 7.
 - Create: `src/features/chat/capabilities/daily-capability-client.ts`
 - Create: `src/features/chat/capabilities/daily-capability-client.test.ts`
 
-- [ ] Write red tests for Turn selection encode, required nullable historical snapshot decode, partial catalog status, abort, 401/403, and malformed/secret-bearing response rejection.
-- [ ] Pin the exact backend commit/hash and regenerate clients; never hand-edit generated schemas.
-- [ ] Implement same-origin `/agent-api` catalog client with existing cookie/error behavior.
-- [ ] Run conversation schema verification/check, focused tests, KB/Skill client drift checks, and typecheck.
-- [ ] Commit: `feat(chat): add daily capability contracts`
+- [x] Write red tests for Turn selection encode, required nullable historical snapshot decode, partial catalog status, abort, 401/403, and malformed/secret-bearing response rejection.
+- [x] Pin the exact backend commit/hash and regenerate clients; never hand-edit generated schemas.
+- [x] Implement same-origin `/agent-api` catalog client with existing cookie/error behavior.
+- [x] Run conversation schema verification/check, focused tests, KB/Skill client drift checks, and typecheck.
+- [x] Commit: `feat(chat): add daily capability contracts`
 
 ## Task 2 — Replace fixtures and make retry/history snapshot-safe
 
@@ -77,15 +77,15 @@ Corresponds to master Plan Task 8.
 - Modify corresponding tests
 - Add a narrow read-only capability-chip component only if `message-list.tsx` would otherwise mix concerns
 
-- [ ] Rename `mcpIds` to `mcpServerIds` repo-wide with compile-time coverage.
-- [ ] Test catalog loading, KB/Skill multi-select, per-section unavailable/disabled UI, and absence of an Agent Loop option.
-- [ ] Test send-time deep snapshot; UI changes after send do not mutate pending.
-- [ ] Test unknown retry reuses original `clientRequestId`, input, and selection.
-- [ ] Test history uses server snapshot, assistant/legacy `null`, and missing catalog entries fall back to safe IDs.
-- [ ] Delete static Daily fixtures; keep Work behavior unchanged.
-- [ ] Keep MCP disabled until backend reports `available` after master Tasks 10–12.
-- [ ] Run all chat/session/component tests, generated checks, typecheck, lint.
-- [ ] Commit: `feat(chat): enable daily kb and skill selection`
+- [x] Rename `mcpIds` to `mcpServerIds` repo-wide with compile-time coverage.
+- [x] Test catalog loading, KB/Skill multi-select, per-section unavailable/disabled UI, and absence of an Agent Loop option.
+- [x] Test send-time deep snapshot; UI changes after send do not mutate pending.
+- [x] Test unknown retry reuses original `clientRequestId`, input, and selection.
+- [x] Test history uses server snapshot, assistant/legacy `null`, and missing catalog entries fall back to safe IDs.
+- [x] Delete static Daily fixtures; keep Work behavior unchanged.
+- [x] Keep MCP disabled until backend reports `available` after master Tasks 10–12.
+- [x] Run all chat/session/component tests, generated checks, typecheck, lint.
+- [x] Commit: `feat(chat): enable daily kb and skill selection`
 
 ## Task 3 — Phase A cross-page E2E
 
@@ -97,11 +97,11 @@ Corresponds to master Plan Task 9.
 - Add/modify: Daily capability Playwright spec under `e2e/`
 - Create: `docs/session/2026-11-13-daily-capability-selection-acceptance.md`
 
-- [ ] Cover login, real catalog, select/send/final/history, unknown retry dedupe, next-Turn selection change, explicit empty lists, partial outage, 401 and 403.
-- [ ] Confirm Work/GIS/KB/Skill Market/MCP management routes have no UI regression.
-- [ ] Run `pnpm test`, Daily Playwright, typecheck, lint, build, and generated contract checks.
-- [ ] Record exact backend/frontend SHA and contract hash.
-- [ ] Commit: `test(e2e): cover daily capability selection`
+- [x] Cover login, real catalog, select/send/final/history, unknown retry dedupe, next-Turn selection change, explicit empty lists, partial outage, 401 and 403.
+- [x] Confirm Work/GIS/KB/Skill Market/MCP management routes have no UI regression.
+- [x] Run `pnpm test`, Daily Playwright, typecheck, lint, build, and generated contract checks.
+- [x] Record exact backend/frontend SHA and contract hash.
+- [x] Commit: `test(e2e): cover daily capability selection`
 
 ## Task 4 — Enable MCP only after backend Phase B
 
@@ -119,19 +119,23 @@ Task 13 evidence: copied the committed backend artifact from DSI `8624c4f79307e8
 
 Corresponds to master Plan Task 14.
 
-- [ ] Selected read-only MCP succeeds; non-selected/mutating tools cannot execute.
-- [ ] Timeout/outage is safe and does not disable KB/Skill.
-- [ ] UI/SSE/history contain no credentials or raw tool payloads.
-- [ ] Run full release gate and update acceptance evidence.
-- [ ] Commit: `test(e2e): verify daily mcp selection`
+- [x] Selected read-only MCP succeeds; non-selected/mutating tools cannot execute.
+- [x] Timeout/outage is safe and does not disable KB/Skill.
+- [x] UI/SSE/history contain no credentials or raw tool payloads.
+- [x] Run full automated release gate and update acceptance evidence.
+- [x] Final AI review: no unresolved Critical/Major findings.
+- [ ] Human/team review: no unresolved Critical/Major findings before main integration.
+- [x] Commit: `test(e2e): verify daily mcp selection`
+
+Task 14 automated evidence: browser17/17 (three MCP additions), full suite790/790, types/lint/build and conversation/KB/Skill generation gates passed. Backend actual HTTP+DB+Loop security4/4 and complete backend gate passed. Public artifact unchanged. Fresh cross-repo branch review found no remaining Critical/Major; historical checkbox state is now synchronized from verified commits/ledgers. See the updated acceptance document for layer boundaries and local reproduction. Human review and main integration remain open; no push/merge is included.
 
 ## Acceptance Criteria
 
-- [ ] Daily options come from the authenticated catalog, not fixtures.
-- [ ] Send, unknown retry, and history preserve one immutable snapshot.
-- [ ] Explicit empty selection is sent and shown truthfully.
-- [ ] MCP remains disabled until the real runtime contract is available.
-- [ ] No second auth state, no browser credential, no non-Daily regression.
+- [x] Daily options come from the authenticated catalog, not fixtures.
+- [x] Send, unknown retry, and history preserve one immutable snapshot.
+- [x] Explicit empty selection is sent and shown truthfully.
+- [x] MCP remains disabled until the real runtime contract is available.
+- [x] No second auth state, no browser credential, no non-Daily regression.
 
 ## Review Focus
 

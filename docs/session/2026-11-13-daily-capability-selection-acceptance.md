@@ -71,3 +71,15 @@ This follows the historical Phase A results above. MCP is now selectable in Dail
 - Self-review and independent incremental AI review found no remaining Major/Critical. Human/team review pending.
 
 These browser regressions cover the existing Phase A scenarios; MCP-specific browser execution/security E2E remains Task 14. Backend Task 12 separately verified the configured loopback HTTP provider through a real PostgreSQL Turn and Loop. A browser session against a live deployed MCP/LLM stack is not claimed here.
+
+## Task 14: final MCP automation evidence — 2026-11-14
+
+- Runtime contract remains backend `8624c4f79307e8d0ee63bb512a391f9a8a2dde05` and frontend selector source `388690e7c2d7a9b26b3efab164c9e2a9a38c9192`; `conversation.v1@0.1.5` and its SHA-256 above are unchanged.
+- Chromium: **17/17**, including three new MCP scenarios: IDs-only selection/activity/final/history; unknown-receipt retry after composer edits; terminal failure + unavailable MCP catalog followed by a successful KB/Skill-only next Turn. The first new scenario was observed RED against the old unavailable-only fixture, then GREEN after adding controlled catalog states.
+- Full frontend gate: **93 files, 790/790 tests**, conversation/KB/Skill generated checks, typecheck, lint and production build passed. Same test-only build configuration as above. No new runtime configuration, token store or production behavior change in Task 14.
+- Backend adds **4/4** actual HTTP adapter → disposable PostgreSQL → Loop tests for selected read-only success, rejection of forged nonselected/mutating calls, timeout/503 with one invocation attempt, KB+Skill-only isolation, cancel priority and clean public output/logs. Existing provider **16/16**; combined capability/security **27/27**. All conversation/auth/KB/Skill/types/build gates passed; backend lint retains 21 baseline warnings and 0 errors.
+- Fresh whole-branch AI review covered both repos, checked committed/uncommitted boundaries, Plan/ledger rulings and artifact/hash equality; no unresolved Critical/Major. Earlier checkbox-status drift was corrected from verified commits/ledgers. Human/team review remains open before main integration.
+
+Browser fixture tests establish browser contract behavior. They do not implement or prove MCP authorization: backend tests execute that boundary using the actual provider and registry. Public event assertions use the actual durable projection/SSE serializer; the existing conversation suite also tests real HTTP SSE/replay/proxy. No live third-party MCP/LLM/RAG or cloud deployment acceptance is claimed.
+
+Team local reproduction and security limits are documented in DSI `docs/plans/2026-11-14-daily-mcp-acceptance.md`. Optional backend `MCP_MANAGEMENT_API_ORIGIN` must point to the same-host loopback management process; frontend continues using its existing `/agent-api` proxy. Selectable services must be Daily, enabled, healthy, freshly discovered and explicitly approved read-only. Empty config keeps MCP unavailable without blocking KB/Skill. The management module uses a separate Node22/pnpm9 install with `--ignore-workspace`; it is not a new frontend dependency.

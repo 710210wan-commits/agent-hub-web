@@ -18,6 +18,8 @@ const state = {
   kbStatus: null,
   catalogStatus: null,
   skillUnavailable: false,
+  mcpAvailable: false,
+  mcpUnavailable: false,
   unknownNextSubmit: false,
   submissions: [],
 };
@@ -71,7 +73,9 @@ const server = http.createServer(async (request, response) => {
       knowledgeBases: { status: "available", items: [{ id: `kb-${userKey}`, name: userKey === "alice" ? "Alice 可选知识库" : "Bob 可选知识库", description: "controlled fixture", type: "vector", supportsDocuments: true }] },
       skills: state.skillUnavailable ? { status: "unavailable", items: [], reasonCode: "SKILL_CATALOG_UNAVAILABLE" }
         : { status: "available", items: [{ id: "built-in:aircraft-region-query", name: "aircraft-region-query", title: "飞机查询", description: "controlled fixture", source: "built-in", revision: null }] },
-      mcpServers: { status: "unavailable", items: [], reasonCode: "MCP_PROVIDER_NOT_CONFIGURED" },
+      mcpServers: state.mcpUnavailable ? { status: "unavailable", items: [], reasonCode: "MCP_CATALOG_UNAVAILABLE" }
+        : state.mcpAvailable ? { status: "available", items: [{ id: "10000000-0000-4000-8000-000000000010", name: "只读船舶服务", description: "controlled contract fixture" }] }
+          : { status: "unavailable", items: [], reasonCode: "MCP_PROVIDER_NOT_CONFIGURED" },
     });
     return;
   }
@@ -109,6 +113,8 @@ function resetState() {
   state.kbStatus = null;
   state.catalogStatus = null;
   state.skillUnavailable = false;
+  state.mcpAvailable = false;
+  state.mcpUnavailable = false;
   state.unknownNextSubmit = false;
   state.submissions = [];
 }
@@ -387,6 +393,8 @@ async function handleControl(body, response) {
   if (body?.action === "catalog") {
     state.catalogStatus = body.status ?? null;
     state.skillUnavailable = body.skillUnavailable === true;
+    state.mcpAvailable = body.mcpAvailable === true;
+    state.mcpUnavailable = body.mcpUnavailable === true;
     sendJson(response, 200, { ok: true });
     return;
   }
