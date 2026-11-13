@@ -1,8 +1,8 @@
 "use client";
 
-import {useEffect,useState} from 'react';
+import {useEffect,useState,useRef,useCallback} from 'react';
 import {Cable, Plus, Search, Server, MapPinned, RefreshCw, X, ArrowRight, ShieldCheck, Terminal} from 'lucide-react';
-import {requestMcp} from '@/features/mcp/api';
+import {requestMcp as sendMcp,McpApiError} from '@/features/mcp/api';
 import {filterServices,marketItems,servicePayload,type Service,type Tool,type Label,type MarketItem} from '@/features/mcp/catalog';
 import styles from './mcp-console.module.css';
 import {ToolArguments} from './tool-arguments';
@@ -10,13 +10,20 @@ import {ToolDialog} from './tool-dialog';
 
 function draft(item?:MarketItem):Service {return {id:'',displayName:item?.displayName??'',description:item?.description??'',label:item?.label??1,transport:item?.transport??'http',presetId:item?.presetId??'ships-demo',url:item?.url??'',credentialRef:item?.credentialRef??'',enabled:false,allowedTools:[],readOnlyTools:[]};}
 
-export function McpConsole(){
+export function McpConsole({onUnauthorized}:{onUnauthorized?:()=>void}={}){
+ const scope=useRef<AbortController|null>(null);
+ useEffect(()=>{const controller=new AbortController();scope.current=controller;return()=>controller.abort();},[]);
+ const requestMcp=useCallback(async <T,>(path:string,init?:RequestInit):Promise<T>=>{
+  const signal=scope.current!.signal;
+  try{return await sendMcp<T>(path,{...init,signal});}
+  catch(error){if(!signal.aborted&&error instanceof McpApiError&&error.status===401)onUnauthorized?.();throw error;}
+ },[onUnauthorized]);
  const [query,setQuery]=useState('');
  const [services,setServices]=useState<Service[]>([]); const [error,setError]=useState(''); const [notice,setNotice]=useState(''); const [busy,setBusy]=useState(false);
  const [editor,setEditor]=useState<Service|null>(null); const [selected,setSelected]=useState<Service|null>(null);
  const [tools,setTools]=useState<Tool[]>([]); const [stale,setStale]=useState(true);const [toolName,setToolName]=useState('');const [args,setArgs]=useState('{}');const [result,setResult]=useState<unknown>(null);
  async function refresh(){const data=await requestMcp<{items:Service[]}>('/servers');setServices(data.items);return data.items;}
- useEffect(()=>{let active=true;requestMcp<{items:Service[]}>('/servers').then(d=>{if(active)setServices(d.items);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[]);
+ useEffect(()=>{let active=true;requestMcp<{items:Service[]}>('/servers').then(d=>{if(active)setServices(d.items);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[requestMcp]);
  async function action(fn:()=>Promise<void>){setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError(e instanceof Error?e.message:'操作失败');}finally{setBusy(false);}}
  async function loadTools(s:Service){const data=await requestMcp<{items:Tool[];stale:boolean}>(`/servers/${s.id}/tools`);setTools(data.items);setStale(data.stale);setToolName(data.items[0]?.toolName??'');setArgs('{}');setResult(null);}
  async function open(s:Service){await action(async()=>{setSelected(s);setToolName('');setTools([]);setStale(true);setResult(null);await loadTools(s);});}

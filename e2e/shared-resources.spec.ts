@@ -8,7 +8,7 @@ test("shared KB/MCP lists stay identical across conversation modes and preserve 
     resources.push(new URL(route.request().url()).pathname);
     await route.fulfill({ json: { success: true, databases: [{ kb_id: "shared-kb", name: "共享知识库", description: "同一数据源", type: "milvus", supports_documents: true }] } });
   });
-  await page.route("**/mcp-api/api/mcp/v1/servers", async route => {
+  await page.route("**/agent-api/api/mcp/v1/servers", async route => {
     resources.push(new URL(route.request().url()).pathname);
     await route.fulfill({ json: { ok: true, data: { items: [1, 2].map(label => ({ id: `shared-${label}`, displayName: `分类 ${label} 共享服务`, label, description: "共享管理", transport: "http", url: "https://example.test/mcp", enabled: false, allowedTools: [], readOnlyTools: [] })) } } });
   });
@@ -25,7 +25,7 @@ test("shared KB/MCP lists stay identical across conversation modes and preserve 
       await expect(page.getByRole("link", { name: "新对话", exact: true })).toHaveAttribute("href", `/chat?mode=${mode}`);
     }
   }
-  expect(new Set(resources)).toEqual(new Set(["/agent-api/api/kb/databases", "/mcp-api/api/mcp/v1/servers"]));
+  expect(new Set(resources)).toEqual(new Set(["/agent-api/api/kb/databases", "/agent-api/api/mcp/v1/servers"]));
 });
 
 test("anonymous login starts empty and cannot submit without credentials", async ({ page }) => {
