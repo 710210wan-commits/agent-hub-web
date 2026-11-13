@@ -48,7 +48,8 @@ a {
 
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -62,6 +63,8 @@ a {
   border-right: 1px solid var(--color-border);
   background: var(--color-sidebar);
   padding: 14px 12px 12px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .brand {
@@ -143,6 +146,7 @@ a {
 }
 
 .sidebar-footer {
+  flex-shrink: 0;
   display: grid;
   gap: 4px;
   margin-top: auto;
@@ -181,6 +185,7 @@ a {
 .app-workspace {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex: 1;
   flex-direction: column;
 }

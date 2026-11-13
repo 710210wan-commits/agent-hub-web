@@ -37,9 +37,9 @@ Files: src/components/auth/login-page.tsx; src/components/auth/auth-boundary.tes
 
 ### Task 2 — 修复外壳滚动（项 4）
 Files: src/app/globals.css; e2e/shell-layout.spec.ts (new).
-- [ ] 浏览器测试构造长内容，在 1440x900 / 1280x720 断言用户栏始终在视口，app-content 滚动可到底；先观察失败。
-- [ ] 外壳明确限制视口高度，业务区独立滚动；侧栏用户区不随业务内容增长，移动菜单可滚动。
-- [ ] 运行浏览器聚焦回归；自审、提交。
+- [x] 浏览器测试构造长内容，在 1440x900 / 1280x720 断言用户栏始终在视口，app-content 滚动可到底；先观察失败。
+- [x] 外壳明确限制视口高度，业务区独立滚动；侧栏用户区不随业务内容增长，移动菜单可滚动。
+- [x] 运行浏览器聚焦回归；自审、提交。
 
 ### Task 3 — 决策/工作显示名（项 6）
 Files: src/config/copy.ts; mode-related visible strings in src; corresponding assertions in tests.
@@ -79,3 +79,5 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - 2026-11-14: 读取最新 main，SHA 未变；线上只读复现密码预填和用户栏离屏。复用 clean native frontend worktree，新建 codex/ui-polish-shared-resources；准备 pnpm 依赖及基线验证。
 
 - Task 1: RED 2 failures (default values / empty submit); GREEN auth 23/23; full suite 797/797. No production auth behavior changed beyond blank initial form.
+
+- Task 2: RED Skill footer bottom 1744 > 900; MCP footer bottom 3485.78 > 900. GREEN desktop 1440x900 / 1280x720 plus mobile navigation: 5/5 Playwright. Content scroll reaches final card; account stays in viewport.
