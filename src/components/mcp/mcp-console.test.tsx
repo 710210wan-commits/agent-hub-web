@@ -10,7 +10,7 @@ describe('MCP console',()=>{
    if(init?.method==='POST'){const data={...JSON.parse(String(init.body)),id:'saved'};items=[data];return new Response(JSON.stringify({ok:true,data}));}
    return new Response(JSON.stringify({ok:true,data:{items}}));
   });
-  vi.stubGlobal('fetch',fetcher);render(<McpConsole mode="work"/>);
+  vi.stubGlobal('fetch',fetcher);render(<McpConsole/>);
   await waitFor(()=>expect(fetcher).toHaveBeenCalled());
   fireEvent.click(screen.getAllByText('添加到我的服务')[0]);
   fireEvent.change(screen.getByLabelText('标签'),{target:{value:'2'}});
@@ -48,15 +48,13 @@ it('opens service tools in a dialog and can refresh discovery inside it',async()
  vi.restoreAllMocks();
 });
 
-it('shows tag 1 in daily mode and tag 2 in work mode',async()=>{
+it('shows all category labels in one shared service list',async()=>{
  const base={description:'',transport:'stdio',presetId:'ships-demo',enabled:false,allowedTools:[],readOnlyTools:[]};
- vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({ok:true,data:{items:[{...base,id:'daily',displayName:'日常测试服务',label:1},{...base,id:'work',displayName:'办公测试服务',label:2}]}}))));
- const view=render(<McpConsole mode="daily"/>);
- await screen.findByText('日常测试服务');
- expect(screen.queryByText('办公测试服务')).not.toBeInTheDocument();
- view.rerender(<McpConsole mode="work"/>);
- expect(screen.getByText('办公测试服务')).toBeInTheDocument();
- expect(screen.queryByText('日常测试服务')).not.toBeInTheDocument();
+ vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({ok:true,data:{items:[{...base,id:'a',displayName:'分类一服务',label:1},{...base,id:'b',displayName:'分类二服务',label:2}]}}))));
+ render(<McpConsole/>);
+ await screen.findByText('分类一服务');
+ expect(screen.getByText('分类二服务')).toBeInTheDocument();
+ expect(screen.queryByText(/决策 · 标签|工作 · 标签/)).not.toBeInTheDocument();
 });
 
 it('requires confirmation before deleting a saved service',async()=>{

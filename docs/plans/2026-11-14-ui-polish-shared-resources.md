@@ -63,10 +63,10 @@ Interfaces: parseMode accepts 1/2 and legacy daily/work; serializeMode(AppMode):
 
 ### Task 6 — 知识库/MCP 共享管理（项 5）
 Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filtering backend only if required, in separate backend branch.
-- [ ] RED: KB/MCP 无模式开关；共享资源列表不随对话模式隐藏；Skill 仍按 daily/work 分流。
-- [ ] KB 继续走同一 Xiaozhi 桥接；共享路由保留导航上下文但不按模式筛资源。MCP 去场景标签过滤/默认语义；已有标签若保留，只作为分类。
-- [ ] 检查原生 MCP provider 标签 1 限制，与共享目录对齐；保持 enabled/health/read-only/显式选择约束。若需要改变现有鉴权设计或工作 Loop 接入，停止该扩展并记录到未来 MCP 计划。
-- [ ] 前后端聚焦契约/目录测试；MCP 无真实服务时只验诚实不可用，不假造真实通过；自审、提交。
+- [x] RED: KB/MCP 无模式开关；共享资源列表不随对话模式隐藏；Skill 仍按 daily/work 分流。
+- [x] KB 继续走同一 Xiaozhi 桥接；共享路由保留导航上下文但不按模式筛资源。MCP 去场景标签过滤/默认语义；已有标签若保留，只作为分类。
+- [x] 检查原生 MCP provider 标签 1 限制，与共享目录对齐；保持 enabled/health/read-only/显式选择约束。若需要改变现有鉴权设计或工作 Loop 接入，停止该扩展并记录到未来 MCP 计划。
+- [x] 前后端聚焦契约/目录测试；MCP 无真实服务时只验诚实不可用，不假造真实通过；自审、提交。
 
 ### Task 7 — 集成验收与交付
 - [ ] pnpm test; pnpm lint; pnpm typecheck; required schema/client checks; pnpm build。
@@ -91,3 +91,5 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - Task 4 (Daily only): initial RED 9 missing-delete behaviors; GREEN focused 69/69, deletion browser flow 1/1 (cancel confirmation / delete / refresh / old URL 404), typecheck passed. Full suite first had existing 500-entry Skill timing timeout under parallel load; unchanged assertions passed with maxWorkers=2: 809/809. Deleted-ID tombstones prevent old pagination responses resurrecting rows. Work deletion deferred explicitly.
 
 - Task 5: RED 8 URL/parser/mode-switch failures; GREEN 814/814 Vitest (maxWorkers=2), navigation+Skill E2E 7/7 including legacy normalization and distinct Skill backends. URL emits 1/2; backend query modes remain daily/work; mode switching drops conversation/draft only for chat/history.
+
+- Task 6: RED 6 shared-list/header failures. GREEN focused 14/14 + shared-resource/login browser 2/2; earlier navigation/layout other 11 cases passed (new login locator corrected to exclude Next route announcer). Backend branch codex/ui-shared-mcp-catalog @ f0155a9 removes only label=1 scope predicate; 27 capability/Turn + 18 provider/security tests passed on isolated disposable DB; API typecheck passed. Labels preserved as categories. No MCP service or Work runtime added.

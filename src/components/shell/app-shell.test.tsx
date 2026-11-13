@@ -6,18 +6,20 @@ import { AuthProvider } from "@/providers/auth-provider";
 
 import { AppShell } from "./app-shell";
 
+const pageState = vi.hoisted(() => ({ pathname: "/chat" }));
 const replace = vi.fn();
 const push = vi.fn();
 const randomUUID = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/chat",
+  usePathname: () => pageState.pathname,
   useRouter: () => ({ push, replace }),
   useSearchParams: () => new URLSearchParams("mode=work&panel=open"),
 }));
 
 describe("AppShell", () => {
   beforeEach(() => {
+    pageState.pathname = "/chat";
     replace.mockClear();
     push.mockClear();
     randomUUID.mockReset();
@@ -100,4 +102,12 @@ describe("AppShell", () => {
     expect(push).toHaveBeenNthCalledWith(2, "/chat?mode=2&draft=draft-2");
     expect(push.mock.calls.flat().join(" ")).not.toContain("conversation=");
   });
+  it.each(["/knowledge", "/knowledge/kb-1", "/mcp", "/mcp/server-1"])("hides mode switching on shared resource %s without losing work navigation", pathname => {
+    pageState.pathname = pathname;
+    render(<AuthProvider><ModeProvider><AppShell title="共享资源">资源</AppShell></ModeProvider></AuthProvider>);
+    expect(screen.queryByRole("button", { name: "决策", exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "工作", exact: true })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "新对话" })).toHaveAttribute("href", "/chat?mode=2");
+  });
+
 });

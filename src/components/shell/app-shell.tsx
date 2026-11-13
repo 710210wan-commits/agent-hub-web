@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 import { MobileSidebar } from "./mobile-sidebar";
 import { Sidebar } from "./sidebar";
@@ -15,6 +16,8 @@ export function AppShell({
   title: string;
   topbarControl?: ReactNode;
 }) {
+  const pathname = usePathname();
+  const sharedResource = /^\/(?:knowledge|mcp)(?:\/|$)/.test(pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -23,6 +26,7 @@ export function AppShell({
       <div className="app-workspace">
         <Topbar
           centerControl={topbarControl}
+          showModeSwitch={!sharedResource}
           title={title}
           menuButton={
             <MobileSidebar
