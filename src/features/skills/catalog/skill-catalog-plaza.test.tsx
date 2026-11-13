@@ -261,7 +261,20 @@ describe("SkillCatalogPlaza", () => {
     expect(screen.getByText("共 3 个")).toBeInTheDocument();
   });
 
-  it("opens card details in a dismissible right-side dialog", async () => {
+  it("renders Work-style tinted icons while preserving the daily description and status badges", async () => {
+    const query = vi.fn(async () => mixedCatalog);
+    renderPlaza(clientStub(query));
+
+    await screen.findByRole("heading", { name: "Alpha Query" });
+    const alphaCard = cardOf("Alpha Query");
+    expect(alphaCard.querySelector(".skill-card-icon")).not.toBeNull();
+    expect(alphaCard.querySelector('[class*="skill-tint-"]')).not.toBeNull();
+    expect(within(alphaCard).getByText("查询日常目标")).toBeInTheDocument();
+    expect(within(alphaCard).getByText("内置 Skill")).toBeInTheDocument();
+    expect(within(alphaCard).getByText("运行中")).toBeInTheDocument();
+  });
+
+  it("opens card details in a dismissible centered dialog", async () => {
     const query = vi.fn(async () => mixedCatalog);
     renderPlaza(clientStub(query));
 
@@ -270,6 +283,7 @@ describe("SkillCatalogPlaza", () => {
     fireEvent.click(cardTrigger);
 
     const dialog = screen.getByRole("dialog", { name: "Alpha Query" });
+    expect(dialog).toHaveClass("skill-detail-dialog");
     expect(within(dialog).getByText("查询日常目标")).toBeInTheDocument();
     expect(within(dialog).getByText("gis-query")).toBeInTheDocument();
     expect(within(dialog).getAllByText("内置 Skill")).toHaveLength(2);
@@ -305,6 +319,10 @@ describe("SkillCatalogPlaza", () => {
       "/skills/mine?mode=daily",
     );
     expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveClass("skill-page-action-primary");
+    expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveClass("skill-action-primary");
+    for (const name of ["发布管理", "审核", "我的"]) {
+      expect(screen.getByRole("link", { name })).toHaveClass("skill-action-secondary");
+    }
     expect(screen.queryByRole("button", { name: "刷新" })).not.toBeInTheDocument();
   });
 
@@ -369,7 +387,7 @@ describe("SkillCatalogPlaza", () => {
     expect(screen.getByRole("heading", { name: "Gamma GIS" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("combobox", { name: "状态" }), {
-      target: { value: "conflict" },
+      target: { value: "blocked" },
     });
     expect(screen.getByRole("heading", { name: "Gamma GIS" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Beta Report" })).not.toBeInTheDocument();
@@ -379,6 +397,39 @@ describe("SkillCatalogPlaza", () => {
     expect(screen.getByRole("heading", { name: "Beta Report" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "搜索 Skill" })).toHaveValue("");
     expect(screen.queryByRole("button", { name: "清除筛选" })).not.toBeInTheDocument();
+  });
+
+  it("uses product source and install-state labels in the dropdowns", async () => {
+    const query = vi.fn(async () => mixedCatalog);
+    renderPlaza(clientStub(query));
+    await screen.findByRole("heading", { name: "Alpha Query" });
+
+    const sourceOptions = Array.from(
+      screen.getByRole("combobox", { name: "来源" }).querySelectorAll("option"),
+    ).map((option) => [option.value, option.textContent]);
+    expect(sourceOptions).toEqual([
+      ["all", "来源"],
+      ["built-in", "内置 Skill"],
+      ["market", "市场发布"],
+    ]);
+
+    const statusOptions = Array.from(
+      screen.getByRole("combobox", { name: "状态" }).querySelectorAll("option"),
+    ).map((option) => [option.value, option.textContent]);
+    expect(statusOptions).toEqual([
+      ["all", "状态"],
+      ["built-in-active", "运行中"],
+      ["enabled", "已启用"],
+      ["installable", "可安装"],
+      ["blocked", "不可用"],
+    ]);
+
+    for (const label of ["来源", "状态"]) {
+      const select = screen.getByRole("combobox", { name: label });
+      expect(select).toHaveClass("skill-catalog-select-control");
+      expect(select.closest(".skill-catalog-select")?.querySelector(".skill-catalog-select-icon"))
+        .not.toBeNull();
+    }
   });
 
   it("limits the category filter options to labels present in the catalog", async () => {

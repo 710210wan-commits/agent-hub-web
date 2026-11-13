@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -29,6 +29,7 @@ import {
 import { parseSkillCatalogFilter } from "./catalog-navigation";
 import { SkillCatalogCard } from "./skill-catalog-card";
 import { SkillCatalogDrawer } from "./skill-catalog-drawer";
+import { SKILL_INSTALL_STATE_LABELS, SKILL_SOURCE_LABELS } from "./skill-catalog-labels";
 import { useSkillCatalog } from "./use-skill-catalog";
 
 export function SkillCatalogPlaza({
@@ -128,10 +129,10 @@ function SkillCatalogPlazaDaily({
           <p>浏览日常后端返回的内置与市场 Skill</p>
         </div>
         <div className="skill-page-actions skill-catalog-actions">
-          <Link className="skill-page-action skill-page-action-primary" href="/skills/creator?mode=daily">创建 Skill</Link>
-          <Link className="skill-page-action" href="/skills/manage?mode=daily">发布管理</Link>
-          <Link className="skill-page-action" href="/skills/review?mode=daily">审核</Link>
-          <Link className="skill-page-action" href="/skills/mine?mode=daily">我的</Link>
+          <Link className="skill-page-action skill-page-action-primary skill-action-primary" href="/skills/creator?mode=daily">创建 Skill</Link>
+          <Link className="skill-page-action skill-action-secondary" href="/skills/manage?mode=daily">发布管理</Link>
+          <Link className="skill-page-action skill-action-secondary" href="/skills/review?mode=daily">审核</Link>
+          <Link className="skill-page-action skill-action-secondary" href="/skills/mine?mode=daily">我的</Link>
         </div>
       </header>
 
@@ -160,26 +161,36 @@ function SkillCatalogPlazaDaily({
                 ))}
               </select>
             )}
-            <select
-              aria-label="来源"
-              onChange={(event) =>
-                patchFilter({ source: event.target.value as SkillCatalogFilter["source"] })}
-              value={filter.source}
-            >
-              <option value="all">全部来源</option>
-              <option value="built-in">内置</option>
-              <option value="market">市场</option>
-            </select>
-            <select
-              aria-label="状态"
-              onChange={(event) =>
-                patchFilter({ status: event.target.value as SkillCatalogFilter["status"] })}
-              value={filter.status}
-            >
-              <option value="all">全部状态</option>
-              <option value="available">可用</option>
-              <option value="conflict">名称冲突</option>
-            </select>
+            <span className="skill-catalog-select">
+              <select
+                aria-label="来源"
+                className="skill-catalog-select-control"
+                onChange={(event) =>
+                  patchFilter({ source: event.target.value as SkillCatalogFilter["source"] })}
+                value={filter.source}
+              >
+                <option value="all">来源</option>
+                <option value="built-in">{SKILL_SOURCE_LABELS["built-in"]}</option>
+                <option value="market">{SKILL_SOURCE_LABELS.market}</option>
+              </select>
+              <ChevronDown aria-hidden="true" className="skill-catalog-select-icon" size={16} />
+            </span>
+            <span className="skill-catalog-select">
+              <select
+                aria-label="状态"
+                className="skill-catalog-select-control"
+                onChange={(event) =>
+                  patchFilter({ status: event.target.value as SkillCatalogFilter["status"] })}
+                value={filter.status}
+              >
+                <option value="all">状态</option>
+                <option value="built-in-active">{SKILL_INSTALL_STATE_LABELS["built-in-active"]}</option>
+                <option value="enabled">{SKILL_INSTALL_STATE_LABELS.enabled}</option>
+                <option value="installable">{SKILL_INSTALL_STATE_LABELS.installable}</option>
+                <option value="blocked">{SKILL_INSTALL_STATE_LABELS.blocked}</option>
+              </select>
+              <ChevronDown aria-hidden="true" className="skill-catalog-select-icon" size={16} />
+            </span>
             {isSkillCatalogFilterActive(effectiveFilter) ? (
               <button
                 className="skill-catalog-clear"

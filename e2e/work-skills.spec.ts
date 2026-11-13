@@ -21,13 +21,20 @@ test("Work Market completes preview, enable, manage, detail, and return journey 
   await page.getByRole("button", { name: "查看 MySQL Reporter 预览" }).click();
   const preview = page.getByRole("dialog");
   await expect(preview.getByRole("heading", { level: 2, name: "MySQL Reporter" })).toBeVisible();
+  await expect(preview.getByText("mysql-reporter")).toHaveClass(/skill-detail-slug/);
   await expect(preview.locator("footer").getByRole("button")).toHaveText(["卸载", "关闭", "去管理"]);
+  const manageButton = preview.getByRole("button", { name: "去管理" });
+  await expect(manageButton).toHaveCSS("background-color", "rgb(49, 94, 234)");
+  await manageButton.hover();
+  await expect(manageButton).not.toHaveCSS("background-color", "rgb(247, 247, 244)");
+  await expect(manageButton).toHaveCSS("color", "rgb(255, 255, 255)");
   await preview.getByRole("switch", { name: "切换启用状态" }).click();
   await expect.poll(() => fixture.state.skills.find((skill) => skill.slug === "mysql-reporter")?.enabled).toBe(false);
 
   await preview.getByRole("button", { name: "去管理" }).click();
   await expect(page).toHaveURL(/\/skills\/mysql-reporter\?mode=work$/);
   await expect(page.getByRole("heading", { name: "MySQL Reporter" })).toBeVisible();
+  await expect(page.locator(".work-detail-identity .skill-detail-slug")).toHaveText("mysql-reporter");
   await expect(page.getByRole("tablist", { name: "Skill 管理" }).getByRole("tab")).toHaveText([
     "代码管理",
     "生效范围",

@@ -27,6 +27,10 @@ describe("SkillPreviewDialog", () => {
     expect(
       title.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(within(title as HTMLElement).getByRole("heading", { name: upload.name })).toHaveClass(
+      "skill-detail-title",
+    );
+    expect(within(title as HTMLElement).getByText(upload.slug)).toHaveClass("skill-detail-slug");
 
     const footer = container.querySelector(".work-preview-footer")!;
     const left = footer.querySelector(".work-preview-footer-left")!;
@@ -53,6 +57,43 @@ describe("SkillPreviewDialog", () => {
     const body = container.querySelector(".work-preview-body")!;
     expect(within(body as HTMLElement).getByRole("heading", { level: 1, name: "MySQL Reporter" })).toBeInTheDocument();
     expect(within(body as HTMLElement).getByText("工作流程说明。")).toBeInTheDocument();
+  });
+
+  it("隐藏 SKILL.md frontmatter，只展示排版后的正文", () => {
+    const { container } = render(
+      <SkillPreviewDialog
+        canManage
+        markdown={"---\nname: workspace-files\nslug: workspace-files\ndescription: 管理交付物。\n---\n\n# 工作区文件管理\n\n## 背景\n\n正文说明。"}
+        onClose={vi.fn()}
+        onManage={vi.fn()}
+        onToggleEnabled={vi.fn()}
+        onUninstall={vi.fn()}
+        skill={upload}
+      />,
+    );
+
+    const body = container.querySelector(".work-preview-body") as HTMLElement;
+    expect(within(body).queryByText(/name: workspace-files/)).not.toBeInTheDocument();
+    expect(within(body).getByRole("heading", { level: 1, name: "工作区文件管理" })).toBeInTheDocument();
+    expect(within(body).getByRole("heading", { level: 2, name: "背景" })).toBeInTheDocument();
+    expect(within(body).getByText("正文说明。")).toBeInTheDocument();
+  });
+
+  it("主次操作使用与 Daily 共用的按钮语义类", () => {
+    render(
+      <SkillPreviewDialog
+        canManage
+        markdown=""
+        onClose={vi.fn()}
+        onManage={vi.fn()}
+        onToggleEnabled={vi.fn()}
+        onUninstall={vi.fn()}
+        skill={upload}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "关闭" })).toHaveClass("skill-action-secondary");
+    expect(screen.getByRole("button", { name: "去管理" })).toHaveClass("skill-action-primary");
   });
 
   it("禁用状态显示已禁用标签，开关可切换", () => {

@@ -44,17 +44,17 @@ export function SkillCatalogDrawer({
         onClick={onClose}
         type="button"
       />
-      <aside
+      <section
         aria-labelledby={titleId}
         aria-modal="true"
-        className="skill-detail-drawer"
+        className="skill-detail-dialog"
         role="dialog"
       >
         <header className="skill-detail-drawer-heading">
           <div>
             <span className="skill-detail-drawer-source">{SKILL_SOURCE_LABELS[item.source]}</span>
-            <h2 id={titleId}>{item.title}</h2>
-            <code>{item.name}</code>
+            <h2 className="skill-detail-title" id={titleId}>{item.title}</h2>
+            <code className="skill-detail-slug">{item.name}</code>
           </div>
           <button
             aria-label="关闭 Skill 详情"
@@ -97,7 +97,7 @@ export function SkillCatalogDrawer({
             </div>
           ) : <p>未声明工具</p>}
         </section>
-      </aside>
+      </section>
     </div>
   );
 }
