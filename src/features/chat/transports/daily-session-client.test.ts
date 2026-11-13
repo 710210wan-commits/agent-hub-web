@@ -37,6 +37,7 @@ const message = {
   revision: 1,
   status: "committed",
   artifactRefs: [],
+  capabilitySelection: null,
   createdAt: "2026-11-09T01:03:04.000Z",
 } as const;
 
@@ -66,6 +67,12 @@ function requestAt(fetchFn: ReturnType<typeof vi.fn>, index = 0) {
 }
 
 describe("daily Session client", () => {
+  it("sends the original explicit selection with canonical Turn input", async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ conversationId, turnId, taskId, userMessageId, acceptedEventSeq: "3", status: "queued", reused: false }, 202));
+    const capabilitySelection = { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] };
+    await createDailySessionClient({ fetchFn }).submitTurn(conversationId, { clientRequestId: requestId, input: { kind: "text", text: "hello" }, capabilitySelection });
+    expect(JSON.parse(String(requestAt(fetchFn).init.body)).capabilitySelection).toEqual(capabilitySelection);
+  });
   it("rejects a cross-origin API base before issuing a request", () => {
     expect(() =>
       createDailySessionClient({ apiBaseUrl: "https://evil.example/api" }),

@@ -62,6 +62,7 @@ function message(
     revision: 1,
     status: "committed",
     artifactRefs: [],
+    capabilitySelection: null,
     createdAt: "2026-11-09T01:00:00.000Z",
   };
 }

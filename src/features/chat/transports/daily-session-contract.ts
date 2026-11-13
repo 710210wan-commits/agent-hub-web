@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   AcceptedConversationTurnSchema,
+  CapabilitySelectionSchema,
   CancelledConversationTurnSchema,
   ConversationErrorSchema,
   ConversationEventPageSchema,
@@ -20,6 +21,7 @@ import {
 
 export {
   AcceptedConversationTurnSchema,
+  CapabilitySelectionSchema,
   CancelledConversationTurnSchema,
   ConversationEventPageSchema,
   ConversationListSchema,
@@ -44,6 +46,7 @@ export const DailySessionErrorEnvelopeSchema = ConversationErrorSchema;
 export type AcceptedConversationTurn = z.infer<
   typeof AcceptedConversationTurnSchema
 >;
+export type CapabilitySelection = z.infer<typeof CapabilitySelectionSchema>;
 export type CancelledConversationTurn = z.infer<
   typeof CancelledConversationTurnSchema
 >;

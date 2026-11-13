@@ -132,9 +132,9 @@ const conversationIdSchema = z.string().uuid();
 const pageLimitSchema = z.number().int().min(1).max(100);
 const eventPageLimitSchema = z.number().int().min(1).max(200);
 
-export function createDailySessionClient(
+export function createDailySessionJsonRequester(
   options: DailySessionClientOptions = {},
-): DailySessionClient {
+) {
   const apiBaseUrl = normalizeSameOriginBase(
     options.apiBaseUrl ?? "/agent-api",
   );
@@ -177,6 +177,16 @@ export function createDailySessionClient(
     }
     return parsed.data;
   }
+
+  return request;
+}
+
+export function createDailySessionClient(
+  options: DailySessionClientOptions = {},
+): DailySessionClient {
+  const request = createDailySessionJsonRequester(options);
+  const apiBaseUrl = normalizeSameOriginBase(options.apiBaseUrl ?? "/agent-api");
+  const fetchFn = options.fetchFn ?? fetch;
 
   return {
     async listConversations(input = {}, signal) {
@@ -377,7 +387,8 @@ function normalizeSameOriginBase(raw: string): string {
 async function readUnknownJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) throw error;
     if (!response.ok) return undefined;
     throw new DailySessionClientError({
       status: response.status,
@@ -416,6 +427,10 @@ function backendErrorMessage(code: string): string | undefined {
       return "事件记录已过期，请重新同步会话";
     case "CONVERSATION_EXECUTION_DISABLED":
       return "当前会话暂不可执行";
+    case "CAPABILITY_UNAVAILABLE":
+      return "所选能力已不可用，请重新选择";
+    case "CAPABILITY_SELECTION_NOT_ALLOWED":
+      return "当前场景不支持选择能力";
     default:
       return undefined;
   }

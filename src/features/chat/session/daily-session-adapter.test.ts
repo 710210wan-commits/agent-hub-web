@@ -25,6 +25,7 @@ function message(
     revision: 1,
     status: "committed",
     artifactRefs: [],
+    capabilitySelection: null,
     createdAt: "2026-11-09T01:03:04.000Z",
     ...overrides,
   };

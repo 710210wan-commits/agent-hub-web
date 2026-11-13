@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   ConversationListSchema,
+  ConversationMessageSchema,
+  SubmitConversationTurnRequestSchema,
   ConversationMessagePageSchema,
   ConversationMetadataSchema,
   ConversationPublicEventSchema,
@@ -41,10 +43,20 @@ const message = {
   revision: 1,
   status: "committed",
   artifactRefs: [],
+  capabilitySelection: null,
   createdAt: "2026-11-09T01:03:04.000Z",
 } as const;
 
 describe("generated conversation.v1 contract", () => {
+  it("accepts selected turns and preserves read-only historical selection", () => {
+    const capabilitySelection = { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] };
+    expect(SubmitConversationTurnRequestSchema.parse({ clientRequestId: messageId, input: { kind: "text", text: "hello" }, capabilitySelection }).capabilitySelection).toEqual(capabilitySelection);
+    expect(ConversationMessageSchema.parse({ ...message, role: "user", capabilitySelection }).capabilitySelection).toEqual(capabilitySelection);
+    expect(SubmitConversationTurnRequestSchema.safeParse({ clientRequestId: messageId, input: { kind: "text", text: "hello" }, capabilitySelection: { ...capabilitySelection, token: "secret" } }).success).toBe(false);
+    const { capabilitySelection: omitted, ...missing } = { ...message, capabilitySelection: null };
+    expect(omitted).toBeNull();
+    expect(ConversationMessageSchema.safeParse(missing).success).toBe(false);
+  });
   it("accepts the exact metadata and list response shapes", () => {
     expect(ConversationMetadataSchema.parse(metadata)).toEqual(metadata);
     expect(

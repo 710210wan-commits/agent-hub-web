@@ -506,6 +506,7 @@ function createMessage(item, turnId, role, text) {
     revision: 1,
     status: "committed",
     artifactRefs: [],
+    capabilitySelection: null,
     createdAt: now(),
   };
 }

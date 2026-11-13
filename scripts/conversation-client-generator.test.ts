@@ -39,8 +39,9 @@ describe("conversation client generation", () => {
 
     expect(operations).toContain("export const conversationOperationSchemas = {");
     expect(operations.match(/^  [A-Za-z_$][A-Za-z0-9_$]*: \{$/gm)).toHaveLength(
-      18,
+      19,
     );
+    expect(operations).toContain("getConversationCapabilities");
     expect(operations).toContain("streamConversationEventsResponseSchema = z.string()");
     expect(operations).not.toContain("parseEventStream");
   });
