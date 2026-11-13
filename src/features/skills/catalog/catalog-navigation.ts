@@ -6,7 +6,13 @@ import {
 } from "./catalog-filter";
 
 const SOURCES = new Set<SkillCatalogFilter["source"]>(["all", "built-in", "market"]);
-const STATUSES = new Set<SkillCatalogFilter["status"]>(["all", "available", "conflict"]);
+const STATUSES = new Set<SkillCatalogFilter["status"]>([
+  "all",
+  "built-in-active",
+  "enabled",
+  "installable",
+  "blocked",
+]);
 
 export function parseSkillCatalogFilter(params: Pick<URLSearchParams, "get">): SkillCatalogFilter {
   const source = params.get("source") as SkillCatalogFilter["source"] | null;

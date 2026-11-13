@@ -142,7 +142,8 @@ export function SkillEditor({
           <button className="work-back-button" onClick={onBack} type="button">← 返回 Work Skill</button>
         </div>
         <div className="work-detail-identity" data-region="identity">
-          <h1>{skill.name}</h1>
+          <h1 className="skill-detail-title">{skill.name}</h1>
+          <code className="skill-detail-slug">{skill.slug}</code>
           <p>{sourceLabel(skill)}{skill.enabled ? "" : " · 已禁用"}</p>
         </div>
         <div className="work-detail-actions" data-region="actions">

@@ -1,24 +1,15 @@
 "use client";
 
-import { BookMarked, Check, Minus, Plus } from "lucide-react";
+import { Check, Minus, Plus } from "lucide-react";
 
+import { SkillCardIcon, skillCardTint } from "@/features/skills/components/skill-card-icon";
 import type { WorkSkill } from "./contracts";
 import type { RecommendedSkill } from "./work-recommended";
 
-const TINTS = ["violet", "cyan", "blue", "amber", "green", "rose"] as const;
-
-export function workSkillTint(name: string): (typeof TINTS)[number] {
-  let hash = 0;
-  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) % 997;
-  return TINTS[hash % TINTS.length];
-}
+export const workSkillTint = skillCardTint;
 
 export function WorkSkillIcon({ name }: { name: string }) {
-  return (
-    <span className={`work-card-icon work-tint-${workSkillTint(name)}`}>
-      <BookMarked aria-hidden="true" size={15} />
-    </span>
-  );
+  return <SkillCardIcon name={name} />;
 }
 
 export interface InstalledWorkSkillCardProps {

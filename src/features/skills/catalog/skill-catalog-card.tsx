@@ -1,4 +1,5 @@
 import type { CatalogItemViewModel } from "../contracts/catalog-view-model";
+import { SkillCardIcon } from "../components/skill-card-icon";
 import { SKILL_INSTALL_STATE_LABELS, SKILL_SOURCE_LABELS } from "./skill-catalog-labels";
 
 export function SkillCatalogCard({
@@ -21,10 +22,13 @@ export function SkillCatalogCard({
 
   const content = (
     <>
-      <div className="resource-card-copy">
-        <h2 className="skill-card-title">{item.title}</h2>
-        <span>{item.description || "暂无描述"}</span>
-        <small>{meta.join(" · ")}</small>
+      <div className="skill-catalog-card-main">
+        <SkillCardIcon name={item.name} />
+        <div className="resource-card-copy">
+          <h2 className="skill-card-title">{item.title}</h2>
+          <span>{item.description || "暂无描述"}</span>
+          <small>{meta.join(" · ")}</small>
+        </div>
       </div>
       <div className="skill-catalog-badges" aria-label="Skill 状态">
         <span className="skill-badge">{SKILL_SOURCE_LABELS[item.source]}</span>

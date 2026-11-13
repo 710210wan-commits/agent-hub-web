@@ -56,13 +56,23 @@ test("daily Skill plaza loads the catalog and filters it without another request
   await page.goto("/skills?mode=daily");
   await expect(page.getByRole("heading", { name: "Alpha Query" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Beta Report" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "查看 Alpha Query 详情" }).locator(".skill-card-icon")).toBeVisible();
   await expect(page.getByRole("button", { name: "刷新" })).toHaveCount(0);
+  const dailyPrimary = page.getByRole("link", { name: "创建 Skill" });
+  await expect(dailyPrimary).toHaveCSS("background-color", "rgb(49, 94, 234)");
+  await expect(page.getByRole("link", { name: "发布管理" })).toHaveCSS("background-color", "rgb(255, 255, 255)");
   const requestsAfterInitialLoad = catalogRequests;
 
   await page.getByRole("searchbox", { name: "搜索 Skill" }).fill("document-render");
   await expect(page.getByRole("heading", { name: "Beta Report" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Alpha Query" })).toHaveCount(0);
   expect(catalogRequests).toBe(requestsAfterInitialLoad);
+
+  await page.getByRole("searchbox", { name: "搜索 Skill" }).fill("");
+  await page.getByRole("button", { name: "查看 Alpha Query 详情" }).click();
+  const dialog = page.getByRole("dialog", { name: "Alpha Query" });
+  await expect(dialog).toHaveClass(/skill-detail-dialog/);
+  await expect(dialog.getByText("查询日常目标")).toBeVisible();
 });
 
 test("work Skill page never requests the daily catalog", async ({ page }) => {

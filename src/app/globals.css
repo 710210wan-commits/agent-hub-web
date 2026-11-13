@@ -434,6 +434,62 @@ a {
   font-size: 12px;
 }
 
+.skill-catalog-select {
+  position: relative;
+  display: inline-flex;
+  width: 144px;
+  height: 42px;
+  align-items: center;
+}
+
+.skill-catalog-controls .skill-catalog-select-control {
+  width: 100%;
+  height: 100%;
+  appearance: none;
+  border-color: #deded9;
+  border-radius: 12px;
+  background: var(--color-surface);
+  padding: 0 38px;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 560;
+  text-align: center;
+  text-align-last: center;
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.skill-catalog-controls .skill-catalog-select-control:hover {
+  border-color: #c9c9c3;
+  background: #fbfbf9;
+}
+
+.skill-catalog-controls .skill-catalog-select-control:focus {
+  border-color: color-mix(in srgb, var(--color-accent), white 22%);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent), transparent 88%);
+}
+
+.skill-catalog-select-control option {
+  color: var(--color-text);
+  font-weight: 400;
+  text-align: left;
+}
+
+.skill-catalog-select-icon {
+  position: absolute;
+  right: 14px;
+  flex: none;
+  color: #5f6066;
+  pointer-events: none;
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.skill-catalog-select:focus-within .skill-catalog-select-icon {
+  color: var(--color-accent);
+  transform: translateY(1px);
+}
+
 .skill-catalog-clear {
   border: 0;
   background: transparent;
@@ -450,9 +506,18 @@ a {
 
 .skill-catalog-badges {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
+}
+
+.skill-catalog-card-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .skill-card-title {
@@ -465,6 +530,7 @@ a {
 .skill-catalog-card-link {
   display: flex;
   width: 100%;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
   border: 0;
@@ -511,18 +577,20 @@ a {
 }
 
 .skill-catalog-actions .skill-page-action {
-  border: 0;
+  border: 1px solid var(--color-border);
   border-radius: 9px;
-  background: #25262a;
+  background: var(--color-surface);
   padding: 9px 13px;
-  color: white;
+  color: var(--color-text);
   font-size: 12px;
   line-height: 1;
   text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
 .skill-catalog-actions .skill-page-action:hover {
-  background: #35363b;
+  border-color: #d6d6d1;
+  background: #f7f7f4;
 }
 
 .skill-catalog-actions button.skill-page-action {
@@ -534,12 +602,20 @@ a {
   opacity: 0.5;
 }
 
-.skill-catalog-actions .skill-page-action-primary {
+.skill-catalog-actions .skill-page-action-primary,
+.skill-catalog-actions .skill-action-primary {
+  border-color: var(--color-accent);
   background: var(--color-accent);
+  color: #fff;
 }
 
-.skill-catalog-actions .skill-page-action-primary:hover {
+.skill-catalog-actions .skill-page-action-primary:hover,
+.skill-catalog-actions .skill-action-primary:hover,
+.skill-catalog-actions .skill-page-action-primary:active,
+.skill-catalog-actions .skill-action-primary:active {
+  border-color: color-mix(in srgb, var(--color-accent), black 14%);
   background: color-mix(in srgb, var(--color-accent), black 14%);
+  color: #fff;
 }
 
 .skill-detail-drawer-layer {
@@ -547,7 +623,9 @@ a {
   z-index: 60;
   inset: 0;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
 .skill-detail-drawer-backdrop {
@@ -558,15 +636,16 @@ a {
   cursor: default;
 }
 
-.skill-detail-drawer {
+.skill-detail-dialog {
   position: relative;
-  width: min(100%, 560px);
-  height: 100%;
+  width: min(100%, 720px);
+  max-height: calc(100vh - 48px);
   overflow-y: auto;
-  border-left: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
   background: var(--color-surface);
-  box-shadow: -18px 0 48px rgb(20 20 20 / 12%);
-  padding: 28px;
+  box-shadow: 0 20px 60px rgb(20 20 20 / 18%);
+  padding: 32px;
 }
 
 .skill-detail-drawer-heading {
@@ -577,15 +656,26 @@ a {
 }
 
 .skill-detail-drawer-heading h2 {
-  margin: 9px 0 5px;
-  font-size: 22px;
+  margin: 9px 0 6px;
+  font-size: 25px;
+  font-weight: 620;
+  letter-spacing: -0.025em;
   line-height: 1.25;
 }
 
 .skill-detail-drawer-heading code {
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 12px;
   overflow-wrap: anywhere;
+}
+
+.skill-detail-title {
+  letter-spacing: -0.025em;
+}
+
+.skill-detail-slug {
+  color: var(--color-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .skill-detail-drawer-source {
@@ -1538,6 +1628,17 @@ a {
 
   .resource-grid {
     grid-template-columns: 1fr;
+  }
+
+  .skill-detail-drawer-layer {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .skill-detail-dialog {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    padding: 24px 20px;
   }
 
   .creator-form-grid,
@@ -3459,9 +3560,12 @@ a {
   color: var(--color-text);
   cursor: pointer;
   font-size: 12px;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
-.work-button:hover:not(:disabled):not(.is-disabled) {
+.work-button:hover:not(:disabled):not(.is-disabled),
+.work-button:active:not(:disabled):not(.is-disabled) {
+  border-color: #d6d6d1;
   background: #f7f7f4;
 }
 
@@ -3471,14 +3575,30 @@ a {
   opacity: 0.5;
 }
 
-.work-button-primary {
+.work-button-primary,
+.work-button.skill-action-primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
   color: #fff;
 }
 
-.work-button-primary:hover:not(:disabled) {
-  background: #254ed0;
+.work-button-primary:hover:not(:disabled):not(.is-disabled),
+.work-button-primary:active:not(:disabled):not(.is-disabled),
+.work-button.skill-action-primary:hover:not(:disabled):not(.is-disabled),
+.work-button.skill-action-primary:active:not(:disabled):not(.is-disabled) {
+  border-color: color-mix(in srgb, var(--color-accent), black 14%);
+  background: color-mix(in srgb, var(--color-accent), black 14%);
+  color: #fff;
+}
+
+.work-button-primary:disabled,
+.work-button-primary.is-disabled,
+.work-button.skill-action-primary:disabled,
+.work-button.skill-action-primary.is-disabled {
+  border-color: color-mix(in srgb, var(--color-accent), white 52%);
+  background: color-mix(in srgb, var(--color-accent), white 52%);
+  color: #fff;
+  opacity: 1;
 }
 
 .work-button-danger {
@@ -4016,6 +4136,7 @@ a {
 /* ---- 预览 ---- */
 
 .work-preview-dialog {
+  width: min(100%, 760px);
   padding: 0;
 }
 
@@ -4035,14 +4156,19 @@ a {
 
 .work-preview-title h2 {
   margin: 0 0 4px;
-  font-size: 17px;
+  font-size: 25px;
   font-weight: 620;
 }
 
+.work-preview-title .skill-detail-slug {
+  display: block;
+  font-size: 12px;
+}
+
 .work-preview-title p {
-  margin: 0;
+  margin: 7px 0 0;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .work-preview-disabled-tag {
@@ -4053,9 +4179,9 @@ a {
 
 .work-preview-body {
   min-height: 240px;
-  padding: 24px;
-  font-size: 12px;
-  line-height: 1.7;
+  padding: 30px 32px 34px;
+  font-size: 14px;
+  line-height: 1.8;
 }
 
 .work-preview-status {
@@ -4064,21 +4190,121 @@ a {
   font-size: 12px;
 }
 
+.work-markdown {
+  color: #565861;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
 .work-markdown h1 {
-  margin: 0 0 12px;
-  font-size: 19px;
+  margin: 0 0 24px;
+  color: var(--color-text);
+  font-size: 28px;
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  line-height: 1.3;
 }
 
 .work-markdown h2 {
-  margin: 18px 0 8px;
-  font-size: 14px;
+  margin: 30px 0 12px;
+  color: var(--color-text);
+  font-size: 19px;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
 }
 
-.work-markdown p,
+.work-markdown h3 {
+  margin: 24px 0 10px;
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 620;
+  line-height: 1.45;
+}
+
+.work-markdown p {
+  margin: 0 0 15px;
+}
+
+.work-markdown ul,
+.work-markdown ol {
+  margin: 0 0 18px;
+  padding-left: 24px;
+}
+
 .work-markdown li {
-  margin: 0 0 8px;
-  font-size: 12px;
-  line-height: 1.7;
+  margin: 6px 0;
+  padding-left: 3px;
+}
+
+.work-markdown strong {
+  color: #34353a;
+  font-weight: 650;
+}
+
+.work-markdown code {
+  border-radius: 5px;
+  background: #f2f3f7;
+  padding: 2px 5px;
+  color: #5a6172;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.work-markdown pre {
+  overflow-x: auto;
+  margin: 0 0 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #f7f7f5;
+  padding: 15px 16px;
+}
+
+.work-markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.work-markdown blockquote {
+  margin: 18px 0;
+  border-left: 3px solid color-mix(in srgb, var(--color-accent), white 38%);
+  background: color-mix(in srgb, var(--color-accent), white 96%);
+  padding: 10px 14px;
+  color: #646773;
+}
+
+.work-markdown blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.work-markdown hr {
+  margin: 26px 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.work-markdown a {
+  color: var(--color-accent);
+  text-underline-offset: 3px;
+}
+
+.work-markdown table {
+  width: 100%;
+  margin: 0 0 18px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.work-markdown th,
+.work-markdown td {
+  border: 1px solid var(--color-border);
+  padding: 9px 11px;
+  text-align: left;
+}
+
+.work-markdown th {
+  background: #f7f7f5;
+  color: var(--color-text);
 }
 
 .work-preview-footer {
@@ -4192,8 +4418,14 @@ a {
 
 .work-detail-identity h1 {
   margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 650;
+  font-size: 25px;
+  font-weight: 620;
+}
+
+.work-detail-identity .skill-detail-slug {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
 }
 
 .work-detail-identity p {
@@ -4527,6 +4759,33 @@ a {
 
   .work-grid {
     grid-template-columns: 1fr;
+  }
+
+  .work-preview-head {
+    align-items: flex-start;
+    padding: 18px 20px;
+  }
+
+  .work-preview-title {
+    align-items: flex-start;
+  }
+
+  .work-preview-body {
+    padding: 24px 20px 28px;
+  }
+
+  .work-markdown h1 {
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  .work-markdown h2 {
+    margin-top: 26px;
+    font-size: 18px;
+  }
+
+  .work-preview-footer {
+    padding: 14px 20px;
   }
 
   .work-detail-page {

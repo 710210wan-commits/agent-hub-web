@@ -1,15 +1,21 @@
 "use client";
 
-import { BookMarked } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { SkillCardIcon } from "@/features/skills/components/skill-card-icon";
 import type { WorkSkill } from "./contracts";
 
 export function workSkillSourceLabel(sourceType: string): string {
   if (sourceType === "builtin") return "内置";
   if (sourceType === "remote") return "远程";
   return "上传";
+}
+
+export function stripWorkSkillFrontmatter(markdown: string): string {
+  return markdown
+    .replace(/^\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, "")
+    .trimStart();
 }
 
 export interface SkillPreviewDialogProps {
@@ -40,6 +46,7 @@ export function SkillPreviewDialog({
 }: SkillPreviewDialogProps) {
   const enabled = skill.enabled !== false;
   const canDelete = canManage && !skill.is_builtin;
+  const visibleMarkdown = stripWorkSkillFrontmatter(markdown);
 
   return (
     <div className="work-overlay">
@@ -47,11 +54,10 @@ export function SkillPreviewDialog({
       <section aria-modal="true" className="work-modal work-preview-dialog" role="dialog">
         <header className="work-preview-head">
           <div className="work-preview-title">
-            <span className="work-card-icon work-tint-blue">
-              <BookMarked aria-hidden="true" size={16} />
-            </span>
+            <SkillCardIcon name={skill.slug} size={16} />
             <div>
-              <h2>{skill.name}</h2>
+              <h2 className="skill-detail-title">{skill.name}</h2>
+              <code className="skill-detail-slug">{skill.slug}</code>
               <p>
                 {workSkillSourceLabel(skill.source_type)} Skill
                 {!enabled ? <em className="work-preview-disabled-tag">已禁用</em> : null}
@@ -74,12 +80,12 @@ export function SkillPreviewDialog({
         <div className="work-preview-body">
           {loading ? <p className="work-preview-status">正在读取 SKILL.md…</p> : null}
           {!loading && error ? <p className="work-preview-status">{error}</p> : null}
-          {!loading && !error && markdown ? (
+          {!loading && !error && visibleMarkdown ? (
             <div className="work-markdown">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{visibleMarkdown}</ReactMarkdown>
             </div>
           ) : null}
-          {!loading && !error && !markdown ? <p className="work-preview-status">未读取到 SKILL.md</p> : null}
+          {!loading && !error && !visibleMarkdown ? <p className="work-preview-status">未读取到 SKILL.md</p> : null}
         </div>
 
         <footer className="work-preview-footer">
@@ -91,10 +97,10 @@ export function SkillPreviewDialog({
             ) : null}
           </div>
           <div className="work-preview-footer-right">
-            <button className="work-button" onClick={onClose} type="button">
+            <button className="work-button skill-action-secondary" onClick={onClose} type="button">
               关闭
             </button>
-            <button className="work-button work-button-primary" onClick={onManage} type="button">
+            <button className="work-button work-button-primary skill-action-primary" onClick={onManage} type="button">
               去管理
             </button>
           </div>

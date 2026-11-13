@@ -4,7 +4,7 @@ export interface SkillCatalogFilter {
   search: string;
   category: string;
   source: "all" | CatalogItemViewModel["source"];
-  status: "all" | "available" | "conflict";
+  status: "all" | CatalogItemViewModel["installState"];
 }
 
 export const EMPTY_SKILL_CATALOG_FILTER: SkillCatalogFilter = {
@@ -53,8 +53,7 @@ export function filterSkillCatalogEntries(
       if (search && !haystack.includes(search)) return false;
       if (filter.category !== "all" && item.categoryLabel !== filter.category) return false;
       if (filter.source !== "all" && item.source !== filter.source) return false;
-      if (filter.status === "available" && item.conflict) return false;
-      if (filter.status === "conflict" && !item.conflict) return false;
+      if (filter.status !== "all" && item.installState !== filter.status) return false;
       return true;
     })
     .map(({ item }) => item);

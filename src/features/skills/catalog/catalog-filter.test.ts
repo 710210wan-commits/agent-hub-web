@@ -103,8 +103,14 @@ describe("filterSkillCatalogEntries", () => {
     const marketReport = filterSkillCatalogEntries(entries, filter({ source: "market", category: "市场发布" }));
     expect(marketReport.map((entry) => entry.id)).toEqual(["market:beta"]);
 
-    const conflictOnly = filterSkillCatalogEntries(entries, filter({ status: "conflict" }));
-    expect(conflictOnly.map((entry) => entry.id)).toEqual(["market:gamma"]);
+    const runningOnly = filterSkillCatalogEntries(entries, filter({ status: "built-in-active" }));
+    expect(runningOnly.map((entry) => entry.id)).toEqual(["built-in:alpha"]);
+
+    const enabledOnly = filterSkillCatalogEntries(entries, filter({ status: "enabled" }));
+    expect(enabledOnly.map((entry) => entry.id)).toEqual(["market:beta"]);
+
+    const blockedOnly = filterSkillCatalogEntries(entries, filter({ status: "blocked" }));
+    expect(blockedOnly.map((entry) => entry.id)).toEqual(["market:gamma"]);
 
     const gisMarket = filterSkillCatalogEntries(entries, filter({ search: "gis", source: "market" }));
     expect(gisMarket.map((entry) => entry.id)).toEqual(["market:gamma"]);
@@ -129,7 +135,7 @@ describe("isSkillCatalogFilterActive", () => {
     expect(isSkillCatalogFilterActive(filter({ search: "gis" }))).toBe(true);
     expect(isSkillCatalogFilterActive(filter({ category: "内置 Skill" }))).toBe(true);
     expect(isSkillCatalogFilterActive(filter({ source: "market" }))).toBe(true);
-    expect(isSkillCatalogFilterActive(filter({ status: "conflict" }))).toBe(true);
+    expect(isSkillCatalogFilterActive(filter({ status: "installable" }))).toBe(true);
   });
 });
 
