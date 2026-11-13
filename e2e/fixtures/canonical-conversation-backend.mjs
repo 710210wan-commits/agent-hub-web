@@ -16,6 +16,10 @@ const state = {
   conversations: new Map(),
   streams: new Map(),
   kbStatus: null,
+  catalogStatus: null,
+  skillUnavailable: false,
+  unknownNextSubmit: false,
+  submissions: [],
 };
 
 resetState();
@@ -58,6 +62,19 @@ const server = http.createServer(async (request, response) => {
     return;
   }
   const userKey = session.userKey;
+  if (url.pathname === "/api/conversation-capabilities") {
+    if (state.catalogStatus) {
+      sendError(response, state.catalogStatus, state.catalogStatus === 401 ? "AUTH_REQUIRED" : "FORBIDDEN");
+      return;
+    }
+    sendJson(response, 200, { schemaVersion: 1, scenarioId: "daily",
+      knowledgeBases: { status: "available", items: [{ id: `kb-${userKey}`, name: userKey === "alice" ? "Alice 可选知识库" : "Bob 可选知识库", description: "controlled fixture", type: "vector", supportsDocuments: true }] },
+      skills: state.skillUnavailable ? { status: "unavailable", items: [], reasonCode: "SKILL_CATALOG_UNAVAILABLE" }
+        : { status: "available", items: [{ id: "built-in:aircraft-region-query", name: "aircraft-region-query", title: "飞机查询", description: "controlled fixture", source: "built-in", revision: null }] },
+      mcpServers: { status: "unavailable", items: [], reasonCode: "MCP_PROVIDER_NOT_CONFIGURED" },
+    });
+    return;
+  }
   if (url.pathname.startsWith("/api/kb/")) {
     handleKnowledge(response, userKey);
     return;
@@ -90,6 +107,10 @@ function resetState() {
     ]])],
   ]);
   state.kbStatus = null;
+  state.catalogStatus = null;
+  state.skillUnavailable = false;
+  state.unknownNextSubmit = false;
+  state.submissions = [];
 }
 
 async function handleAuth(request, response, url) {
@@ -276,13 +297,14 @@ async function handleConversation(request, response, url, userKey) {
 }
 
 async function submitTurn(item, body, response) {
-  if (item.activeTurn && !isTerminal(item.activeTurn.status)) {
-    sendError(response, 409, "TURN_IN_PROGRESS");
-    return;
-  }
+  state.submissions.push({ conversationId: item.metadata.conversationId, body: structuredClone(body) });
   const reused = item.turnRequests.get(body?.clientRequestId);
   if (reused) {
     sendJson(response, 202, { ...reused, reused: true });
+    return;
+  }
+  if (item.activeTurn && !isTerminal(item.activeTurn.status)) {
+    sendError(response, 409, "TURN_IN_PROGRESS");
     return;
   }
   const turnIndex = String(item.turns.length + 1);
@@ -294,6 +316,7 @@ async function submitTurn(item, body, response) {
     "user",
     body?.input?.text ?? "",
   );
+  userMessage.capabilitySelection = structuredClone(body.capabilitySelection ?? null);
   item.messages.push(userMessage);
   appendEvent(item, "message.created", { message: userMessage }, {
     turnId,
@@ -326,6 +349,11 @@ async function submitTurn(item, body, response) {
     reused: false,
   };
   item.turnRequests.set(body?.clientRequestId, receipt);
+  if (state.unknownNextSubmit) {
+    state.unknownNextSubmit = false;
+    sendError(response, 503, "STORAGE_UNAVAILABLE");
+    return;
+  }
   sendJson(response, 202, receipt);
 }
 
@@ -356,6 +384,17 @@ function cancelTurn(item, turnId, response) {
 }
 
 async function handleControl(body, response) {
+  if (body?.action === "catalog") {
+    state.catalogStatus = body.status ?? null;
+    state.skillUnavailable = body.skillUnavailable === true;
+    sendJson(response, 200, { ok: true });
+    return;
+  }
+  if (body?.action === "unknown-next-submit") {
+    state.unknownNextSubmit = true;
+    sendJson(response, 200, { ok: true });
+    return;
+  }
   if (body?.action === "next-kb-status" && [401, 403].includes(body.status)) {
     state.kbStatus = body.status;
     if (body.status === 401) state.sessions.clear();
@@ -369,6 +408,14 @@ async function handleControl(body, response) {
   }
   if (body?.action === "disconnect") {
     closeStreams(item.metadata.conversationId);
+    sendJson(response, 200, { ok: true });
+    return;
+  }
+  if (body?.action === "revoke" && item.activeTurn) {
+    const turn = item.activeTurn;
+    turn.status = "failed";
+    turn.errorCode = "CAPABILITY_UNAVAILABLE";
+    appendEvent(item, "turn.failed", { turn }, { turnId: turn.turnId, taskId: turn.taskId });
     sendJson(response, 200, { ok: true });
     return;
   }
@@ -570,6 +617,7 @@ function findConversation(conversationId) {
 function publicState() {
   return {
     calls: state.calls,
+    submissions: state.submissions,
     conversations: [...state.conversations.values()].flatMap((items) =>
       [...items.values()].map((item) => ({
         conversationId: item.metadata.conversationId,
@@ -577,6 +625,7 @@ function publicState() {
         messageCount: item.messages.length,
         streamCount: state.streams.get(item.metadata.conversationId)?.size ?? 0,
         activeTurnStatus: item.activeTurn?.status ?? null,
+        errorCode: item.activeTurn?.errorCode ?? null,
       })),
     ),
   };

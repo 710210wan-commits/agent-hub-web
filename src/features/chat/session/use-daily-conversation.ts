@@ -462,7 +462,7 @@ export function useDailyConversation({
           return;
         }
         if (isNetworkUnknown(error)) {
-          commit({ type: "pending.status", status: "unknown" });
+          commit({ type: "pending.status", status: "unknown", notice: "发送结果尚未确认，请重试确认原请求" });
           return;
         }
         commit({
@@ -638,7 +638,8 @@ function isTurnInProgress(error: unknown): boolean {
 }
 
 function isNetworkUnknown(error: unknown): boolean {
-  return isClientCode(error, "NETWORK_ERROR") || isDisconnected(error);
+  return isClientCode(error, "NETWORK_ERROR") || isDisconnected(error)
+    || (error instanceof DailySessionClientError && error.status === 503);
 }
 
 function safeMessage(error: unknown, fallback: string): string {
