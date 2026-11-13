@@ -395,11 +395,14 @@ describe("useDailyConversation", () => {
       }),
     );
 
-    await act(async () => void (await result.current.submit("问题")));
+    const selection = { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] };
+    await act(async () => void (await result.current.submit("问题", selection)));
+    selection.knowledgeBaseIds.push("kb-late");
     expect(result.current.state.pendingSend).toMatchObject({
       clientRequestId: turnKey,
       content: "问题",
       status: "unknown",
+      capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] },
     });
     expect(onConversationResolved).not.toHaveBeenCalled();
     await act(async () => void (await result.current.retrySubmit()))
@@ -413,13 +416,13 @@ describe("useDailyConversation", () => {
     expect(submitTurn).toHaveBeenNthCalledWith(
       1,
       conversationId,
-      { clientRequestId: turnKey, input: { kind: "text", text: "问题" } },
+      { clientRequestId: turnKey, input: { kind: "text", text: "问题" }, capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] } },
       expect.any(AbortSignal),
     );
     expect(submitTurn).toHaveBeenNthCalledWith(
       2,
       conversationId,
-      { clientRequestId: turnKey, input: { kind: "text", text: "问题" } },
+      { clientRequestId: turnKey, input: { kind: "text", text: "问题" }, capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] } },
       expect.any(AbortSignal),
     );
     expect(onConversationResolved).toHaveBeenCalledWith(conversationId);

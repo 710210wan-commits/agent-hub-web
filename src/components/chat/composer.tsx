@@ -7,20 +7,7 @@ import type { AppMode } from "@/config/modes";
 import type { ChatRunState } from "@/features/chat/reducer/chat-state";
 
 import { CapabilitySelector } from "./capability-selector";
-
-const knowledgeOptions = [
-  { id: "project", label: "项目资料库" },
-  { id: "policy", label: "政策规范库" },
-  { id: "internal", label: "内部问答资料" },
-];
-const skillOptions = [
-  { id: "risk", label: "风险分析" },
-  { id: "report", label: "报告生成" },
-];
-const mcpOptions = [
-  { id: "weather", label: "天气数据" },
-  { id: "internal-data", label: "内部数据服务" },
-];
+import type { ConversationCapabilityCatalog } from "@/features/chat/capabilities/contracts";
 
 function isRunning(status: ChatRunState) {
   return status === "submitting" || status === "working" || status === "streaming";
@@ -36,6 +23,8 @@ export function Composer({
   onSend,
   onStop,
   capabilityMode,
+  capabilityCatalog,
+  capabilityNotice,
 }: {
   input: string;
   mode: AppMode;
@@ -46,11 +35,16 @@ export function Composer({
   onSend: () => void;
   onStop: () => void;
   capabilityMode?: "selectable" | "preconfigured" | "unavailable";
+  capabilityCatalog?: ConversationCapabilityCatalog;
+  capabilityNotice?: string;
 }) {
   const running = isRunning(status);
   const resolvedCapabilityMode =
-    capabilityMode ?? (mode === "work" ? "preconfigured" : "selectable");
+    capabilityMode ?? (mode === "work" ? "preconfigured" : "unavailable");
   const capabilitiesDisabled = resolvedCapabilityMode !== "selectable";
+  const sectionHint = (section?: { status: string; items: unknown[] }) => capabilitiesDisabled ? undefined
+    : capabilityNotice ?? (!section ? "加载中…" : section.status === "disabled" ? "已禁用"
+      : section.status !== "available" ? "暂不可用" : section.items.length === 0 ? "暂无可用项" : undefined);
   return (
     <div className="composer-dock">
       <div className="composer">
@@ -80,27 +74,30 @@ export function Composer({
             附件
           </button>
           <CapabilitySelector
-            disabled={capabilitiesDisabled}
+            disabled={capabilitiesDisabled || capabilityCatalog?.knowledgeBases.status !== "available" || !capabilityCatalog.knowledgeBases.items.length}
+            statusText={sectionHint(capabilityCatalog?.knowledgeBases)}
             label="知识库"
             onChange={(knowledgeBaseIds) =>
               onSelectionChange({ ...selection, knowledgeBaseIds })
             }
-            options={knowledgeOptions}
+            options={capabilityCatalog?.knowledgeBases.items.map(item => ({ id: item.id, label: item.name })) ?? []}
             selectedIds={selection.knowledgeBaseIds}
           />
           <CapabilitySelector
-            disabled={capabilitiesDisabled}
+            disabled={capabilitiesDisabled || capabilityCatalog?.skills.status !== "available" || !capabilityCatalog.skills.items.length}
+            statusText={sectionHint(capabilityCatalog?.skills)}
             label="Skill"
             onChange={(skillIds) => onSelectionChange({ ...selection, skillIds })}
-            options={skillOptions}
+            options={capabilityCatalog?.skills.items.map(item => ({ id: item.id, label: item.title })) ?? []}
             selectedIds={selection.skillIds}
           />
           <CapabilitySelector
-            disabled={capabilitiesDisabled}
+            disabled
+            statusText={capabilitiesDisabled ? undefined : "暂未接入"}
             label="MCP"
-            onChange={(mcpIds) => onSelectionChange({ ...selection, mcpIds })}
-            options={mcpOptions}
-            selectedIds={selection.mcpIds}
+            onChange={(mcpServerIds) => onSelectionChange({ ...selection, mcpServerIds })}
+            options={[]}
+            selectedIds={selection.mcpServerIds}
           />
           {resolvedCapabilityMode === "preconfigured" ? (
             <span className="composer-capability-note">

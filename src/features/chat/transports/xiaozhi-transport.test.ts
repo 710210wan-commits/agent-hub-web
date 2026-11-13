@@ -7,7 +7,7 @@ import { createXiaozhiTransport } from "./xiaozhi-transport";
 const emptySelection = {
   knowledgeBaseIds: [],
   skillIds: [],
-  mcpIds: [],
+  mcpServerIds: [],
 };
 
 function jsonResponse(body: unknown, status = 200): Response {

@@ -32,6 +32,15 @@ function message(
 }
 
 describe("daily Session message adapter", () => {
+  it("preserves historical selection independently of current catalog or caller edits", () => {
+    const input = message("old-message", { role: "user", capabilitySelection: {
+      knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: [],
+    } });
+    const projected = adaptDailySessionMessage(input);
+    input.capabilitySelection!.knowledgeBaseIds.push("later");
+    expect(projected.selection).toEqual({ knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: [] });
+    expect(Object.isFrozen(projected.selection!.knowledgeBaseIds)).toBe(true);
+  });
   it.each(["user", "assistant"] as const)(
     "maps %s text while preserving stable metadata",
     (role) => {
@@ -144,6 +153,7 @@ describe("daily Session message adapter", () => {
       clientRequestId: "50000000-0000-4000-8000-000000000005",
       content: "待确认问题",
       status: "unknown" as const,
+      capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
       userMessageId: "40000000-0000-4000-8000-000000000013",
     };
 
@@ -177,6 +187,7 @@ describe("daily Session message adapter", () => {
       clientRequestId: "50000000-0000-4000-8000-000000000005",
       content: "仍在编辑器中的草稿",
       status: "blocked",
+      capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
     });
 
     expect(projected).toEqual([]);

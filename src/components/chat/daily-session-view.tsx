@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { defaultDailyCapabilityClient, useDailyCapabilities, type DailyCapabilityClient } from "@/features/chat/capabilities/use-daily-capabilities";
 
 import { ErrorState } from "@/components/states/error-state";
 import { InlineError } from "@/components/states/inline-error";
@@ -24,16 +25,20 @@ export function DailySessionView({
   client,
   conversationId,
   onConversationResolved,
+  capabilityClient = defaultDailyCapabilityClient,
 }: {
   client: DailySessionClient;
   conversationId?: string;
   onConversationResolved?(conversationId: string): void;
+  capabilityClient?: DailyCapabilityClient;
 }) {
   const auth = useDailySessionAuthBridge();
   if (!auth.enabled) return <DailySessionAuthNotice />;
 
   return (
     <AuthenticatedDailySessionView
+      key={auth.identityGeneration}
+      capabilityClient={capabilityClient}
       client={client}
       conversationId={conversationId}
       identityGeneration={auth.identityGeneration}
@@ -44,12 +49,14 @@ export function DailySessionView({
 }
 
 function AuthenticatedDailySessionView({
+  capabilityClient,
   client,
   conversationId,
   identityGeneration,
   onAuthRequired,
   onConversationResolved,
 }: {
+  capabilityClient: DailyCapabilityClient;
   client: DailySessionClient;
   conversationId?: string;
   identityGeneration: number;
@@ -65,6 +72,7 @@ function AuthenticatedDailySessionView({
   });
   const [input, setInput] = useState("");
   const [selection, setSelection] = useState(createEmptySelection);
+  const capabilities = useDailyCapabilities(capabilityClient, identityGeneration, onAuthRequired);
   const hasInitialConversation = Boolean(conversationId);
   const isInitialLoading =
     hasInitialConversation &&
@@ -96,7 +104,7 @@ function AuthenticatedDailySessionView({
     const content = input.trim();
     if (!content) return;
     setInput("");
-    void controller.submit(content);
+    void controller.submit(content, selection);
   };
   const run = presentRun(controller.state);
   const showEmpty = controller.messages.length === 0 && !controller.state.conversation;
@@ -151,7 +159,9 @@ function AuthenticatedDailySessionView({
       ) : null}
 
       <Composer
-        capabilityMode="unavailable"
+        capabilityMode="selectable"
+        capabilityCatalog={capabilities.catalog}
+        capabilityNotice={capabilities.notice}
         input={input}
         mode="daily"
         onChange={setInput}

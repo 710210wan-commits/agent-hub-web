@@ -1859,6 +1859,23 @@ a {
   color: #3454bd;
 }
 
+.message-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  color: var(--muted-foreground, #71717a);
+  font-size: 11px;
+}
+
+.capability-history-chip {
+  padding: 3px 8px;
+  border: 1px solid #e4e4e7;
+  border-radius: 999px;
+  overflow-wrap: anywhere;
+}
+
 .capability-selector {
   position: relative;
 }

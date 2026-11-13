@@ -26,7 +26,7 @@ function hasSelections(selection: ChatSelectionSnapshot): boolean {
   return (
     selection.knowledgeBaseIds.length > 0 ||
     selection.skillIds.length > 0 ||
-    selection.mcpIds.length > 0
+    selection.mcpServerIds.length > 0
   );
 }
 

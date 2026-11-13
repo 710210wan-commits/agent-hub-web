@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { snapshotCapabilitySelection, type CapabilitySelection } from "../capabilities/contracts";
+import { createEmptySelection } from "../reducer/chat-state";
 
 import {
   DailySessionClientError,
@@ -37,7 +39,7 @@ export interface DailyConversationController {
   state: DailyConversationState;
   messages: DailySessionViewMessage[];
   conversationId?: string;
-  submit(content: string): Promise<void>;
+  submit(content: string, selection?: CapabilitySelection): Promise<void>;
   retrySubmit(): Promise<void>;
   cancel(): Promise<void>;
   reconnect(): void;
@@ -378,7 +380,7 @@ export function useDailyConversation({
   ]);
 
   const performSubmit = useCallback(
-    async (content: string, turnRequestId: string) => {
+    async (content: string, turnRequestId: string, capabilitySelection: CapabilitySelection) => {
       mutationControllerRef.current?.abort();
       const controller = new AbortController();
       mutationControllerRef.current = controller;
@@ -391,6 +393,7 @@ export function useDailyConversation({
         pending: {
           clientRequestId: turnRequestId,
           content,
+          capabilitySelection,
           status: "submitting",
           createdAt: Date.now(),
         },
@@ -432,6 +435,7 @@ export function useDailyConversation({
           {
             clientRequestId: turnRequestId,
             input: { kind: "text", text: content },
+            capabilitySelection,
           },
           controller.signal,
         );
@@ -472,13 +476,13 @@ export function useDailyConversation({
   );
 
   const submit = useCallback(
-    async (content: string) => {
+    async (content: string, selection: CapabilitySelection = createEmptySelection()) => {
       const normalized = content.trim();
       if (!normalized) return;
       if (!activeConversationRef.current && !createKeyRef.current) {
         createKeyRef.current = idFactoryRef.current();
       }
-      await performSubmit(normalized, idFactoryRef.current());
+      await performSubmit(normalized, idFactoryRef.current(), snapshotCapabilitySelection(selection));
     },
     [performSubmit],
   );
@@ -486,7 +490,7 @@ export function useDailyConversation({
   const retrySubmit = useCallback(async () => {
     const pending = stateRef.current.pendingSend;
     if (!pending) return;
-    await performSubmit(pending.content, pending.clientRequestId);
+    await performSubmit(pending.content, pending.clientRequestId, snapshotCapabilitySelection(pending.capabilitySelection));
   }, [performSubmit]);
 
   const cancel = useCallback(async () => {

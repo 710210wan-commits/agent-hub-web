@@ -22,6 +22,16 @@ const userMessageId = "40000000-0000-4000-8000-000000000004";
 const assistantMessageId = "50000000-0000-4000-8000-000000000005";
 const clientRequestId = "60000000-0000-4000-8000-000000000006";
 
+it("copies and freezes pending selection arrays at the reducer boundary", () => {
+  const capabilitySelection = { knowledgeBaseIds: ["kb-a"], skillIds: [], mcpServerIds: [] };
+  const state = dailyConversationReducer(createInitialDailyConversationState("test"), { type: "pending.start", pending: {
+    clientRequestId, content: "hello", status: "submitting", capabilitySelection,
+  } });
+  capabilitySelection.knowledgeBaseIds.push("kb-later");
+  expect(state.pendingSend?.capabilitySelection?.knowledgeBaseIds).toEqual(["kb-a"]);
+  expect(Object.isFrozen(state.pendingSend?.capabilitySelection?.knowledgeBaseIds)).toBe(true);
+});
+
 const metadata: ConversationMetadata = {
   conversationId,
   scenarioId: "daily",
@@ -118,6 +128,7 @@ function pendingState() {
         clientRequestId,
         content: "问题",
         status: "submitting",
+        capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
       },
     },
   );

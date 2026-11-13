@@ -5,6 +5,7 @@ import type {
   ConversationPublicEvent,
   ConversationSnapshot,
 } from "@/features/chat/transports/daily-session-contract";
+import { snapshotCapabilitySelection, type CapabilitySelection } from "../capabilities/contracts";
 
 export type DailyConversationStatus =
   | "idle"
@@ -32,6 +33,7 @@ export interface DailyActiveTurn {
 }
 
 export interface PendingDailySend {
+  capabilitySelection: CapabilitySelection;
   clientRequestId: string;
   content: string;
   status: "submitting" | "unknown" | "accepted" | "blocked" | "failed";
@@ -143,7 +145,7 @@ export function dailyConversationReducer(
     case "pending.start":
       return {
         ...state,
-        pendingSend: action.pending,
+        pendingSend: { ...action.pending, capabilitySelection: snapshotCapabilitySelection(action.pending.capabilitySelection) },
         status: "submitting",
         notice: null,
       };

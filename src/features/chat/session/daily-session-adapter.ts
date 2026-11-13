@@ -1,6 +1,7 @@
 import type { ChatMessage } from "@/features/chat/contracts/chat";
 import type { ConversationMessage } from "@/features/chat/transports/daily-session-contract";
 import type { PendingDailySend } from "./daily-conversation-reducer";
+import { snapshotCapabilitySelection } from "../capabilities/contracts";
 
 export interface DailySessionViewMessage extends ChatMessage {
   ordinal: string;
@@ -23,6 +24,7 @@ export function adaptDailySessionMessage(
     content: visibleContent(message),
     createdAt: Date.parse(message.createdAt),
     ordinal: message.ordinal,
+    ...(message.role === "user" && message.capabilitySelection ? { selection: snapshotCapabilitySelection(message.capabilitySelection) } : {}),
   };
 }
 
@@ -67,6 +69,7 @@ export function projectDailySessionMessages(
       createdAt: pending.createdAt ?? 0,
       ordinal: "pending",
       pending: true,
+      selection: snapshotCapabilitySelection(pending.capabilitySelection),
     },
   ];
 }

@@ -17,6 +17,13 @@ import { AuthProvider, useAuth } from "@/providers/auth-provider";
 
 import { DailySessionView } from "./daily-session-view";
 
+vi.mock("@/features/chat/capabilities/daily-capability-client", () => ({ createDailyCapabilityClient: () => ({ getCatalog: async () => ({
+  schemaVersion: 1, scenarioId: "daily",
+  knowledgeBases: { status: "available", items: [{ id: "kb-a", name: "真实资料库" }, { id: "kb-b", name: "第二资料库" }] },
+  skills: { status: "available", items: [{ id: "built-in:aircraft-region-query", title: "真实查询 Skill" }, { id: "market:report", title: "真实报告 Skill" }] },
+  mcpServers: { status: "unavailable", items: [], reasonCode: "MCP_PROVIDER_NOT_CONFIGURED" },
+}) }) }));
+
 const conversationId = "10000000-0000-4000-8000-000000000001";
 const userA = {
   id: "user-a",
@@ -195,21 +202,66 @@ function AuthStatusProbe() {
 }
 
 describe("DailySessionView", () => {
-  it("shows a GPT-style empty canonical chat with disabled capability selectors", async () => {
-    const client = makeClient();
+  it("keeps catalog 403 local and invalidates global auth on 401", async () => {
+    const capabilityClient = { getCatalog: vi.fn().mockRejectedValue(new DailySessionClientError({ status: 403, code: "FORBIDDEN", message: "denied" })) };
+    const view = render(<AuthProvider client={makeAuthClient()}><AuthStatusProbe /><DailySessionView client={makeClient()} capabilityClient={capabilityClient} /></AuthProvider>);
+    expect(await screen.findByText("知识库：暂无权限访问能力目录")).toBeInTheDocument();
+    expect(screen.getByTestId("auth-status")).toHaveTextContent("authenticated");
+    view.unmount();
+    const unauthorized = { getCatalog: vi.fn().mockRejectedValue(new DailySessionClientError({ status: 401, code: "AUTH_REQUIRED", message: "expired" })) };
+    render(<AuthProvider client={makeAuthClient()}><AuthStatusProbe /><DailySessionView client={makeClient()} capabilityClient={unauthorized} /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId("auth-status")).not.toHaveTextContent("authenticated"));
+  });
+  it("does not request capability catalog without authenticated identity", async () => {
+    const capabilityClient = { getCatalog: vi.fn() };
+    render(<AuthProvider client={makeAuthClient(vi.fn().mockResolvedValue({ enabled: true, user: null }))}><DailySessionView client={makeClient()} capabilityClient={capabilityClient} /></AuthProvider>);
+    await screen.findByRole("heading", { name: "完整登录后使用日常会话" });
+    expect(capabilityClient.getCatalog).not.toHaveBeenCalled();
+  });
+  it("shows section-specific disabled and unavailable states", async () => {
+    const capabilityClient = { getCatalog: vi.fn().mockResolvedValue({ schemaVersion: 1, scenarioId: "daily",
+      knowledgeBases: { status: "disabled", items: [], reasonCode: "KNOWLEDGE_BASE_DISABLED" },
+      skills: { status: "unavailable", items: [], reasonCode: "SKILL_CATALOG_UNAVAILABLE" },
+      mcpServers: { status: "unavailable", items: [], reasonCode: "MCP_PROVIDER_NOT_CONFIGURED" } }) };
+    render(<AuthProvider client={makeAuthClient()}><DailySessionView client={makeClient()} capabilityClient={capabilityClient} /></AuthProvider>);
+    expect(await screen.findByText("知识库：已禁用")).toBeInTheDocument();
+    expect(screen.getByText("Skill：暂不可用")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^知识库/ })).toBeDisabled();
+  });
+  it("shows persisted selection as read-only chips even when catalog resources disappeared", async () => {
+    const historical = { ...message("40000000-0000-4000-8000-000000000019", "1", "旧提问"), role: "user" as const,
+      capabilitySelection: { knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: [] } };
+    renderView(makeClient({ loadSnapshot: vi.fn(async () => snapshot([historical])) }));
+    expect(await screen.findByText("知识库 · deleted-kb")).toBeInTheDocument();
+    expect(screen.getByText("Skill · market:old-publication")).toBeInTheDocument();
+    expect(screen.getByLabelText("本轮能力").querySelector("button,input")).toBeNull();
+  });
+  it("loads real multi-select capabilities and keeps MCP unavailable", async () => {
+    const client = makeClient({ createConversation: vi.fn(async () => ({ conversation: metadata(), reused: false })), submitTurn: vi.fn(async () => accepted()) });
     renderView(client, undefined, makeAuthClient(), null);
 
     expect(
       await screen.findByRole("heading", { name: "今天想聊些什么？" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "消息" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^知识库/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /^Skill/ })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole("button", { name: /^知识库/ })).toBeEnabled());
+    expect(screen.getByRole("button", { name: /^Skill/ })).toBeEnabled();
     expect(screen.getByRole("button", { name: /^MCP/ })).toBeDisabled();
-    expect(
-      screen.getByText("当前持久会话暂未支持能力组合"),
-    ).toBeInTheDocument();
-    expect(client.loadSnapshot).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /^知识库/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "真实资料库" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "第二资料库" }));
+    expect(screen.getByRole("button", { name: "知识库 · 2" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Skill/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "真实查询 Skill" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "真实报告 Skill" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "消息" }), { target: { value: "使用选中能力" } });
+    fireEvent.click(screen.getByRole("button", { name: "发送" }));
+    await waitFor(() => expect(client.submitTurn).toHaveBeenCalledWith(conversationId, expect.objectContaining({
+      capabilitySelection: { knowledgeBaseIds: ["kb-a", "kb-b"], skillIds: ["built-in:aircraft-region-query", "market:report"], mcpServerIds: [] },
+    }), expect.any(AbortSignal)));
+    expect(screen.getByRole("button", { name: "知识库 · 2" })).toBeInTheDocument();
+    expect(screen.queryByText("项目资料库")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agent Loop")).not.toBeInTheDocument();
   });
 
   it("creates on first send, resolves the route only after turn acceptance, and keeps the controller on URL catch-up", async () => {
