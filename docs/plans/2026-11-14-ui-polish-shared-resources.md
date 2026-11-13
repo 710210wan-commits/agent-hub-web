@@ -69,10 +69,10 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - [x] 前后端聚焦契约/目录测试；MCP 无真实服务时只验诚实不可用，不假造真实通过；自审、提交。
 
 ### Task 7 — 集成验收与交付
-- [ ] pnpm test; pnpm lint; pnpm typecheck; required schema/client checks; pnpm build。
-- [ ] 已有 mocked fixture E2E + 新布局/删除/数字 URL/共享入口用例；所有测试显式准备登录，不依赖默认账号。
-- [ ] 全分支独立 AI review，修复 Major/Critical，自审差异；更新证据与提交记录。
-- [ ] 交付本地分支/提交和未验范围；不 push 或部署。
+- [x] pnpm exec vitest run --maxWorkers=2; pnpm lint; pnpm typecheck; required client checks; pnpm build。
+- [x] 已有 mocked fixture E2E + 新布局/删除/数字 URL/共享入口用例；所有测试显式准备登录，不依赖默认账号。
+- [x] 全分支独立 AI review，修复 Major/Critical，自审差异；更新证据与提交记录。
+- [x] 交付本地分支/提交和未验范围；不 push 或部署。
 
 ## Execution Ledger
 
@@ -95,3 +95,35 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - Task 6: RED 6 shared-list/header failures. GREEN focused 14/14 + shared-resource/login browser 2/2; earlier navigation/layout other 11 cases passed (new login locator corrected to exclude Next route announcer). Backend branch codex/ui-shared-mcp-catalog @ f0155a9 removes only label=1 scope predicate; 27 capability/Turn + 18 provider/security tests passed on isolated disposable DB; API typecheck passed. Labels preserved as categories. No MCP service or Work runtime added.
 
 - Final independent review: no Critical/Major; two Minor findings (fragment loss during normalization, stale rename error masking delete error) reproduced RED and fixed GREEN, affected tests32/32; re-review confirmed no remaining findings. Typing-only Testing Library locator correction also verified7/7. Pre-fix final full suite818/818; default browser35 pass +1 opt-in real Xiaozhi skip; canonical browser18/18. Final post-review rerun/build pending.
+
+
+## 最终验收与交接（2026-11-14）
+
+| 范围 | 状态 |
+| --- | --- |
+| 1 登录初值 | 已清空用户名/密码；浏览器密码管理器正常语义保留 |
+| 4 侧栏 | 长页内容独立滚动；桌面与平板用户/退出可见；移动导航回归通过 |
+| 6 显示名称 | 决策/工作；内部 daily/work 及后端 API 值未改 |
+| 2 历史删除 | 原生已接软删除、确认与错误/身份隔离；用户明确延期工作删除 |
+| 3 mode URL | 新URL为1/2，旧链接兼容并归一；query/hash和Skill路由记忆保留；切对话模式清除conversation/draft |
+| 5 共享资源 | KB/MCP共享管理且保留导航上下文；Skill继续双后端；MCP标签仅作分类 |
+| MCP服务/鉴权、模型设置 | 本轮未实施；无真实MCP服务验收或工作Loop新增MCP能力 |
+
+最终前端冻结版本（审查修正后）：
+- 全量 Vitest：94 files / 820 tests passed，maxWorkers=2。
+- 默认 Playwright：35 passed，1 skipped（真实 Xiaozhi 需显式 opt-in 与临时API Key，未启用）。
+- Canonical Playwright：18 passed；涵盖登录/401/403/换号/demo、SSE/cancel、历史/删除、能力选择快照。
+- 两处审查修正：RED均复现；聚焦32 tests passed；fragment真实浏览器1 passed；全量820再次通过。
+- lint、typecheck、check:conversation-client、check:kb-client、check:skill-market-client、test:skill-market:independence通过。
+- pnpm build通过；check:skill-market-sensitive-data通过（构建时注入一次性测试canary，不使用生产密钥）。
+- 最终独立审查及修正后复审：无遗留Critical/Major/Minor。人工验收与远端集成尚待用户后续决定。
+
+后端配套：codex/ui-shared-mcp-catalog @5ae07e8（实现提交f0155a9）。
+- 基线e425ed1；仅删除provider的label=1场景过滤，其他执行安全条件保留。
+- 27项能力目录/Turn +18项provider/安全测试通过；API ts-check通过。
+- 使用一次性隔离Postgres，测试结束已移除容器；既有业务DB及服务器未改。
+
+前端分支：codex/ui-polish-shared-resources。
+前端worktree：C:/Users/24219/.codex/worktrees/cloud-frontend-refresh/agent-hub-web。
+后端worktree：C:/Users/24219/.codex/worktrees/cloud-backend-refresh/projects_new。
+本轮仅本地提交；未push、未创建PR、未merge、未重新部署线上镜像。线上仍为上一版。
