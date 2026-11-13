@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: ["thin-loop-real-transport.spec.ts", "daily-session-j1.spec.ts", "daily-capabilities.spec.ts"],
+  testIgnore: ["mcp-container-auth.spec.ts", "thin-loop-real-transport.spec.ts", "daily-session-j1.spec.ts", "daily-capabilities.spec.ts"],
   fullyParallel: false,
   workers: 1,
   timeout: 30_000,

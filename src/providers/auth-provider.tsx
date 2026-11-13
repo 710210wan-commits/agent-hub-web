@@ -23,7 +23,7 @@ import {
  * 状态机：
  * - checking      挂载/操作中，等待 DSI 会话探测结果
  * - anonymous     无有效会话 → AuthBoundary 只渲染登录页
- * - demo          演示态：基础会话（无 xiaozhi token），Skill/MCP/工作/设置可用，
+ * - demo          演示态：基础会话（无 xiaozhi token）；受保护MCP不请求，
  *                 知识库与对话页由页面内引导提示（后端 requireVerifiedDsiSession 硬约束）
  * - authenticated 完整态：已验证的 xiaozhi 会话
  * - error         服务不可达等可重试错误

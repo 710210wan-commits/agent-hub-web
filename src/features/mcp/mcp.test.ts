@@ -16,3 +16,11 @@ it('public remote examples carry verified endpoints into service configuration',
  expect(remote).toHaveLength(2);
  expect(remote.map(x=>x.url)).toEqual(['https://learn.microsoft.com/api/mcp','https://mcp.deepwiki.com/mcp']);
 });
+
+
+it('uses the Agent API cookie bridge and preserves platform auth status',async()=>{
+ const seen:{url:unknown;init?:RequestInit}[]=[];
+ await requestMcp('/servers',undefined,async(url,init)=>{seen.push({url,init});return new Response(JSON.stringify({ok:true,data:{items:[]}}));});
+ expect(seen[0].url).toBe('/agent-api/api/mcp/v1/servers');expect(seen[0].init?.credentials).toBe('same-origin');
+ for(const status of [401,403,502])await expect(requestMcp('/servers',undefined,async()=>new Response(JSON.stringify({ok:false,error:{code:status===401?'AUTH_REQUIRED':'MCP_SERVICE_UNAVAILABLE',message:'失败'}}),{status}))).rejects.toMatchObject({status});
+});

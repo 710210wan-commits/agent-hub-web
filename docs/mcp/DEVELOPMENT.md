@@ -57,3 +57,10 @@ pnpm typecheck；pnpm test；pnpm exec eslint src/components/mcp src/features/mc
 ## 模式映射（替代此前“标签不绑定模式”约定）
 
 用户已明确：标签1=日常，标签2=办公。我的服务列表、计数和搜索按顶部 mode 过滤，取消跨模式的“全部标签”选择。新增服务默认使用当前模式对应标签，编辑时可改归属。市场保持公共目录，添加到当前模式。切换模式卸载旧弹窗和参数草稿。此为展示归属，不代表服务端用户权限隔离。
+
+
+## 2026-11-14 统一身份桥接（替代上文直连配置）
+
+管理请求统一走 `/agent-api/api/mcp/v1`，沿用全局AuthProvider及Cookie。MCP_API_ORIGIN和/mcp-api直连rewrite已停用；浏览器不接触服务凭据。后端配置Console固定私网origin及两种secret文件，详见DSI MCP部署计划。
+
+未登录/demo不发受保护请求。平台401触发全局失效；403仅本页权限提示，MCP服务502不会退出登录。退出/换号卸载并中止页面请求，重置列表、编辑草稿、工具和结果；迟到响应不可回填。标签1/2共享，Skill场景不变。

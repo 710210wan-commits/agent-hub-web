@@ -17,7 +17,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720
         }));
         await route.fulfill({ json: { generatedAt: "2026-11-14T00:00:00.000Z", items, total: items.length } });
       });
-      await page.route("**/mcp-api/**", async route => {
+      await page.route("**/agent-api/api/mcp/**", async route => {
         await route.fulfill({ json: { ok: true, data: { items: Array.from({ length: 20 }, (_, i) => ({
           id: `layout-server-${i}`, displayName: `长列表服务 ${i}`, description: "用于验证长内容布局",
           label: 1, transport: "http", url: "https://example.test/mcp", enabled: false,

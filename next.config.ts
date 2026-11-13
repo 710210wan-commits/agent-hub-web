@@ -11,12 +11,12 @@ resolveSkillMarketGatewayConfig(process.env);
 resolveSkillMarketPrincipalConfig(process.env);
 resolveSkillMarketTargetConfig(process.env);
 
-import { resolveMcpRewrites } from "./src/config/mcp-proxy";
+
 
 const nextConfig: NextConfig = {
   output: "standalone",
   async rewrites() {
-    return [...resolveAgentApiRewrites(process.env), ...resolveMcpRewrites(process.env)];
+    return resolveAgentApiRewrites(process.env);
   },
 };
 
