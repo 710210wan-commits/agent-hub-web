@@ -134,7 +134,7 @@ function renderContent(
         <li key={session.id}>
           <Link
             className="history-item"
-            href={`/chat?mode=work&conversation=${encodeURIComponent(session.id)}`}
+            href={`/chat?mode=2&conversation=${encodeURIComponent(session.id)}`}
           >
             <Clock3 aria-hidden="true" size={17} />
             <span className="history-item-copy">

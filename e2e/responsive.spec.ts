@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 test("tablet collapses sidebar labels and mobile opens navigation", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 760 });
-  await page.goto("/chat?mode=daily");
+  await page.goto("/chat?mode=1");
   await expect(page.locator(".sidebar-link-label").first()).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 780 });

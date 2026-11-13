@@ -153,7 +153,7 @@ describe("HistoryPage", () => {
     expect(within(list).getAllByText("置顶")).toHaveLength(2);
     expect(within(list).getByRole("link", { name: /置顶较早/ })).toHaveAttribute(
       "href",
-      "/chat?mode=work&conversation=thread%2F..%2F%3Fx%3D1%23frag",
+      "/chat?mode=2&conversation=thread%2F..%2F%3Fx%3D1%23frag",
     );
   });
 

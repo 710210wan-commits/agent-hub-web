@@ -24,7 +24,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720
           allowedTools: [], readOnlyTools: [], health: "unknown",
         })) } } });
       });
-      await page.goto(`/${kind}?mode=daily`);
+      await page.goto(`/${kind}?mode=1`);
       const last = page.getByRole("heading", { name: kind === "skills" ? "长列表技能 19" : "长列表服务 19", exact: true });
       await last.waitFor();
       const footer = page.locator(".sidebar-user");

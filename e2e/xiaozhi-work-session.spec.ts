@@ -68,7 +68,7 @@ test("work mode persists, restores, continues, cancels, and stays isolated from 
     }
   });
 
-  await page.goto("/chat?mode=work");
+  await page.goto("/chat?mode=2");
   await installObservationRecorder(page);
 
   const firstRunId = await sendAndWait(page, firstPrompt, runIds, 0);
@@ -88,7 +88,7 @@ test("work mode persists, restores, continues, cancels, and stays isolated from 
   );
   expect(new Set(observations.assistantSnapshots).size).toBeGreaterThan(1);
 
-  await page.goto("/history?mode=work");
+  await page.goto("/history?mode=2");
   const persistedSession = page.getByRole("link", {
     name: new RegExp(marker),
   });
@@ -135,7 +135,7 @@ test("work mode persists, restores, continues, cancels, and stays isolated from 
   await page.getByRole("button", { name: "决策" }).click();
   await expect(page.getByRole("heading", { name: "今天想聊些什么？" })).toBeVisible();
   await expect(page.getByText(marker, { exact: false })).toHaveCount(0);
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await expect(page.getByText("日常历史待 session 接入")).toBeVisible();
   await expect(page.getByText(marker, { exact: false })).toHaveCount(0);
 

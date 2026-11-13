@@ -45,7 +45,7 @@ describe("SkillCreator", () => {
     const query = vi.fn(async () => ({ items: [{ diagnostics: [], manifest: toolManifest }] }));
     render(<ModeProvider><SkillCreator client={{ mutate, query } as unknown as SkillMarketClient} /></ModeProvider>);
 
-    expect(screen.getByRole("link", { name: /返回 Skill 广场/ })).toHaveAttribute("href", "/skills?mode=daily");
+    expect(screen.getByRole("link", { name: /返回 Skill 广场/ })).toHaveAttribute("href", "/skills?mode=1");
     fireEvent.change(screen.getByLabelText("名称"), { target: { value: "demo-skill" } });
     fireEvent.change(screen.getByLabelText("标题"), { target: { value: "Demo" } });
     fireEvent.change(screen.getByLabelText("需求描述"), { target: { value: "Build a useful demo skill" } });
@@ -57,7 +57,7 @@ describe("SkillCreator", () => {
     await screen.findByRole("button", { name: "保存草稿" });
     fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/skills/creator?mode=daily&draftId=draft-1"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/skills/creator?mode=1&draftId=draft-1"));
   });
 
   it("keeps the saved state when the URL binds the draft that was just saved", async () => {
@@ -100,7 +100,7 @@ describe("SkillCreator", () => {
     await screen.findByRole("button", { name: "保存草稿" });
     fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/skills/creator?mode=daily&draftId=draft-1"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/skills/creator?mode=1&draftId=draft-1"));
     expect(screen.getByRole("link", { name: "前往作者工作台提交审核" })).toBeInTheDocument();
 
     view.rerender(<ModeProvider><SkillCreator client={client} draftId="draft-1" /></ModeProvider>);
@@ -198,7 +198,7 @@ describe("SkillCreator", () => {
     expect(screen.queryByRole("button", { name: "提交审核" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "前往作者工作台提交审核" })).toHaveAttribute(
       "href",
-      "/skills/mine?mode=daily",
+      "/skills/mine?mode=1",
     );
     expect(operations).not.toContain("runSmokeCases");
   });

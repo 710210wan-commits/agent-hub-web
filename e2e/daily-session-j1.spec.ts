@@ -8,12 +8,12 @@ test.beforeEach(async ({ request }) => {
 });
 
 test("anonymous 登录一次后，Daily、History、KB 共用全局身份", async ({ page }) => {
-  await page.goto("/chat?mode=daily");
+  await page.goto("/chat?mode=1");
   await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
   await login(page, "alice");
   await expect(page.getByRole("textbox", { name: "消息" })).toBeVisible();
 
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await expect(page.getByText("Alice 历史会话")).toBeVisible();
   await expect(page.getByRole("heading", { name: "登录" })).toHaveCount(0);
 
@@ -26,7 +26,7 @@ test("首轮写 URL、活动与最终正文；第二轮、刷新、历史跳转�
   page,
   request,
 }) => {
-  await loginFrom(page, "alice", "/chat?mode=daily");
+  await loginFrom(page, "alice", "/chat?mode=1");
   const id = await submit(page, "第一轮问题");
   await expect(page.getByText("正在准备…")).toBeVisible();
 
@@ -70,7 +70,7 @@ test("首轮写 URL、活动与最终正文；第二轮、刷新、历史跳转�
   await page.reload();
   await expect(page.getByText("第一轮最终正文")).toBeVisible();
   await expect(page.getByText("第二轮最终正文")).toBeVisible();
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await page.getByRole("link", { name: /第一轮问题/ }).click();
   await expect(page).toHaveURL(new RegExp(`conversation=${id}`));
   await expect(page.getByText("第二轮最终正文")).toBeVisible();
@@ -80,7 +80,7 @@ test("运行中 cancel 进入 cancelling/interrupted，不伪造 assistant 正�
   page,
   request,
 }) => {
-  await loginFrom(page, "alice", "/chat?mode=daily");
+  await loginFrom(page, "alice", "/chat?mode=1");
   const id = await submit(page, "需要停止的问题");
   await control(request, { action: "advance", conversationId: id, phase: "started" });
   await expect(page.getByText("正在处理…")).toBeVisible();
@@ -98,7 +98,7 @@ test("运行中 cancel 进入 cancelling/interrupted，不伪造 assistant 正�
 });
 
 test("SSE 断开后手动重连，从 cursor 恢复且不重复执行", async ({ page, request }) => {
-  await loginFrom(page, "alice", "/chat?mode=daily");
+  await loginFrom(page, "alice", "/chat?mode=1");
   const id = await submit(page, "断线恢复问题");
   await control(request, { action: "advance", conversationId: id, phase: "started" });
   await control(request, { action: "disconnect", conversationId: id });
@@ -123,7 +123,7 @@ test("SSE 断开后手动重连，从 cursor 恢复且不重复执行", async ({
 });
 
 test("受保护页面 401 回到全局登录，旧用户数据跨页面消失", async ({ page, request }) => {
-  await loginFrom(page, "alice", "/history?mode=daily");
+  await loginFrom(page, "alice", "/history?mode=1");
   await expect(page.getByText("Alice 历史会话")).toBeVisible();
   await page.goto("/knowledge");
   await expect(page.getByText("Alice 私有知识库")).toBeVisible();
@@ -132,7 +132,7 @@ test("受保护页面 401 回到全局登录，旧用户数据跨页面消失", 
   await page.reload();
   await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
   await expect(page.getByText("Alice 私有知识库")).toHaveCount(0);
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
   await expect(page.getByText("Alice 历史会话")).toHaveCount(0);
 });
@@ -145,22 +145,22 @@ test("KB 403 只显示 Origin 错误，不退出全局身份", async ({ page, re
   await expect(
     page.getByText("请求来源校验失败，请联系管理员检查部署配置"),
   ).toBeVisible();
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await expect(page.getByText("Alice 历史会话")).toBeVisible();
 });
 
 test("退出 A 后登录 B，A 会话、pending 与 KB 数据均不可见", async ({ page }) => {
-  await loginFrom(page, "alice", "/chat?mode=daily");
+  await loginFrom(page, "alice", "/chat?mode=1");
   const aliceConversation = await submit(page, "Alice 未完成问题");
   await page.getByRole("button", { name: "退出登录" }).click();
   await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
   await login(page, "bob");
 
   await expect(page.getByText("Alice 未完成问题")).toHaveCount(0);
-  await page.goto("/history?mode=daily");
+  await page.goto("/history?mode=1");
   await expect(page.getByText("Bob 历史会话")).toBeVisible();
   await expect(page.getByText("Alice 历史会话")).toHaveCount(0);
-  await page.goto(`/chat?mode=daily&conversation=${aliceConversation}`);
+  await page.goto(`/chat?mode=1&conversation=${aliceConversation}`);
   await expect(
     page.getByText("会话不存在、已删除或不属于当前用户"),
   ).toBeVisible();
@@ -170,7 +170,7 @@ test("退出 A 后登录 B，A 会话、pending 与 KB 数据均不可见", asyn
 });
 
 test("demo 可访问壳页，但 Daily/KB 仅提示且不发受保护请求", async ({ page, request }) => {
-  await page.goto("/chat?mode=daily");
+  await page.goto("/chat?mode=1");
   await page.getByRole("button", { name: "暂不登录，不使用知识库" }).click();
   await expect(
     page.getByRole("heading", { name: "完整登录后使用决策会话" }),
@@ -230,7 +230,7 @@ async function fixtureState(request: APIRequestContext): Promise<FixtureState> {
 }
 
 test("原生历史删除需确认，成功后刷新和旧链接均不可见", async ({ page }) => {
-  await loginFrom(page, "alice", "/history?mode=daily");
+  await loginFrom(page, "alice", "/history?mode=1");
   const history = page.getByRole("link", { name: /Alice 历史会话/ });
   await history.waitFor();
   const id = new URL((await history.getAttribute("href"))!, "http://local.test").searchParams.get("conversation")!;
@@ -243,6 +243,6 @@ test("原生历史删除需确认，成功后刷新和旧链接均不可见", as
   await expect(history).toHaveCount(0);
   await page.reload();
   await expect(page.getByText("Alice 历史会话")).toHaveCount(0);
-  await page.goto(`/chat?mode=daily&conversation=${id}`);
+  await page.goto(`/chat?mode=1&conversation=${id}`);
   await expect(page.getByText("会话不存在、已删除或不属于当前用户")).toBeVisible();
 });

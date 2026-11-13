@@ -62,7 +62,7 @@ describe("AppShell", () => {
         expect(link).toHaveAttribute("target", "_blank");
         expect(link).toHaveAttribute("rel", "noopener noreferrer");
       } else {
-        expect(link).toHaveAttribute("href", expect.stringContaining("mode=work"));
+        expect(link).toHaveAttribute("href", expect.stringContaining("mode=2"));
       }
       expect(link).toHaveAccessibleName(link.textContent?.trim());
       expect(link).toHaveAttribute("aria-label", link.textContent?.trim());
@@ -80,7 +80,7 @@ describe("AppShell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "决策" }));
 
-    expect(replace).toHaveBeenCalledWith("/chat?mode=daily&panel=open");
+    expect(replace).toHaveBeenCalledWith("/chat?mode=1&panel=open");
   });
 
   it("starts each new chat with a draft nonce rather than a fake conversation", () => {
@@ -96,8 +96,8 @@ describe("AppShell", () => {
     fireEvent.click(newChat);
     fireEvent.click(newChat);
 
-    expect(push).toHaveBeenNthCalledWith(1, "/chat?mode=work&draft=draft-1");
-    expect(push).toHaveBeenNthCalledWith(2, "/chat?mode=work&draft=draft-2");
+    expect(push).toHaveBeenNthCalledWith(1, "/chat?mode=2&draft=draft-1");
+    expect(push).toHaveBeenNthCalledWith(2, "/chat?mode=2&draft=draft-2");
     expect(push.mock.calls.flat().join(" ")).not.toContain("conversation=");
   });
 });

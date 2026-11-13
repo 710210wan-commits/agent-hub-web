@@ -28,7 +28,7 @@ function SkillReviewQueueDaily({ client }: { client: SkillMarketClient }) {
 
   return (
     <section className="resource-page skill-review-queue">
-      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
+      <SkillBackLink href="/skills?mode=1">返回 Skill 广场</SkillBackLink>
       <header className="page-heading">
         <div><h1>Skill 审核队列</h1><p>审查冻结快照、Tool 事实、Validator、Diff、Smoke 与 Trigger 证据</p></div>
       </header>
@@ -47,7 +47,7 @@ function SkillReviewQueueDaily({ client }: { client: SkillMarketClient }) {
                   <Link
                     aria-label={`进入审核 ${submission.name}`}
                     className="skill-page-action skill-page-action-primary"
-                    href={`/skills/review/${encodeURIComponent(submission.id)}?mode=daily`}
+                    href={`/skills/review/${encodeURIComponent(submission.id)}?mode=1`}
                   >
                     {reviewActionLabel(submission)}
                   </Link>

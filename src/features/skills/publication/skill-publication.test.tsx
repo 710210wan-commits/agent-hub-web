@@ -171,7 +171,7 @@ describe("Skill publication management", () => {
     await waitFor(() => expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
       operation: "revisePublication", pathParameters: { id: "pub-2" },
     }), expect.anything()));
-    expect(push).toHaveBeenCalledWith("/skills/creator?mode=daily&draftId=draft-9&sourcePublication=pub-2&revision=2");
+    expect(push).toHaveBeenCalledWith("/skills/creator?mode=1&draftId=draft-9&sourcePublication=pub-2&revision=2");
   });
 
   it("downloads the artifact with integrity verification before saving", async () => {
@@ -219,6 +219,6 @@ describe("Skill publication management", () => {
     const client = { query: vi.fn().mockRejectedValue(permission) } as unknown as SkillMarketClient;
     render(<ModeProvider><SkillPublicationDetail client={client} id="pub-1" /></ModeProvider>);
     expect(await screen.findByRole("heading", { name: "无权执行此操作" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /返回发布管理/ })).toHaveAttribute("href", "/skills/manage?mode=daily");
+    expect(screen.getByRole("link", { name: /返回发布管理/ })).toHaveAttribute("href", "/skills/manage?mode=1");
   });
 });

@@ -3,7 +3,7 @@ import { installSkillMarketFixture } from "./fixtures/skill-market-api";
 
 test("filters the Plaza, opens Detail, and visits My Skills", async ({ page }) => {
   await installSkillMarketFixture(page);
-  await page.goto("/skills?mode=daily");
+  await page.goto("/skills?mode=1");
 
   await page.getByLabel("来源").selectOption("market");
   await expect(page.getByRole("heading", { name: "Market K03" })).toBeVisible();
@@ -22,7 +22,7 @@ test("filters the Plaza, opens Detail, and visits My Skills", async ({ page }) =
 
 test("creates, edits, refreshes a conflict, saves, and submits a Draft", async ({ page }) => {
   await installSkillMarketFixture(page, { conflictOnFirstSave: true });
-  await page.goto("/skills/drafts/new?mode=daily");
+  await page.goto("/skills/drafts/new?mode=1");
 
   await page.getByLabel("草稿名称").fill("market-k03");
   await page.getByLabel("ZIP 文件").setInputFiles({
@@ -49,7 +49,7 @@ test("creates, edits, refreshes a conflict, saves, and submits a Draft", async (
 
 test("runs Creator from Requirement through Smoke and saves a Draft", async ({ page }) => {
   await installSkillMarketFixture(page);
-  await page.goto("/skills/creator?mode=daily");
+  await page.goto("/skills/creator?mode=1");
 
   await page.getByLabel("名称").fill("market-k03");
   await page.getByLabel("标题").fill("Market K03");
@@ -67,14 +67,14 @@ test("runs Creator from Requirement through Smoke and saves a Draft", async ({ p
   await expect(page.getByLabel("Smoke Evidence")).toContainText("smoke-1：passed");
   await page.getByRole("button", { name: "保存草稿" }).click();
   await expect(page.getByText(/草稿 draft-k03 已保存/)).toBeVisible();
-  await expect(page).toHaveURL(/\/skills\/creator\?mode=daily&draftId=draft-k03$/);
+  await expect(page).toHaveURL(/\/skills\/creator\?mode=1&draftId=draft-k03$/);
   await expect(page.getByRole("button", { name: "提交审核" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "前往作者工作台提交审核" })).toHaveAttribute("href", "/skills/mine?mode=daily");
+  await expect(page.getByRole("link", { name: "前往作者工作台提交审核" })).toHaveAttribute("href", "/skills/mine?mode=1");
 });
 
 test("runs Trigger Test, approves, and restores authoritative review state after refresh", async ({ page }) => {
   await installSkillMarketFixture(page);
-  await page.goto("/skills/review/submission-k03?mode=daily");
+  await page.goto("/skills/review/submission-k03?mode=1");
 
   await page.getByLabel("触发查询").fill("lifecycle");
   await page.getByRole("button", { name: "运行 Trigger Test" }).click();
@@ -91,7 +91,7 @@ test("runs Trigger Test, approves, and restores authoritative review state after
 
 test("rejects a Submission with a required reviewer comment", async ({ page }) => {
   await installSkillMarketFixture(page);
-  await page.goto("/skills/review/submission-k03?mode=daily");
+  await page.goto("/skills/review/submission-k03?mode=1");
   await page.getByLabel("审核评语").fill("Trigger boundary needs revision.");
   await page.getByRole("button", { name: "拒绝" }).click();
   await expect(page.getByText(/状态：rejected/)).toBeVisible();
@@ -99,7 +99,7 @@ test("rejects a Submission with a required reviewer comment", async ({ page }) =
 
 test("downloads, enables, disables, withdraws, and revises a Publication", async ({ page }) => {
   const fixture = await installSkillMarketFixture(page, { initialSubmissionStatus: "published" });
-  await page.goto("/skills/manage/publication-k03?mode=daily");
+  await page.goto("/skills/manage/publication-k03?mode=1");
   await expect(page.getByRole("heading", { name: "market-k03" })).toBeVisible();
 
   const download = page.waitForEvent("download");
@@ -117,13 +117,13 @@ test("downloads, enables, disables, withdraws, and revises a Publication", async
   await page.getByRole("button", { name: "下架" }).click();
   await expect(page.getByRole("status")).toContainText("Publication 已下架");
   await page.getByRole("button", { name: "创建新修订" }).click();
-  await expect(page).toHaveURL(/\/skills\/creator\?mode=daily&draftId=draft-k03&sourcePublication=publication-k03&revision=2$/);
+  await expect(page).toHaveURL(/\/skills\/creator\?mode=1&draftId=draft-k03&sourcePublication=publication-k03&revision=2$/);
   await expect(page.getByRole("heading", { name: "Skill Creator" })).toBeVisible();
 });
 
 test("recovers from publish success with installation failure without republishing", async ({ page }) => {
   const fixture = await installSkillMarketFixture(page, { initialSubmissionStatus: "approved", partialEnableFailure: true });
-  await page.goto("/skills/review/submission-k03?mode=daily");
+  await page.goto("/skills/review/submission-k03?mode=1");
   await page.getByRole("button", { name: "发布并启用" }).click();
   await expect(page.getByText(/发布已完成，但启用失败/)).toBeVisible();
   await page.getByRole("link", { name: "前往发布管理继续启用" }).click();
@@ -136,9 +136,9 @@ test("recovers from publish success with installation failure without republishi
 test("does not leak daily Creator description or requests into work mode", async ({ page }) => {
   const fixture = await installSkillMarketFixture(page);
   const secretDescription = "Sensitive daily-only requirement description.";
-  await page.goto("/skills/creator?mode=daily");
+  await page.goto("/skills/creator?mode=1");
   await page.getByLabel("需求描述").fill(secretDescription);
-  await page.goto("/skills/creator?mode=work");
+  await page.goto("/skills/creator?mode=2");
   await expect(page.getByRole("heading", { name: "工作场景暂未接入" })).toBeVisible();
   await expect(page.getByText(secretDescription)).toHaveCount(0);
   const stored = await page.evaluate(() => sessionStorage.getItem("skill-creator-safe-progress"));
@@ -146,6 +146,6 @@ test("does not leak daily Creator description or requests into work mode", async
   const before = fixture.calls.length;
   await page.waitForTimeout(100);
   expect(fixture.calls).toHaveLength(before);
-  await page.goto("/skills/creator?mode=daily");
+  await page.goto("/skills/creator?mode=1");
   await expect(page.getByLabel("需求描述")).toHaveValue("");
 });

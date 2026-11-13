@@ -14,7 +14,7 @@ test("canonical real transport loads unavailable catalog without creating a Turn
     if (request.url().includes("/agent-api/api/conversation-capabilities")) catalogRequests += 1;
   });
 
-  await page.goto("/chat?mode=daily&backend=real");
+  await page.goto("/chat?mode=1&backend=real");
   await expect(page.getByRole("button", { name: "知识库" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Skill" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "MCP" })).toBeDisabled();

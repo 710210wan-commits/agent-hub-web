@@ -111,7 +111,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
   async function remove() {
     if (!submission || submission.status !== "pending_review" || !window.confirm("确认永久删除这个待审核提交？此操作不可撤销。") || !start("delete")) return;
     const result = await client.mutate({ mode: "daily", operation: "deleteSubmission", pathParameters: { id } }, deleteSubmissionAdapter);
-    if (result.ok) router.replace("/skills/review?mode=daily"); else setError(result.error);
+    if (result.ok) router.replace("/skills/review?mode=1"); else setError(result.error);
     finish();
   }
 
@@ -133,7 +133,7 @@ function SkillReviewDetailDaily({ client, id }: { client: SkillMarketClient; id:
 
   return (
     <section className="resource-page skill-review-detail">
-      <SkillBackLink href="/skills/review?mode=daily">返回审核队列</SkillBackLink>
+      <SkillBackLink href="/skills/review?mode=1">返回审核队列</SkillBackLink>
       <header className="page-heading">
         <div><h1>{submission.name}</h1><p>状态：{submission.status} · 修订 r{submission.revision} · 提交 {submission.id}</p></div>
       </header>
@@ -209,7 +209,7 @@ function PublishAndEnableResult({ result }: { result: PublishAndEnableResponse }
     <p>发布成功：{result.publication.value.id} · submission {result.publication.value.submissionId}</p>
     {result.installation.status === "completed"
       ? <p>启用成功：{result.installation.value.scopeType}:{result.installation.value.scopeId}</p>
-      : <><p className="skill-draft-validation">发布已完成，但启用失败：{result.installation.error}。请单独处理启用，不要重复发布。</p><Link href={`/skills/manage/${encodeURIComponent(result.publication.value.id)}?mode=daily`}>前往发布管理继续启用</Link></>}
+      : <><p className="skill-draft-validation">发布已完成，但启用失败：{result.installation.error}。请单独处理启用，不要重复发布。</p><Link href={`/skills/manage/${encodeURIComponent(result.publication.value.id)}?mode=1`}>前往发布管理继续启用</Link></>}
   </div>;
 }
 

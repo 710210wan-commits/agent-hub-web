@@ -72,17 +72,17 @@ describe("SkillMine", () => {
     expect(await screen.findByRole("heading", { name: "我的 Skill" })).toBeInTheDocument();
     const draft = screen.getByRole("article", { name: "草稿 my-draft" });
     expect(within(draft).getByRole("link", { name: "编辑" })).toHaveAttribute(
-      "href", "/skills/creator?mode=daily&draftId=draft-1",
+      "href", "/skills/creator?mode=1&draftId=draft-1",
     );
     expect(within(draft).getByRole("button", { name: "提交审核" })).toBeInTheDocument();
     expect(within(draft).getByRole("button", { name: "删除" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "上传 Skill ZIP 或目录" })).toHaveAttribute(
       "href",
-      "/skills/drafts/new?mode=daily",
+      "/skills/drafts/new?mode=1",
     );
     expect(screen.getByRole("link", { name: "Creator" })).toHaveAttribute(
       "href",
-      "/skills/creator?mode=daily",
+      "/skills/creator?mode=1",
     );
     expect(screen.getByRole("heading", { name: "Enabled Skill" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Available Skill" })).toBeInTheDocument();

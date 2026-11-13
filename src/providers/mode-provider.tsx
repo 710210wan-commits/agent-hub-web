@@ -10,7 +10,7 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { parseMode, type AppMode } from "@/config/modes";
+import { parseMode, serializeMode, withMode, type AppMode } from "@/config/modes";
 
 interface ModeContextValue {
   mode: AppMode;
@@ -40,8 +40,8 @@ function readSkillRoute(mode: AppMode): string | null {
   try {
     const url = new URL(stored, "https://agent-hub.local");
     if (url.origin !== "https://agent-hub.local" || !isSkillPath(url.pathname)) return null;
-    if (url.searchParams.get("mode") !== mode) return null;
-    return `${url.pathname}${url.search}`;
+    if (parseMode(url.searchParams.get("mode")) !== mode) return null;
+    return withMode(`${url.pathname}${url.search}`, mode);
   } catch {
     return null;
   }
@@ -55,6 +55,12 @@ export function ModeProvider({ children }: { children: ReactNode }) {
   const mode = parseMode(searchParams.get("mode"));
 
   useEffect(() => {
+    if (searchParams.get("mode") !== serializeMode(mode)) {
+      router.replace(withMode(routeHref(pathname, search), mode));
+    }
+  }, [mode, pathname, router, search, searchParams]);
+
+  useEffect(() => {
     if (isSkillPath(pathname)) rememberSkillRoute(mode, routeHref(pathname, search));
   }, [mode, pathname, search]);
 
@@ -63,11 +69,15 @@ export function ModeProvider({ children }: { children: ReactNode }) {
       if (nextMode === mode) return;
       if (isSkillPath(pathname)) {
         rememberSkillRoute(mode, routeHref(pathname, search));
-        router.replace(readSkillRoute(nextMode) ?? `/skills?mode=${nextMode}`);
+        router.replace(readSkillRoute(nextMode) ?? withMode("/skills", nextMode));
         return;
       }
       const next = new URLSearchParams(searchParams.toString());
-      next.set("mode", nextMode);
+      next.set("mode", serializeMode(nextMode));
+      if (pathname === "/chat" || pathname === "/history") {
+        next.delete("conversation");
+        next.delete("draft");
+      }
       router.replace(`${pathname}?${next.toString()}`);
     },
     [mode, pathname, router, search, searchParams],

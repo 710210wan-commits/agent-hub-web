@@ -67,7 +67,7 @@ export default function ChatRoute() {
     (sessionId: string) => {
       if (mode !== "work") return;
       const next = new URLSearchParams(search);
-      next.set("mode", "work");
+      next.set("mode", "2");
       next.set("conversation", sessionId);
       next.delete("draft");
       router.replace(`/chat?${next.toString()}`);
@@ -78,7 +78,7 @@ export default function ChatRoute() {
     (conversationId: string) => {
       if (!useCanonicalDaily) return;
       const next = new URLSearchParams(search);
-      next.set("mode", "daily");
+      next.set("mode", "1");
       next.set("conversation", conversationId);
       next.delete("draft");
       router.replace(`/chat?${next.toString()}`);

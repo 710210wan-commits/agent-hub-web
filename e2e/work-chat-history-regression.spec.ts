@@ -55,13 +55,13 @@ test("Work history restores a conversation and continues it without touching dai
     await json(route, { detail: `Unhandled Work Chat fixture route: ${method} ${path}` }, 404);
   });
 
-  await page.goto("/history?mode=work");
+  await page.goto("/history?mode=2");
   const historyLink = page.getByRole("link", { name: /Task 6 Work History/ });
   await expect(historyLink).toBeVisible();
-  await expect(historyLink).toHaveAttribute("href", "/chat?mode=work&conversation=thread-task6");
+  await expect(historyLink).toHaveAttribute("href", "/chat?mode=2&conversation=thread-task6");
   await historyLink.click();
 
-  await expect(page).toHaveURL(/\/chat\?mode=work&conversation=thread-task6$/);
+  await expect(page).toHaveURL(/\/chat\?mode=2&conversation=thread-task6$/);
   await expect(page.getByText("历史问题", { exact: true })).toBeVisible();
   await expect(page.getByText("历史回答", { exact: true })).toBeVisible();
   await page.getByRole("textbox", { name: "消息" }).fill("继续这个 Work 会话");

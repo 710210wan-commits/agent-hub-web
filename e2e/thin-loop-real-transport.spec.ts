@@ -39,7 +39,7 @@ test.beforeEach(async () => {
 test("shows safe activity then only the final Markdown from the real SSE transport", async ({
   page,
 }) => {
-  await page.goto("/chat?mode=daily");
+  await page.goto("/chat?mode=1");
   await page.getByRole("textbox", { name: "消息" }).fill("分析真实链路风险");
   await page.getByRole("button", { name: "发送" }).click();
 
@@ -70,7 +70,7 @@ test("shows safe activity then only the final Markdown from the real SSE transpo
 });
 
 test("stops the real run, closes SSE, and requests backend abort", async ({ page }) => {
-  await page.goto("/chat?mode=daily");
+  await page.goto("/chat?mode=1");
   await page.getByRole("textbox", { name: "消息" }).fill("请测试手动停止");
   await page.getByRole("button", { name: "发送" }).click();
 

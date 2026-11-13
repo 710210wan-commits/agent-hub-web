@@ -37,7 +37,7 @@ describe("ModeProvider Skill route memory", () => {
     const view = renderModeSwitch();
 
     fireEvent.click(screen.getByRole("button", { name: "决策" }));
-    expect(navigation.replace).toHaveBeenLastCalledWith("/skills?mode=daily");
+    expect(navigation.replace).toHaveBeenLastCalledWith("/skills?mode=1");
 
     navigation.pathname = "/skills";
     navigation.search = "mode=daily";
@@ -45,7 +45,7 @@ describe("ModeProvider Skill route memory", () => {
     fireEvent.click(screen.getByRole("button", { name: "工作" }));
 
     expect(navigation.replace).toHaveBeenLastCalledWith(
-      "/skills/workspace-files?mode=work",
+      "/skills/workspace-files?mode=2",
     );
   });
 
@@ -55,7 +55,7 @@ describe("ModeProvider Skill route memory", () => {
     const view = renderModeSwitch();
 
     fireEvent.click(screen.getByRole("button", { name: "工作" }));
-    expect(navigation.replace).toHaveBeenLastCalledWith("/skills?mode=work");
+    expect(navigation.replace).toHaveBeenLastCalledWith("/skills?mode=2");
 
     navigation.pathname = "/skills";
     navigation.search = "mode=work";
@@ -63,7 +63,7 @@ describe("ModeProvider Skill route memory", () => {
     fireEvent.click(screen.getByRole("button", { name: "决策" }));
 
     expect(navigation.replace).toHaveBeenLastCalledWith(
-      "/skills/creator?mode=daily&draftId=draft-1",
+      "/skills/creator?mode=1&draftId=draft-1",
     );
   });
 
@@ -74,6 +74,21 @@ describe("ModeProvider Skill route memory", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "决策" }));
 
-    expect(navigation.replace).toHaveBeenCalledWith("/chat?mode=daily&panel=open");
+    expect(navigation.replace).toHaveBeenCalledWith("/chat?mode=1&panel=open");
   });
+  it("normalizes a legacy deep link without dropping its query", () => {
+    navigation.pathname = "/skills/creator";
+    navigation.search = "mode=daily&draftId=draft-1";
+    renderModeSwitch();
+    expect(navigation.replace).toHaveBeenCalledWith("/skills/creator?mode=1&draftId=draft-1");
+  });
+  it("drops conversation and draft on an actual chat mode switch", () => {
+    navigation.pathname = "/chat";
+    navigation.search = "mode=2&conversation=work-thread&draft=old&panel=open";
+    renderModeSwitch();
+    expect(screen.getByRole("button", { name: "工作" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "决策" }));
+    expect(navigation.replace).toHaveBeenLastCalledWith("/chat?mode=1&panel=open");
+  });
+
 });

@@ -122,7 +122,7 @@ describe("SkillCatalogDetail work mode（Task 5）", () => {
     renderDetailWork("mysql-reporter", workApiStub());
 
     fireEvent.click(await screen.findByRole("button", { name: "← 返回 Work Skill" }));
-    expect(push).toHaveBeenCalledWith("/skills?mode=work");
+    expect(push).toHaveBeenCalledWith("/skills?mode=2");
   });
 
   it("aborts the in-flight Work request when switching to daily mode", async () => {

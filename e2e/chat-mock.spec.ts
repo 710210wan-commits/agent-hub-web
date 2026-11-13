@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("mock chat streams final text without fabricating selectable capabilities", async ({ page }) => {
-  await page.goto("/chat?mode=daily&scenario=completed&delay=600");
+  await page.goto("/chat?mode=1&scenario=completed&delay=600");
   await expect(page.getByRole("heading", { name: "今天想聊些什么？" })).toBeVisible();
   await expect(page.getByRole("button", { name: "附件（待接入）" })).toBeDisabled();
   await page.screenshot({ path: "e2e/screenshots/chat-empty.png" });
@@ -26,7 +26,7 @@ test("mock chat streams final text without fabricating selectable capabilities",
 });
 
 test("manual stop preserves partial text and offers mock continuation", async ({ page }) => {
-  await page.goto("/chat?mode=daily&scenario=completed&delay=800");
+  await page.goto("/chat?mode=1&scenario=completed&delay=800");
   await page.getByRole("textbox", { name: "消息" }).fill("生成一段回答");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("综合现有资料，")).toBeVisible();
@@ -40,7 +40,7 @@ test("manual stop preserves partial text and offers mock continuation", async ({
 });
 
 test("mock disconnected scenario keeps text and shows truthful warning", async ({ page }) => {
-  await page.goto("/chat?mode=daily&scenario=disconnected");
+  await page.goto("/chat?mode=1&scenario=disconnected");
   await page.getByRole("textbox", { name: "消息" }).fill("测试断流");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("已保留的部分正文。")).toBeVisible();

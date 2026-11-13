@@ -74,7 +74,7 @@ function AuthenticatedDailySessionHistory({
       <div className="daily-history-toolbar">
         <button
           className="primary-button"
-          onClick={() => router.push("/chat?mode=daily")}
+          onClick={() => router.push("/chat?mode=1")}
           type="button"
         >
           新对话
@@ -174,7 +174,7 @@ function renderHistoryContent(input: {
                 <>
                   <Link
                     className="history-item daily-history-link"
-                    href={`/chat?mode=daily&conversation=${encodeURIComponent(conversation.conversationId)}`}
+                    href={`/chat?mode=1&conversation=${encodeURIComponent(conversation.conversationId)}`}
                   >
                     <Clock3 aria-hidden="true" size={17} />
                     <span className="history-item-copy">

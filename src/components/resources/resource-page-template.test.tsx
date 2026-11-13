@@ -35,7 +35,7 @@ describe("ResourcePageTemplate", () => {
     expect(screen.getByRole("button", { name: "新建知识库（待接入）" })).toBeDisabled();
     expect(screen.getByRole("link", { name: /政策规范库/ })).toHaveAttribute(
       "href",
-      "/knowledge/policy?mode=work",
+      "/knowledge/policy?mode=2",
     );
 
     fireEvent.change(screen.getByRole("searchbox", { name: "搜索知识库" }), {
@@ -53,7 +53,7 @@ describe("ResourcePageTemplate", () => {
 
     expect(screen.getByRole("link", { name: "返回知识库" })).toHaveAttribute(
       "href",
-      "/knowledge?mode=work",
+      "/knowledge?mode=2",
     );
     expect(screen.getByText("详情能力待接入")).toBeInTheDocument();
   });

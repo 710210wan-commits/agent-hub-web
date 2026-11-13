@@ -47,12 +47,12 @@ function SkillPublicationDetailDaily({ client, id }: { client: SkillMarketClient
   if (state.kind === "loading") return <LoadingState label="正在加载 Publication…" />;
   if (state.kind === "error") return (
     <section className="resource-page">
-      <SkillBackLink href="/skills/manage?mode=daily">返回发布管理</SkillBackLink>
+      <SkillBackLink href="/skills/manage?mode=1">返回发布管理</SkillBackLink>
       <SkillMarketErrorState error={state.error} onRecover={state.error.recovery === "back" ? undefined : refresh} />
     </section>
   );
   const publication = state.publications.find((item) => item.id === id);
-  if (!publication) return <section className="resource-page"><SkillBackLink href="/skills/manage?mode=daily">返回发布管理</SkillBackLink><EmptyState title="Publication 不存在或当前身份不可见" /></section>;
+  if (!publication) return <section className="resource-page"><SkillBackLink href="/skills/manage?mode=1">返回发布管理</SkillBackLink><EmptyState title="Publication 不存在或当前身份不可见" /></section>;
 
   const publicationHash = publication.contentHash;
   const currentStatus = withdrawn?.status ?? publication.status;
@@ -124,7 +124,7 @@ function SkillPublicationDetailDaily({ client, id }: { client: SkillMarketClient
     const result = await client.mutate({ mode: "daily", operation: "revisePublication", pathParameters: { id } }, revisePublicationAdapter);
     if (result.ok) {
       const query = new URLSearchParams({
-        mode: "daily",
+        mode: "1",
         draftId: result.value.id,
         sourcePublication: id,
         revision: String(result.value.revision),
@@ -136,7 +136,7 @@ function SkillPublicationDetailDaily({ client, id }: { client: SkillMarketClient
 
   return (
     <section className="resource-page skill-publication-detail">
-      <SkillBackLink href="/skills/manage?mode=daily">返回发布管理</SkillBackLink>
+      <SkillBackLink href="/skills/manage?mode=1">返回发布管理</SkillBackLink>
       <header className="page-heading">
         <div><h1>{publication.skillName}</h1><p>Publication {publication.id} · 修订 r{publication.revision}</p></div>
       </header>

@@ -53,7 +53,7 @@ function SkillCatalogPlazaWork({ workApi }: { workApi?: WorkSkillsApi }) {
     <WorkSkillsPage
       api={workApi}
       identityGeneration={identityGeneration}
-      onManageSkill={(slug) => router.push(`/skills/${encodeURIComponent(slug)}?mode=work`)}
+      onManageSkill={(slug) => router.push(`/skills/${encodeURIComponent(slug)}?mode=2`)}
     />
   );
 }
@@ -129,10 +129,10 @@ function SkillCatalogPlazaDaily({
           <p>浏览决策后端返回的内置与市场 Skill</p>
         </div>
         <div className="skill-page-actions skill-catalog-actions">
-          <Link className="skill-page-action skill-page-action-primary skill-action-primary" href="/skills/creator?mode=daily">创建 Skill</Link>
-          <Link className="skill-page-action skill-action-secondary" href="/skills/manage?mode=daily">发布管理</Link>
-          <Link className="skill-page-action skill-action-secondary" href="/skills/review?mode=daily">审核</Link>
-          <Link className="skill-page-action skill-action-secondary" href="/skills/mine?mode=daily">我的</Link>
+          <Link className="skill-page-action skill-page-action-primary skill-action-primary" href="/skills/creator?mode=1">创建 Skill</Link>
+          <Link className="skill-page-action skill-action-secondary" href="/skills/manage?mode=1">发布管理</Link>
+          <Link className="skill-page-action skill-action-secondary" href="/skills/review?mode=1">审核</Link>
+          <Link className="skill-page-action skill-action-secondary" href="/skills/mine?mode=1">我的</Link>
         </div>
       </header>
 

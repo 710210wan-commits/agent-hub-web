@@ -57,9 +57,9 @@ Interfaces: DailySessionClient.deleteConversation(id, signal?): Promise<void>; s
 ### Task 5 — URL 数字映射（项 3）
 Files: src/config/modes.ts; src/providers/mode-provider.tsx; navigation/session/skill URL builders and affected route parsers/tests.
 Interfaces: parseMode accepts 1/2 and legacy daily/work; serializeMode(AppMode): '1'|'2'; withMode emits numeric mode only.
-- [ ] RED: parseMode('1')='daily'; parseMode('2')='work'; legacy accepted; emitted URLs mode=1/2; preserve other params and hash。
-- [ ] 更新所有前端 URL 生成及入口解析；内部类型、API/BFF 后端值保持 daily/work；sessionStorage 旧 route 兼容。
-- [ ] 测试旧链接、深链接、切换后端、刷新与历史跳转；自审、提交。
+- [x] RED: parseMode('1')='daily'; parseMode('2')='work'; legacy accepted; emitted URLs mode=1/2; preserve other params and hash。
+- [x] 更新所有前端 URL 生成及入口解析；内部类型、API/BFF 后端值保持 daily/work；sessionStorage 旧 route 兼容。
+- [x] 测试旧链接、深链接、切换后端、刷新与历史跳转；自审、提交。
 
 ### Task 6 — 知识库/MCP 共享管理（项 5）
 Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filtering backend only if required, in separate backend branch.
@@ -89,3 +89,5 @@ Files: shared shell header/nav; KB routes; src/components/mcp; MCP catalog filte
 - Batch A independent review: no Critical/Major; one Minor tablet logout clipping. RED browser assertion reproduces; fixed collapsed account layout, GREEN 7/7 desktop/tablet/mobile layout. Added failed-login empty-field assertion. Lint, typecheck, production build passed before Batch B.
 
 - Task 4 (Daily only): initial RED 9 missing-delete behaviors; GREEN focused 69/69, deletion browser flow 1/1 (cancel confirmation / delete / refresh / old URL 404), typecheck passed. Full suite first had existing 500-entry Skill timing timeout under parallel load; unchanged assertions passed with maxWorkers=2: 809/809. Deleted-ID tombstones prevent old pagination responses resurrecting rows. Work deletion deferred explicitly.
+
+- Task 5: RED 8 URL/parser/mode-switch failures; GREEN 814/814 Vitest (maxWorkers=2), navigation+Skill E2E 7/7 including legacy normalization and distinct Skill backends. URL emits 1/2; backend query modes remain daily/work; mode switching drops conversation/draft only for chat/history.

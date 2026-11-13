@@ -26,7 +26,7 @@ describe("SkillReviewQueue", () => {
     render(<ModeProvider><SkillReviewQueue client={client} /></ModeProvider>);
 
     expect(await screen.findByRole("link", { name: "进入审核 demo-skill" })).toHaveAttribute(
-      "href", "/skills/review/submission-1?mode=daily",
+      "href", "/skills/review/submission-1?mode=1",
     );
     expect(screen.getByText(/作者 author-1 · 修订 r2 · pending_review/)).toBeInTheDocument();
     expect(screen.getByText(`Artifact SHA-256 ${"a".repeat(64)}`)).toBeInTheDocument();

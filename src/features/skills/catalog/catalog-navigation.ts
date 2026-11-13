@@ -1,4 +1,4 @@
-import type { AppMode } from "@/config/modes";
+import { serializeMode, type AppMode } from "@/config/modes";
 
 import {
   EMPTY_SKILL_CATALOG_FILTER,
@@ -38,7 +38,7 @@ export function catalogPlazaHref(filter: SkillCatalogFilter, mode: AppMode): str
 }
 
 function catalogHref(pathname: string, filter: SkillCatalogFilter, mode: AppMode): string {
-  const params = new URLSearchParams({ mode });
+  const params = new URLSearchParams({ mode: serializeMode(mode) });
   if (filter.search) params.set("search", filter.search);
   if (filter.category !== "all") params.set("category", filter.category);
   if (filter.source !== "all") params.set("source", filter.source);

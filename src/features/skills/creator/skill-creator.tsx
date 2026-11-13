@@ -305,14 +305,14 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
         bundle: current.bundle ? { ...current.bundle, diagnostics: response.diagnostics } : current.bundle,
         draft: response.draft, draftSaved: true,
       }));
-      router.replace(`/skills/creator?mode=daily&draftId=${encodeURIComponent(response.draft.id)}`);
+      router.replace(`/skills/creator?mode=1&draftId=${encodeURIComponent(response.draft.id)}`);
     });
   }
 
   if (loadingDraft) return <LoadingState label="正在恢复 Creator 草稿…" />;
   if (state.draft && state.draft.status !== "editing") {
     return <section className="resource-page skill-creator-page">
-      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
+      <SkillBackLink href="/skills?mode=1">返回 Skill 广场</SkillBackLink>
       <div className="skill-draft-notice" role="status">该草稿状态为 {state.draft.status}，Creator 不再发起变更。</div>
     </section>;
   }
@@ -321,7 +321,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
 
   return (
     <section className="resource-page skill-creator-page">
-      <SkillBackLink href="/skills?mode=daily">返回 Skill 广场</SkillBackLink>
+      <SkillBackLink href="/skills?mode=1">返回 Skill 广场</SkillBackLink>
       <header className="page-heading"><div><h1>Skill Creator</h1><p>当前阶段：{stepLabel(step)}。服务端结果优先，本地仅短期保留基本进度。</p></div></header>
       <nav className="creator-steps" aria-label="Creator 流程">
         {[
@@ -392,8 +392,8 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
         {!state.smokeResult ? <p className="skill-draft-notice">Smoke 尚未运行；这是 Soft Gate，不阻止保存，也不会阻止之后从作者工作台提交审核。</p> : null}
         <div className="skill-draft-actions">
           <button disabled={Boolean(pending) || hasErrors(state)} type="button" onClick={saveDraft}>{pending === "save" ? "正在保存…" : "保存草稿"}</button>
-          {state.draftSaved && state.draft?.status === "editing" ? <Link href="/skills/mine?mode=daily">前往作者工作台提交审核</Link> : null}
-          {state.draft ? <Link href={`/skills/drafts/${encodeURIComponent(state.draft.id)}?mode=daily`}>打开草稿</Link> : null}
+          {state.draftSaved && state.draft?.status === "editing" ? <Link href="/skills/mine?mode=1">前往作者工作台提交审核</Link> : null}
+          {state.draft ? <Link href={`/skills/drafts/${encodeURIComponent(state.draft.id)}?mode=1`}>打开草稿</Link> : null}
         </div>
       </CreatorSection> : null}
 

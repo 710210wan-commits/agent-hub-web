@@ -114,7 +114,7 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
       { mode: "daily", operation: "deleteDraft", pathParameters: { id } },
       draftDeleteAdapter,
     );
-    if (result.ok) router.replace("/skills/mine?mode=daily");
+    if (result.ok) router.replace("/skills/mine?mode=1");
     else setMutationError(result.error);
     finishAction();
   }
@@ -131,7 +131,7 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
 
   return (
     <section className="resource-page skill-draft-page">
-      <SkillBackLink href="/skills/mine?mode=daily">返回我的 Skill</SkillBackLink>
+      <SkillBackLink href="/skills/mine?mode=1">返回我的 Skill</SkillBackLink>
       <header className="page-heading">
         <div><h1>{draft.name}</h1><p>状态：{draft.status} · 修订 r{draft.revision} · {draft.fileCount} 个文件</p></div>
       </header>
@@ -149,7 +149,7 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
         {draft.editable ? <div className="skill-draft-actions">
           <button disabled={Boolean(action) || !dirty} type="button" onClick={() => void save()}>{action === "save" ? "正在保存…" : "保存修改"}</button>
           <button disabled={Boolean(action)} type="button" onClick={() => void remove()}>{action === "delete" ? "正在删除…" : "删除草稿"}</button>
-          <Link href={`/skills/creator?mode=daily&draftId=${encodeURIComponent(draft.id)}`}>Creator 继续编辑</Link>
+          <Link href={`/skills/creator?mode=1&draftId=${encodeURIComponent(draft.id)}`}>Creator 继续编辑</Link>
         </div> : null}
       </div>
 

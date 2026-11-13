@@ -126,7 +126,7 @@ describe("DailySessionHistory", () => {
     const list = await screen.findByRole("list", { name: "决策历史会话" });
     expect(within(list).getByRole("link", { name: /第二页/ })).toHaveAttribute(
       "href",
-      `/chat?mode=daily&conversation=${SECOND_ID}`,
+      `/chat?mode=1&conversation=${SECOND_ID}`,
     );
     expect(client.listConversations).toHaveBeenNthCalledWith(
       2,
@@ -140,7 +140,7 @@ describe("DailySessionHistory", () => {
     renderHistory(client);
 
     fireEvent.click(await screen.findByRole("button", { name: "新对话" }));
-    expect(push).toHaveBeenCalledWith("/chat?mode=daily");
+    expect(push).toHaveBeenCalledWith("/chat?mode=1");
     expect(client.createConversation).not.toHaveBeenCalled();
   });
 

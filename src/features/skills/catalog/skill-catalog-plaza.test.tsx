@@ -145,7 +145,7 @@ describe("SkillCatalogPlaza", () => {
     fireEvent.click(await screen.findByRole("button", { name: "查看 MySQL Reporter 预览" }));
     fireEvent.click(await screen.findByRole("button", { name: "去管理" }));
 
-    expect(push).toHaveBeenCalledWith("/skills/mysql-reporter?mode=work");
+    expect(push).toHaveBeenCalledWith("/skills/mysql-reporter?mode=2");
   });
 
   it("aborts the in-flight daily catalog request when switching to work mode", async () => {
@@ -304,19 +304,19 @@ describe("SkillCatalogPlaza", () => {
     }
     expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveAttribute(
       "href",
-      "/skills/creator?mode=daily",
+      "/skills/creator?mode=1",
     );
     expect(screen.getByRole("link", { name: "发布管理" })).toHaveAttribute(
       "href",
-      "/skills/manage?mode=daily",
+      "/skills/manage?mode=1",
     );
     expect(screen.getByRole("link", { name: "审核" })).toHaveAttribute(
       "href",
-      "/skills/review?mode=daily",
+      "/skills/review?mode=1",
     );
     expect(screen.getByRole("link", { name: "我的" })).toHaveAttribute(
       "href",
-      "/skills/mine?mode=daily",
+      "/skills/mine?mode=1",
     );
     expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveClass("skill-page-action-primary");
     expect(screen.getByRole("link", { name: "创建 Skill" })).toHaveClass("skill-action-primary");
