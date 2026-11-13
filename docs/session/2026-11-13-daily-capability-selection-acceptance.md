@@ -58,3 +58,16 @@ No new deployment environment variable was introduced by Task 9, so README/env e
 This is browser contract acceptance plus real PostgreSQL/runtime integration acceptance, not a single browser session against a live deployed DSI/Xiaozhi/LLM/RAG stack. External RAG was declared unavailable; live-provider quality/availability and cloud deployment are not claimed here. Work/GIS/Workflow and the general Skill Market release suite are outside this Phase A acceptance matrix. MCP stays disabled pending Tasks 10–13.
 
 Task 9 also fixes a discovered UI defect: unknown network/503 acceptance results now set a safe notice so the original-request retry button is visible. No automatic rerun or new request key is generated.
+
+## Task 13 follow-up: conditional MCP selection
+
+This follows the historical Phase A results above. MCP is now selectable in Daily only when the authenticated backend catalog returns an available, nonempty MCP section. Unavailable, disabled and empty sections stay disabled with stable status text. Work remains server-preconfigured. There are no new frontend environment variables or token stores.
+
+- Backend source: DSI `8624c4f79307e8d0ee63bb512a391f9a8a2dde05` (Task 12).
+- Pinned artifact: `conversation.v1@0.1.5`, 19 operations, SHA-256 `67b3aa7ec3d3871fee2a4f7ac8af169344e4e1af6cda3513efb6b6d7b244c81d`.
+- Contract/client: copied committed backend bytes, updated lock and regenerated; new `MCP_CATALOG_UNAVAILABLE` is accepted without losing KB/Skill sections. MCP config, schemas and secret fields remain rejected by strict DTO validation.
+- Component/controller coverage: multi-select/deselect, exact IDs-only Turn payload, unknown-result retry preserving the original request/key/MCP snapshot after later selection edits, immutable copied MCP arrays, and read-only historical ID chips after catalog removal.
+- Verification: focused 65/65; full suite 93 files, 790/790 tests; existing Daily/session browser regression 14/14; conversation schema/client and KB/Skill generated checks, typecheck, lint and production build passed. Build uses the same test-only configuration recorded above.
+- Self-review and independent incremental AI review found no remaining Major/Critical. Human/team review pending.
+
+These browser regressions cover the existing Phase A scenarios; MCP-specific browser execution/security E2E remains Task 14. Backend Task 12 separately verified the configured loopback HTTP provider through a real PostgreSQL Turn and Loop. A browser session against a live deployed MCP/LLM stack is not claimed here.

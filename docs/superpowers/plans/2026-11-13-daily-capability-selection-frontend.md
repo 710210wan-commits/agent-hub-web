@@ -107,11 +107,13 @@ Corresponds to master Plan Task 9.
 
 Corresponds to master Plan Task 13.
 
-- [ ] Pin the backend artifact where `mcpServers.status=available` has real provider support.
-- [ ] Test and enable MCP Server multi-select only for available status.
-- [ ] Submit server IDs only; no URL/schema/credential leaves the trusted backend boundary.
-- [ ] Preserve the same pending/retry/history rules.
-- [ ] Commit: `feat(chat): enable daily mcp selection`
+- [x] Pin the backend artifact where `mcpServers.status=available` has real provider support.
+- [x] Test and enable MCP Server multi-select only for available status.
+- [x] Submit server IDs only; no URL/schema/credential leaves the trusted backend boundary.
+- [x] Preserve the same pending/retry/history rules.
+- [x] Commit: `feat(chat): enable daily mcp selection`
+
+Task 13 evidence: copied the committed backend artifact from DSI `8624c4f79307e8d0ee63bb512a391f9a8a2dde05`, `conversation.v1@0.1.5`, SHA-256 `67b3aa7ec3d3871fee2a4f7ac8af169344e4e1af6cda3513efb6b6d7b244c81d`, then regenerated the client. The existing catalog requester, selection type and Daily controller already support MCP IDs; only Composer needs runtime behavior changes. Available/nonempty enables multi-select; unavailable/disabled/empty remain disabled with status text. Work stays preconfigured. Tests cover MCP metadata/secret rejection, multi-select/deselect, original snapshot after UI/caller edits and unknown retry, and missing-service historical chips. RED: 5 new failures reproduced hard-disabled UI and old reason enum; GREEN: focused 65/65, full frontend 93 files/790 tests, existing browser regression 14/14, all conversation/KB/Skill generated checks, types, lint and production build passed. Self-review and independent AI review found no Major/Critical. Browser MCP/security scenarios remain Task 14; no live third-party MCP acceptance claimed.
 
 ## Task 5 — Final MCP/security E2E
 

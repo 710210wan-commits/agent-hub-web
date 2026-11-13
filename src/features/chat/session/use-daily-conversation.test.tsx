@@ -395,14 +395,15 @@ describe("useDailyConversation", () => {
       }),
     );
 
-    const selection = { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] };
+    const selection = { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: ["server-a"] };
     await act(async () => void (await result.current.submit("问题", selection)));
     selection.knowledgeBaseIds.push("kb-late");
+    selection.mcpServerIds.push("server-late");
     expect(result.current.state.pendingSend).toMatchObject({
       clientRequestId: turnKey,
       content: "问题",
       status: "unknown",
-      capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] },
+      capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: ["server-a"] },
     });
     expect(onConversationResolved).not.toHaveBeenCalled();
     await act(async () => void (await result.current.retrySubmit()))
@@ -416,13 +417,13 @@ describe("useDailyConversation", () => {
     expect(submitTurn).toHaveBeenNthCalledWith(
       1,
       conversationId,
-      { clientRequestId: turnKey, input: { kind: "text", text: "问题" }, capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] } },
+      { clientRequestId: turnKey, input: { kind: "text", text: "问题" }, capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: ["server-a"] } },
       expect.any(AbortSignal),
     );
     expect(submitTurn).toHaveBeenNthCalledWith(
       2,
       conversationId,
-      { clientRequestId: turnKey, input: { kind: "text", text: "问题" }, capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: [] } },
+      { clientRequestId: turnKey, input: { kind: "text", text: "问题" }, capabilitySelection: { knowledgeBaseIds: ["kb-a"], skillIds: ["built-in:aircraft-region-query"], mcpServerIds: ["server-a"] } },
       expect.any(AbortSignal),
     );
     expect(onConversationResolved).toHaveBeenCalledWith(conversationId);

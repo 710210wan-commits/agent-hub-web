@@ -2,9 +2,9 @@
   "artifact": "conversation.v1.json",
   "contractId": "conversation.v1",
   "operationCount": 19,
-  "schemaVersion": "0.1.4",
-  "sha256": "e773f1f9824d9af837a236234b235083a1d1cf02f2570057b843c181265799b0",
-  "sourceCommit": "5ab29df6afd9e811321c639437b2672472f43996",
+  "schemaVersion": "0.1.5",
+  "sha256": "67b3aa7ec3d3871fee2a4f7ac8af169344e4e1af6cda3513efb6b6d7b244c81d",
+  "sourceCommit": "8624c4f79307e8d0ee63bb512a391f9a8a2dde05",
   "sourcePath": "api/openapi/conversation.v1.json",
   "sourceRepository": "DSI"
 }

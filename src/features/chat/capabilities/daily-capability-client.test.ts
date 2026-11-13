@@ -13,6 +13,15 @@ describe("Daily capability client", () => {
     expect(fetchFn).toHaveBeenCalledWith("/agent-api/api/conversation-capabilities?scenarioId=daily",
       expect.objectContaining({ credentials: "same-origin", method: "GET", signal }));
   });
+  it("accepts MCP availability and independent provider failure from contract 0.1.5", async () => {
+    for (const mcpServers of [
+      { status: "available", items: [{ id: "server-a", name: "只读查询", description: "" }] },
+      { status: "unavailable", items: [], reasonCode: "MCP_CATALOG_UNAVAILABLE" },
+    ]) {
+      const payload = { ...catalog, mcpServers };
+      expect(await createDailyCapabilityClient({ fetchFn: vi.fn().mockResolvedValue(response(payload)) }).getCatalog()).toEqual(payload);
+    }
+  });
   it.each([401, 403])("preserves HTTP %i with safe text", async status => {
     const fetchFn = vi.fn().mockResolvedValue(response({ code: status, message: "SECRET", data: null }, status));
     await expect(createDailyCapabilityClient({ fetchFn }).getCatalog()).rejects.toMatchObject({ status });
@@ -22,6 +31,9 @@ describe("Daily capability client", () => {
     { ...catalog, token: "SECRET" },
     { ...catalog, knowledgeBases: { ...catalog.knowledgeBases, items: [{ ...catalog.knowledgeBases.items[0], apiKey: "SECRET" }] } },
     { ...catalog, skills: { status: "available", items: [{ id: "x", url: "https://private.invalid" }] } },
+    ...["url", "inputSchema", "credentialRef", "token"].map(field => ({ ...catalog,
+      mcpServers: { status: "available", items: [{ id: "server-a", name: "查询", description: "", [field]: "SECRET" }] },
+    })),
   ])("rejects malformed or secret-bearing catalogs", async payload => {
     await expect(createDailyCapabilityClient({ fetchFn: vi.fn().mockResolvedValue(response(payload)) }).getCatalog())
       .rejects.toMatchObject({ code: "INVALID_RESPONSE" });

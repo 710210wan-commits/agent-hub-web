@@ -230,10 +230,11 @@ describe("DailySessionView", () => {
   });
   it("shows persisted selection as read-only chips even when catalog resources disappeared", async () => {
     const historical = { ...message("40000000-0000-4000-8000-000000000019", "1", "旧提问"), role: "user" as const,
-      capabilitySelection: { knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: [] } };
+      capabilitySelection: { knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: ["deleted-mcp"] } };
     renderView(makeClient({ loadSnapshot: vi.fn(async () => snapshot([historical])) }));
     expect(await screen.findByText("知识库 · deleted-kb")).toBeInTheDocument();
     expect(screen.getByText("Skill · market:old-publication")).toBeInTheDocument();
+    expect(screen.getByText("MCP · deleted-mcp")).toBeInTheDocument();
     expect(screen.getByLabelText("本轮能力").querySelector("button,input")).toBeNull();
   });
   it("loads real multi-select capabilities and keeps MCP unavailable", async () => {
@@ -262,6 +263,36 @@ describe("DailySessionView", () => {
     expect(screen.getByRole("button", { name: "知识库 · 2" })).toBeInTheDocument();
     expect(screen.queryByText("项目资料库")).not.toBeInTheDocument();
     expect(screen.queryByText("Agent Loop")).not.toBeInTheDocument();
+  });
+
+  it("submits MCP IDs only and retries the original snapshot after selection changes", async () => {
+    const capabilityClient = { getCatalog: vi.fn().mockResolvedValue({ schemaVersion: 1, scenarioId: "daily",
+      knowledgeBases: { status: "available", items: [] }, skills: { status: "available", items: [] },
+      mcpServers: { status: "available", items: [
+        { id: "server-a", name: "船舶查询", description: "" },
+        { id: "server-b", name: "飞机查询", description: "" },
+      ] },
+    }) };
+    const submitTurn = vi.fn().mockRejectedValueOnce(new DailySessionClientError({ status: 503, code: "NETWORK_ERROR", message: "发送结果尚未确认" }))
+      .mockResolvedValue(accepted());
+    const client = makeClient({ submitTurn });
+    render(<AuthProvider client={makeAuthClient()}><DailySessionView client={client} conversationId={conversationId} capabilityClient={capabilityClient} /></AuthProvider>);
+    await waitFor(() => expect(screen.getByRole("button", { name: "MCP" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "MCP" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "船舶查询" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "飞机查询" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "消息" }), { target: { value: "查询态势" } });
+    fireEvent.click(screen.getByRole("button", { name: "发送" }));
+    await screen.findByRole("button", { name: "重试发送" });
+    const original = submitTurn.mock.calls[0][1];
+    expect(original).toEqual({ clientRequestId: expect.any(String), input: { kind: "text", text: "查询态势" },
+      capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: ["server-a", "server-b"] } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "船舶查询" }));
+    expect(screen.getByRole("button", { name: "MCP · 1" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "重试发送" }));
+    await waitFor(() => expect(submitTurn).toHaveBeenCalledTimes(2));
+    expect(submitTurn.mock.calls[1][1]).toEqual(original);
+    expect(screen.getByRole("button", { name: "MCP · 1" })).toBeInTheDocument();
   });
 
   it("creates on first send, resolves the route only after turn acceptance, and keeps the controller on URL catch-up", async () => {

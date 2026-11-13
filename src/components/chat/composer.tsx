@@ -92,11 +92,11 @@ export function Composer({
             selectedIds={selection.skillIds}
           />
           <CapabilitySelector
-            disabled
-            statusText={capabilitiesDisabled ? undefined : "暂未接入"}
+            disabled={capabilitiesDisabled || capabilityCatalog?.mcpServers.status !== "available" || !capabilityCatalog.mcpServers.items.length}
+            statusText={sectionHint(capabilityCatalog?.mcpServers)}
             label="MCP"
             onChange={(mcpServerIds) => onSelectionChange({ ...selection, mcpServerIds })}
-            options={[]}
+            options={capabilityCatalog?.mcpServers.items.map(item => ({ id: item.id, label: item.name })) ?? []}
             selectedIds={selection.mcpServerIds}
           />
           {resolvedCapabilityMode === "preconfigured" ? (

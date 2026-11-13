@@ -313,7 +313,8 @@
                   "KNOWLEDGE_BASE_DISABLED",
                   "KNOWLEDGE_BASE_CATALOG_UNAVAILABLE",
                   "SKILL_CATALOG_UNAVAILABLE",
-                  "MCP_PROVIDER_NOT_CONFIGURED"
+                  "MCP_PROVIDER_NOT_CONFIGURED",
+                  "MCP_CATALOG_UNAVAILABLE"
                 ],
                 "type": "string"
               },
@@ -367,7 +368,8 @@
                   "KNOWLEDGE_BASE_DISABLED",
                   "KNOWLEDGE_BASE_CATALOG_UNAVAILABLE",
                   "SKILL_CATALOG_UNAVAILABLE",
-                  "MCP_PROVIDER_NOT_CONFIGURED"
+                  "MCP_PROVIDER_NOT_CONFIGURED",
+                  "MCP_CATALOG_UNAVAILABLE"
                 ],
                 "type": "string"
               },
@@ -459,7 +461,8 @@
                   "KNOWLEDGE_BASE_DISABLED",
                   "KNOWLEDGE_BASE_CATALOG_UNAVAILABLE",
                   "SKILL_CATALOG_UNAVAILABLE",
-                  "MCP_PROVIDER_NOT_CONFIGURED"
+                  "MCP_PROVIDER_NOT_CONFIGURED",
+                  "MCP_CATALOG_UNAVAILABLE"
                 ],
                 "type": "string"
               },
@@ -5912,7 +5915,7 @@
   "info": {
     "description": "C01 backend proposal. Runtime Zod exported using the same pattern as Skill Market. Frontend TypeScript/Zod generation is a separate repository step, not implemented here.",
     "title": "DSI Conversation API",
-    "version": "0.1.4"
+    "version": "0.1.5"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -8311,7 +8314,7 @@
       "/api/conversations"
     ],
     "bff": "Forward trusted login Cookie and permitted Origin, Last-Event-ID; preserve Set-Cookie, structured errors, download and streaming headers. Never use Skill Market fixed principal for conversations.",
-    "capabilitySelection": "Daily Agent Loop only. Malformed or forged fields return 400 INVALID_REQUEST; other profiles return 422 CAPABILITY_SELECTION_NOT_ALLOWED; missing, inaccessible, revoked, or Phase A unsupported MCP selections return 422 CAPABILITY_UNAVAILABLE with a generic message. Matching receipt retries reuse the stored snapshot without repeating external preflight. The worker re-reads the DB snapshot and revalidates before model use; a selected resource revoked after acceptance ends with CAPABILITY_UNAVAILABLE. Process restart loses the execution identity handle and never replays a pending Turn.",
+    "capabilitySelection": "Daily Agent Loop only. Malformed or forged fields return 400 INVALID_REQUEST; other profiles return 422 CAPABILITY_SELECTION_NOT_ALLOWED; missing, inaccessible, revoked, or unavailable selections return 422 CAPABILITY_UNAVAILABLE with a generic message. Matching receipt retries reuse the stored snapshot without repeating external preflight. MCP tools come only from explicitly selected enabled/healthy read-only servers; an empty or omitted MCP selection never queries the provider. Catalog outages degrade only the MCP section with MCP_CATALOG_UNAVAILABLE. The worker re-reads the DB snapshot and revalidates before model use; a selected resource revoked after acceptance ends with CAPABILITY_UNAVAILABLE. Process restart loses the execution identity handle and never replays a pending Turn.",
     "legacy": "Controlled legacy adapter only. QA/daily aliases: /agent and /api/agent. taskId and legacy task status retained; conversationId/turnId added. userId/sessionId ignored. Preserve clientRequestId on retries; without one, each request starts a new single-turn conversation. Nonempty legacy task context/daily category require typed input via the dedicated API; fixed demos and internal task-only services remain separate. Admission disabled returns 503 CONVERSATION_EXECUTION_DISABLED, never falls back to the old pipeline. Receipt retries may still return an existing committed turn.",
     "retry": "Same send retries retain clientRequestId and normalized input, including after timeout or 503 with an unknown commit result. acceptedEventSeq is a receipt watermark, not permission to skip unapplied events. Unknown commit retains the original execution identity; retries never rebind credentials.",
     "stream": "Client fetches snapshot separately. Use snapshot.lastEventSeq for future updates only after installing that snapshot. Recover historical failed/interrupted turn state by replaying /events from afterSeq=0 (or a proven cached projection) through the snapshot watermark; activeTurn alone is not terminal history. Preserve an applied cursor only together with its projection. Last-Event-ID overrides afterSeq and is conversation-scoped. : connected/: heartbeat are comments. Named events require event listeners or a streaming parser; x-event-schema is descriptive and does not generate that parser. No token-delta replay. RESYNC_REQUIRED discards stale cursor/preview and reloads snapshot; if historical events remain unavailable, mark historical status unknown, retain readable messages, and do not infinitely reconnect or rerun the model."

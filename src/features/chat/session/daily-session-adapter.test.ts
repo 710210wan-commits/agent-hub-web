@@ -34,12 +34,14 @@ function message(
 describe("daily Session message adapter", () => {
   it("preserves historical selection independently of current catalog or caller edits", () => {
     const input = message("old-message", { role: "user", capabilitySelection: {
-      knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: [],
+      knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: ["old-server"],
     } });
     const projected = adaptDailySessionMessage(input);
     input.capabilitySelection!.knowledgeBaseIds.push("later");
-    expect(projected.selection).toEqual({ knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: [] });
+    input.capabilitySelection!.mcpServerIds.push("later-server");
+    expect(projected.selection).toEqual({ knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: ["old-server"] });
     expect(Object.isFrozen(projected.selection!.knowledgeBaseIds)).toBe(true);
+    expect(Object.isFrozen(projected.selection!.mcpServerIds)).toBe(true);
   });
   it.each(["user", "assistant"] as const)(
     "maps %s text while preserving stable metadata",
