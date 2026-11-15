@@ -16,8 +16,11 @@ vi.mock("next/navigation", () => ({
 const draft = {
   authorId: "author-1",
   editable: true,
-  fileCount: 1,
-  files: { "SKILL.md": "# Demo" },
+  fileCount: 2,
+  files: {
+    "SKILL.md": "# Demo\n\nA **previewable** skill.",
+    "skill-definition.json": '{"metadata":{"name":"demo-skill"}}',
+  },
   id: "draft-1",
   metadata: { title: "Demo" },
   name: "demo-skill",
@@ -26,6 +29,21 @@ const draft = {
 };
 
 describe("SkillDraftEditor", () => {
+  it("previews each draft file with rendered Markdown and formatted JSON", async () => {
+    const client = { mutate: vi.fn(), query: vi.fn().mockResolvedValue(draft) } as unknown as SkillMarketClient;
+    render(<ModeProvider><SkillDraftEditor client={client} id="draft-1" /></ModeProvider>);
+
+    expect(await screen.findByRole("heading", { name: "文件预览" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "预览控制" })).toBeInTheDocument();
+    expect(screen.getByText("SKILL.md", { selector: "[aria-label='当前预览文件']" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Demo" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "skill-definition.json" }));
+    expect(screen.getByText("skill-definition.json", { selector: "[aria-label='当前预览文件']" })).toBeInTheDocument();
+    expect(screen.getByText(/"name": "demo-skill"/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看原文" }));
+    expect(screen.getByText('{"metadata":{"name":"demo-skill"}}')).toBeInTheDocument();
+  });
+
   it("saves with the loaded revision and keeps local edits after a conflict", async () => {
     const mutate = vi.fn().mockResolvedValue({
       error: new SkillMarketError({

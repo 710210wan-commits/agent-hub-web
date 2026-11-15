@@ -74,6 +74,9 @@ describe("SkillMine", () => {
     expect(within(draft).getByRole("link", { name: "编辑" })).toHaveAttribute(
       "href", "/skills/creator?mode=1&draftId=draft-1",
     );
+    expect(within(draft).getByRole("link", { name: "预览" })).toHaveAttribute(
+      "href", "/skills/drafts/draft-1?mode=1",
+    );
     expect(within(draft).getByRole("button", { name: "提交审核" })).toBeInTheDocument();
     expect(within(draft).getByRole("button", { name: "删除" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "上传 Skill ZIP 或目录" })).toHaveAttribute(

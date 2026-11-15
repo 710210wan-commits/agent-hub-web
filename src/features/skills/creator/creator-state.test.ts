@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AuthorDraft, RequirementSpecV1 } from "../contracts/generated";
 import {
   creatorStep,
+  creatorDraftMetadata,
   invalidateAfterBasic,
   invalidateAfterRequirement,
   invalidateAfterTools,
@@ -60,5 +61,17 @@ describe("creator state", () => {
     expect(recovered.draft?.id).toBe("draft-1");
     expect(recovered.bundle?.files).toEqual(draft.files);
     expect(creatorStep(recovered)).toBe("smoke");
+  });
+
+  it("stores review fields at the metadata top level as well as Creator recovery state", () => {
+    const metadata = creatorDraftMetadata(completeState());
+
+    expect(metadata).toMatchObject({
+      negativeExamples: ["no"],
+      positiveExamples: ["yes"],
+      requirement,
+      scenarioIds: ["daily"],
+      smokeEvidence: [],
+    });
   });
 });

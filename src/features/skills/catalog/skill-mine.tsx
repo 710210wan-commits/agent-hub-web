@@ -124,6 +124,7 @@ function SkillMineDaily({ client }: { client: SkillMarketClient }) {
             </span>
             {draft.status === "editing" ? (
               <div className="skill-mine-draft-actions">
+                <Link href={`/skills/drafts/${encodeURIComponent(draft.id)}?mode=1`}>预览</Link>
                 <Link href={`/skills/creator?mode=1&draftId=${encodeURIComponent(draft.id)}`}>编辑</Link>
                 <button disabled={Boolean(busyId)} onClick={() => void submitDraft(draft)} type="button">
                   {busyId === draft.id ? "处理中…" : "提交审核"}

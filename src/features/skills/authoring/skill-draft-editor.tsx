@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { Braces, Code2, Eye, FileText } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { LoadingState } from "@/components/states/loading-state";
 import { SkillMarketWorkPlaceholder } from "@/features/skills/catalog/skill-catalog-plaza";
@@ -45,6 +48,8 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
   const [action, setAction] = useState<Action>();
   const [diagnostics, setDiagnostics] = useState<SkillDiagnostic[]>([]);
   const [submission, setSubmission] = useState<SubmissionViewModel>();
+  const [previewFile, setPreviewFile] = useState<string>();
+  const [showRaw, setShowRaw] = useState(false);
 
   const load = useCallback(() => {
     setLoadingError(undefined);
@@ -61,6 +66,8 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
     ).then((loaded) => {
       setDraft(loaded);
       setEdit(toBuffer(loaded));
+      setPreviewFile(Object.keys(loaded.files)[0]);
+      setShowRaw(false);
       setDiagnostics([]);
       setMutationError(undefined);
     }).catch((error: unknown) => {
@@ -136,6 +143,14 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
         <div><h1>{draft.name}</h1><p>状态：{draft.status} · 修订 r{draft.revision} · {draft.fileCount} 个文件</p></div>
       </header>
 
+      <FilePreview
+        files={draft.files}
+        onSelect={(file) => { setPreviewFile(file); setShowRaw(false); }}
+        onToggleRaw={() => setShowRaw((value) => !value)}
+        selected={previewFile}
+        showRaw={showRaw}
+      />
+
       {sourcePublication && sourceRevision === draft.revision ? <div className="skill-draft-notice" role="status">已从 Publication {sourcePublication} 创建新修订 r{draft.revision}；原 Publication 与 Artifact 不会被覆盖。</div> : null}
       {!draft.editable ? <div className="skill-draft-notice" role="status">该草稿已不可编辑，当前仅可查看。</div> : null}
       <div className="skill-draft-panel">
@@ -198,4 +213,58 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function Diagnostics({ diagnostics }: { diagnostics: SkillDiagnostic[] }) {
   return <ul aria-label="校验结果">{diagnostics.map((item, index) => <li key={`${item.code}-${index}`}>{item.severity}：{item.message}</li>)}</ul>;
+}
+
+function FilePreview({ files, onSelect, onToggleRaw, selected, showRaw }: {
+  files: Record<string, string>;
+  onSelect: (file: string) => void;
+  onToggleRaw: () => void;
+  selected?: string;
+  showRaw: boolean;
+}) {
+  const names = Object.keys(files);
+  const active = selected && selected in files ? selected : names[0];
+  const content = active ? files[active] ?? "" : "";
+  const markdown = active?.toLowerCase().endsWith(".md");
+  const json = active?.toLowerCase().endsWith(".json");
+  const typeLabel = markdown ? "Markdown" : json ? "JSON" : "文本";
+  let formatted = content;
+  if (json && !showRaw) {
+    try { formatted = JSON.stringify(JSON.parse(content) as unknown, null, 2); } catch { formatted = content; }
+  }
+
+  return (
+    <section className="skill-file-preview">
+      <div className="skill-file-preview-heading">
+        <div><span className="skill-file-preview-eyebrow">草稿内容</span><h2>文件预览</h2><p>选择左侧文件，检查注册前的最终内容。</p></div>
+      </div>
+      {names.length ? (
+        <div className="skill-file-preview-layout">
+          <nav aria-label="草稿文件">
+            {names.map((name) => (
+              <button aria-pressed={name === active} key={name} onClick={() => onSelect(name)} type="button">
+                {name.toLowerCase().endsWith(".json") ? <Braces aria-hidden="true" size={14} /> : <FileText aria-hidden="true" size={14} />}
+                <span>{name}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="skill-file-preview-content">
+            <div aria-label="预览控制" className="skill-file-preview-toolbar" role="group">
+              <div>
+                <strong aria-label="当前预览文件">{active}</strong>
+                <span>{typeLabel} · {content.length} 个字符</span>
+              </div>
+              <button aria-pressed={showRaw} type="button" onClick={onToggleRaw}>
+                {showRaw ? <Eye aria-hidden="true" size={14} /> : <Code2 aria-hidden="true" size={14} />}
+                {showRaw ? "查看预览" : "查看原文"}
+              </button>
+            </div>
+            {markdown && !showRaw
+              ? <div className="skill-file-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown></div>
+              : <pre><code>{showRaw ? content : formatted}</code></pre>}
+          </div>
+        </div>
+      ) : <p className="skill-file-preview-empty">草稿中没有可预览的文件。</p>}
+    </section>
+  );
 }

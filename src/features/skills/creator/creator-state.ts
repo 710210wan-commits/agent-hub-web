@@ -112,6 +112,7 @@ export function recoverCreatorState(draft: AuthorDraft): CreatorState {
 }
 
 export function creatorDraftMetadata(state: CreatorState): Record<string, unknown> {
+  const requirement = state.confirmedRequirement;
   return {
     creator: {
       basic: state.basic,
@@ -123,6 +124,11 @@ export function creatorDraftMetadata(state: CreatorState): Record<string, unknow
       smokeResult: state.smokeResult,
       version: 1,
     },
+    negativeExamples: requirement?.trigger.negativeExamples ?? [],
+    positiveExamples: requirement?.trigger.positiveExamples ?? [],
+    requirement,
+    scenarioIds: state.basic.scenarioId ? [state.basic.scenarioId] : [],
+    smokeEvidence: state.smokeResult?.evidence ?? [],
     title: state.basic.title,
     version: state.basic.version,
   };

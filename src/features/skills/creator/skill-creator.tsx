@@ -13,7 +13,7 @@ import { useAppMode } from "@/providers/mode-provider";
 import type { SkillMarketClient, SkillMarketMutationResult } from "../api/client";
 import { getBrowserSkillMarketClient } from "../api/browser-client";
 import { draftMutationAdapter, draftUpdateAdapter } from "../contracts/authoring-view-model";
-import { SkillMarketError } from "../contracts/error";
+import { SkillMarketError, type SkillMarketRecoveryAction } from "../contracts/error";
 import type { CreatorGenerateResponse, CreatorToolListResponse, RequirementSpecV1, SkillDiagnostic, ToolResolutionResponse } from "../contracts/generated";
 import {
   analyzeRequirementAdapter,
@@ -58,6 +58,7 @@ export function SkillCreator({ client, draftId }: { client?: SkillMarketClient; 
 
 function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; draftId?: string }) {
   const router = useRouter();
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const pendingRef = useRef<PendingAction | undefined>(undefined);
   const retryRef = useRef<(() => void) | undefined>(undefined);
   const savedDraftRef = useRef<string | null>(null);
@@ -146,6 +147,20 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
   function updateBasic(field: keyof CreatorState["basic"], value: string) {
     setState((current) => invalidateAfterBasic(current, { ...current.basic, [field]: value }));
     setResolution(undefined);
+  }
+
+  function editRequirementDescription() {
+    setError(undefined);
+    descriptionRef.current?.focus();
+    descriptionRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }
+
+  function recoverFromError(action: SkillMarketRecoveryAction) {
+    if (action === "edit") {
+      editRequirementDescription();
+      return;
+    }
+    retryRef.current?.();
   }
 
   function analyze() {
@@ -318,6 +333,11 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
   }
   const step = creatorStep(state);
   const errors = state.bundle?.diagnostics.filter((item) => item.severity === "error") ?? [];
+  const requiredCapabilities = state.confirmedRequirement?.tools.requiredCapabilities ?? [];
+  const missingCapabilities = resolution?.missingCapabilities ?? state.confirmedRequirement?.tools.missingCapabilities ?? [];
+  const hasMissingCapabilities = missingCapabilities.length > 0;
+  const capabilityResolutionInconsistent = requiredCapabilities.length === 0;
+  const missingCapabilityError = error ? isMissingCapabilityError(error) : false;
 
   return (
     <section className="resource-page skill-creator-page">
@@ -336,38 +356,50 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
           <label>版本<input value={state.basic.version} onChange={(event) => updateBasic("version", event.target.value)} /></label>
           <label>目标场景<input disabled value={state.basic.scenarioId} /></label>
         </div>
-        <label>需求描述<textarea rows={5} value={state.basic.description} onChange={(event) => updateBasic("description", event.target.value)} /></label>
+        <label>需求描述<textarea ref={descriptionRef} rows={5} value={state.basic.description} onChange={(event) => updateBasic("description", event.target.value)} /></label>
         <small>需求描述可能包含业务内容，不会写入浏览器持久缓存。</small>
-        <button disabled={Boolean(pending) || !validBasic(state.basic)} type="button" onClick={analyze}>{pending === "analyze" ? "正在分析…" : "分析需求"}</button>
+        <div className="creator-action-bar">
+          <button className="primary-button creator-action-button" disabled={Boolean(pending) || !validBasic(state.basic)} type="button" onClick={analyze}>{pending === "analyze" ? "正在分析…" : "分析需求"}</button>
+        </div>
       </CreatorSection>
 
       {state.interview ? <CreatorSection title="2–3. Requirement Interview 与 Spec 确认">
+        <p className="creator-spec-hint"><strong>Spec 是什么？</strong> Spec 是生成 Skill 前的结构化需求合同，用来固定目标、输入、输出、触发边界和成功标准，后续的工具推荐、Bundle 生成和审核都以它为准。</p>
         <p><strong>模型建议摘要：</strong>{state.interview.summary}</p>
-        <RequirementSummary requirement={state.interview.requirement} />
+        <RequirementSummary confirmed={Boolean(state.confirmedRequirement)} requirement={state.confirmedRequirement ?? state.interview.requirement} />
         {state.interview.questions.map((question, index) => <label key={question}>{question}<textarea rows={2} value={answers[index] ?? ""} onChange={(event) => {
           const next = [...answers]; next[index] = event.target.value; setAnswers(next);
         }} /></label>)}
-        <div className="skill-draft-actions">
-          {state.interview.questions.length ? <button disabled={Boolean(pending) || !answers.some((item) => item.trim())} type="button" onClick={revise}>{pending === "revise" ? "正在修订…" : "提交回答并修订"}</button> : null}
-          <button disabled={Boolean(pending)} type="button" onClick={confirmRequirementAndRecommend}>{pending === "confirm-requirement" ? "正在确认并推荐…" : "确认 Spec 并推荐工具"}</button>
+        <div className="skill-draft-actions creator-action-bar">
+          {state.interview.questions.length ? (
+            <button className="secondary-button creator-action-button" disabled={Boolean(pending) || !answers.some((item) => item.trim())} type="button" onClick={revise}>{pending === "revise" ? "正在修订…" : "提交回答并修订 Spec"}</button>
+          ) : (
+            <button className="secondary-button creator-action-button" disabled={Boolean(pending)} type="button" onClick={editRequirementDescription}>修改需求描述</button>
+          )}
+          <button className="primary-button creator-action-button" disabled={Boolean(pending)} type="button" onClick={confirmRequirementAndRecommend}>{pending === "confirm-requirement" ? "正在确认并推荐…" : "确认 Spec 并推荐工具"}</button>
         </div>
       </CreatorSection> : null}
 
       {state.confirmedRequirement ? <CreatorSection title="4. Tool Catalog 与 Tool Resolution">
-        <div className="skill-draft-actions">
+        <p>这里展示当前 daily 场景可用的工具及其安全元数据。只选 Skill 确实需要的工具；纯 Prompt Skill 可以保持 0 个工具。</p>
+        <div className="creator-tool-toolbar">
           <input aria-label="搜索工具" placeholder="搜索工具" value={toolSearch} onChange={(event) => setToolSearch(event.target.value)} />
-          <select aria-label="风险筛选" value={toolRisk} onChange={(event) => setToolRisk(event.target.value)}><option value="all">全部风险</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="input-dependent">input-dependent</option></select>
-          <button disabled={Boolean(pending)} type="button" onClick={recommendTools}>{pending === "recommend" ? "正在推荐…" : resolution ? "重新获取服务端推荐" : "获取服务端推荐"}</button>
+          <select aria-label="风险筛选" value={toolRisk} onChange={(event) => setToolRisk(event.target.value)}><option value="all">全部风险</option><option value="low">低风险</option><option value="medium">中风险</option><option value="high">高风险</option><option value="input-dependent">依输入判断</option></select>
+          <button className="secondary-button creator-action-button" disabled={Boolean(pending)} type="button" onClick={recommendTools}>{pending === "recommend" ? "正在推荐…" : resolution ? "重新获取服务端推荐" : "获取服务端推荐"}</button>
         </div>
-        {resolution ? <div className="creator-recommendations"><strong>推荐理由</strong>{resolution.recommendations.map((item) => <p key={item.name}>{item.name}：{item.reason}</p>)}{resolution.missingCapabilities.map((item) => <p key={item}>缺少能力：{item}</p>)}<Diagnostics diagnostics={resolution.diagnostics} /></div> : null}
-        <div className="creator-tool-grid">{filteredTools.map(({ diagnostics, manifest }) => <label className="creator-tool-card" key={manifest.name}>
-          <span><input checked={(state.selectedToolNames ?? []).includes(manifest.name)} type="checkbox" onChange={() => toggleTool(manifest.name)} /> <strong>{manifest.displayName ?? manifest.name}</strong></span>
-          <span>{manifest.description}</span><span>风险：{manifest.riskLevel} · 可用性：{manifest.availability}</span>
-          <span>权限：{manifest.requiredPermissions.join("、") || "无"}</span><span>副作用：{manifest.sideEffects.join("、") || "无"}</span>
-          <span>访问：读 {String(manifest.access.read)} / 写 {String(manifest.access.write)} / 破坏性 {String(manifest.access.destructive)}</span>
-          {diagnostics.map((item, index) => <span key={`${item.code}-${index}`}>{item.severity}：{item.message}</span>)}
-        </label>)}</div>
-        <button disabled={Boolean(pending) || state.selectedToolNames === undefined} type="button" onClick={confirmToolsAndGenerate}>{pending === "generate" ? "正在确认并生成…" : state.bundle ? "重新确认工具并生成 Bundle" : "确认工具并生成 Bundle"}</button>
+        {resolution ? <ToolRecommendationSummary resolution={resolution} /> : null}
+        {hasMissingCapabilities ? <CreatorCapabilityBlocker capabilities={missingCapabilities} inconsistent={capabilityResolutionInconsistent} onEdit={editRequirementDescription} title={capabilityResolutionInconsistent ? "服务端能力解析不一致" : "暂时无法生成 Bundle"} /> : null}
+        <div className="creator-tool-grid">{filteredTools.map((item) => <ToolCard
+          checked={(state.selectedToolNames ?? []).includes(item.manifest.name)}
+          item={item}
+          key={item.manifest.name}
+          onToggle={() => toggleTool(item.manifest.name)}
+          recommendation={resolution?.recommendations.find((entry) => entry.name === item.manifest.name)?.reason}
+        />)}</div>
+        <div className="creator-selection-summary"><span>已选择 <strong>{state.selectedToolNames?.length ?? 0}</strong> 个工具</span><small>{hasMissingCapabilities ? "仍有能力缺口，暂时不能生成 Bundle。" : state.selectedToolNames?.length ? "确认后将写入 Skill Definition。" : "当前为无工具配置，适合纯 Prompt Skill。"}</small></div>
+        <div className="creator-action-bar">
+          <button className="primary-button creator-action-button" disabled={Boolean(pending) || state.selectedToolNames === undefined || hasMissingCapabilities} type="button" onClick={confirmToolsAndGenerate}>{pending === "generate" ? "正在确认并生成…" : state.bundle ? "重新确认工具并生成 Bundle" : "确认工具并生成 Bundle"}</button>
+        </div>
       </CreatorSection> : null}
 
       {state.confirmedToolNames !== undefined ? <CreatorSection title="5–6. Bundle 与 Diagnostics">
@@ -377,27 +409,37 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
       </CreatorSection> : null}
 
       {state.bundle && !errors.length ? <CreatorSection title="7. Smoke Case 与 Evidence">
-        <button disabled={Boolean(pending)} type="button" onClick={suggestSmoke}>{pending === "suggest" ? "正在建议…" : "建议 Smoke Cases"}</button>
+        <p className="creator-smoke-hint">Smoke Case 从已确认的 Spec 示例和成功标准派生，可在执行前编辑。</p>
+        <div className="creator-action-bar creator-action-bar-compact"><button className="secondary-button creator-action-button" disabled={Boolean(pending)} type="button" onClick={suggestSmoke}>{pending === "suggest" ? "正在建议…" : "从 Spec 建议 Smoke Cases"}</button></div>
         {state.smokeCases?.map((item, index) => <div className="creator-smoke-case" key={item.id}>
           <strong>{item.id}</strong>
           <label>输入<textarea value={item.input} onChange={(event) => updateSmokeCase(index, "input", event.target.value)} /></label>
           <label>预期<textarea value={item.expected} onChange={(event) => updateSmokeCase(index, "expected", event.target.value)} /></label>
         </div>)}
-        {state.smokeCases?.length ? <button disabled={Boolean(pending)} type="button" onClick={runSmoke}>{pending === "smoke" ? "正在执行…" : "执行 Smoke"}</button> : null}
-        {state.smokeResult ? <div aria-label="Smoke Evidence"><p>质量门：{state.smokeResult.qualityGate}</p>{state.smokeResult.evidence.map((item) => <article key={item.case.id}><strong>{item.case.id}：{item.status}{item.errorType ? `（${item.errorType}）` : ""}</strong><p>{item.output ?? item.errorMessage ?? "后端未提供摘要"}</p><small>{item.durationMs} ms</small></article>)}</div> : null}
+        {state.smokeCases?.length ? <div className="creator-action-bar"><button className="primary-button creator-action-button" disabled={Boolean(pending)} type="button" onClick={runSmoke}>{pending === "smoke" ? "正在执行…" : "执行 Smoke"}</button></div> : null}
+        {state.smokeResult ? <div aria-label="Smoke Evidence" className="creator-smoke-evidence">
+          <div className="creator-smoke-gate"><span>质量门</span><strong>{state.smokeResult.qualityGate === "soft" ? "软门禁" : state.smokeResult.qualityGate}</strong></div>
+          <div className="creator-smoke-evidence-list">{state.smokeResult.evidence.map((item) => <article className="creator-smoke-evidence-item" key={item.case.id}>
+            <div className="creator-smoke-evidence-heading"><strong>{item.case.id}</strong><span className={`creator-smoke-status is-${item.status}`}>{smokeStatusLabel(item.status)}</span><small>{item.durationMs} ms</small></div>
+            <p>{item.output ?? item.errorMessage ?? "后端未提供摘要"}</p>
+            {item.errorType ? <small>{smokeErrorTypeLabel(item.errorType)}</small> : null}
+          </article>)}</div>
+        </div> : null}
       </CreatorSection> : null}
 
       {state.bundle && !errors.length ? <CreatorSection title="8. 保存草稿与提交审核">
         <p>{state.draftSaved && state.draft ? `草稿 ${state.draft.id} 已保存（r${state.draft.revision}）。` : "当前 Creator 结果尚未保存。"}</p>
         {!state.smokeResult ? <p className="skill-draft-notice">Smoke 尚未运行；这是 Soft Gate，不阻止保存，也不会阻止之后从作者工作台提交审核。</p> : null}
-        <div className="skill-draft-actions">
-          <button disabled={Boolean(pending) || hasErrors(state)} type="button" onClick={saveDraft}>{pending === "save" ? "正在保存…" : "保存草稿"}</button>
-          {state.draftSaved && state.draft?.status === "editing" ? <Link href="/skills/mine?mode=1">前往作者工作台提交审核</Link> : null}
-          {state.draft ? <Link href={`/skills/drafts/${encodeURIComponent(state.draft.id)}?mode=1`}>打开草稿</Link> : null}
+        <div className="skill-draft-actions creator-action-bar">
+          {state.draft ? <Link className="secondary-button creator-action-button" href={`/skills/drafts/${encodeURIComponent(state.draft.id)}?mode=1`}>打开草稿</Link> : null}
+          {state.draftSaved && state.draft?.status === "editing" ? <Link className="secondary-button creator-action-button" href="/skills/mine?mode=1">前往作者工作台提交审核</Link> : null}
+          <button className="primary-button creator-action-button" disabled={Boolean(pending) || hasErrors(state)} type="button" onClick={saveDraft}>{pending === "save" ? "正在保存…" : "保存草稿"}</button>
         </div>
       </CreatorSection> : null}
 
-      {error ? <SkillMarketErrorState error={error} onRecover={() => retryRef.current?.()} /> : null}
+      {error ? missingCapabilityError ? (
+        <CreatorCapabilityBlocker capabilities={missingCapabilities} inconsistent={capabilityResolutionInconsistent} onEdit={editRequirementDescription} requestId={error.requestId} title={capabilityResolutionInconsistent ? "服务端能力解析不一致" : "工具能力不匹配"} />
+      ) : <SkillMarketErrorState error={error} onRecover={recoverFromError} /> : null}
     </section>
   );
 }
@@ -406,8 +448,124 @@ function CreatorSection({ children, title }: { children: React.ReactNode; title:
   return <section className="creator-section"><h2>{title}</h2>{children}</section>;
 }
 
-function RequirementSummary({ requirement }: { requirement: RequirementSpecV1 }) {
-  return <dl className="creator-requirement"><div><dt>目标</dt><dd>{requirement.goal}</dd></div><div><dt>输入</dt><dd>{requirement.input.description}</dd></div><div><dt>输出</dt><dd>{requirement.output.description}</dd></div><div><dt>来源</dt><dd>{requirement.status === "confirmed" ? "用户已确认" : "模型建议，待确认"}</dd></div></dl>;
+function RequirementSummary({ confirmed, requirement }: { confirmed: boolean; requirement: RequirementSpecV1 }) {
+  return <div className="creator-spec-grid">
+    <section className="creator-spec-card creator-spec-core">
+      <div className="creator-spec-card-heading"><h3>核心定义</h3><span className={confirmed ? "creator-status-badge is-confirmed" : "creator-status-badge"}>{confirmed ? "已确认" : "待你确认"}</span></div>
+      <dl className="creator-requirement"><SpecRow label="目标" value={requirement.goal} /><SpecRow label="输入" value={requirement.input.description} /><SpecRow label="输出" value={requirement.output.description} /></dl>
+    </section>
+    <section className="creator-spec-card">
+      <h3>触发边界</h3>
+      <SpecList label="何时使用" items={[requirement.trigger.whenToUse]} />
+      <SpecList label="正向示例" items={requirement.trigger.positiveExamples} />
+      <SpecList label="反向示例" items={requirement.trigger.negativeExamples} />
+    </section>
+    <section className="creator-spec-card">
+      <h3>能力与验收</h3>
+      <SpecList empty="无需额外能力" label="必需能力" items={requirement.tools.requiredCapabilities} />
+      <SpecList empty="无" label="约束" items={requirement.constraints} />
+      <SpecList empty="待补充" label="成功标准" items={requirement.successCriteria} />
+    </section>
+  </div>;
+}
+
+function SpecRow({ label, value }: { label: string; value: string }) {
+  return <div><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
+function SpecList({ empty = "无", items, label }: { empty?: string; items: string[]; label: string }) {
+  return <div className="creator-spec-list"><strong>{label}</strong>{items.length ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <span>{empty}</span>}</div>;
+}
+
+function ToolRecommendationSummary({ resolution }: { resolution: ToolResolutionResponse }) {
+  const hasRecommendations = resolution.recommendations.length > 0;
+  const hasMissingCapabilities = resolution.missingCapabilities.length > 0;
+  return <div className="creator-recommendations">
+    <strong>{hasRecommendations ? "服务端推荐" : "推荐结果"}</strong>
+    {hasRecommendations ? resolution.recommendations.map((item) => <p key={item.name}><b>{item.name}</b>：{item.reason}</p>) : hasMissingCapabilities ? <p>当前没有已注册工具能够满足 Spec。</p> : <p>当前 Spec 不需要额外工具，可以保持无工具配置。</p>}
+    <Diagnostics diagnostics={resolution.diagnostics} />
+  </div>;
+}
+
+function CreatorCapabilityBlocker({ capabilities, inconsistent, onEdit, requestId, title }: { capabilities: string[]; inconsistent: boolean; onEdit: () => void; requestId?: string; title: string }) {
+  return <section className="creator-capability-blocker" role="alert">
+    <h2>{title}</h2>
+    {inconsistent ? <>
+      <p>当前 Spec 已明确“无需额外能力”，但 Tool Resolution 仍报告能力缺口。这是服务端解析结果冲突，不是需求文案问题。</p>
+      <p>请重新获取服务端推荐；如果仍然出现，可使用排障 ID 检查服务端。</p>
+    </> : <>
+      <p>{capabilities.length ? <>没有已注册工具能够满足：<strong>{capabilities.join("、")}</strong>。</> : "后端确认时发现仍有未满足的工具能力。"}</p>
+      <p>请返回检查 Spec 的必需能力，或注册并选择兼容工具。</p>
+    </>}
+    {requestId ? <small>排障 ID：{requestId}</small> : null}
+    <div className="creator-action-bar creator-action-bar-compact"><button className="secondary-button creator-action-button" type="button" onClick={onEdit}>返回修改需求</button></div>
+  </section>;
+}
+
+function isMissingCapabilityError(error: SkillMarketError): boolean {
+  return error.diagnostics?.some((item) => item.field === "tools.missingCapabilities" || item.code.toLocaleLowerCase().includes("missingcapabilit")) ?? false;
+}
+
+type CreatorToolItem = CreatorToolListResponse["items"][number];
+
+function ToolCard({ checked, item, onToggle, recommendation }: { checked: boolean; item: CreatorToolItem; onToggle: () => void; recommendation?: string }) {
+  const { diagnostics, manifest } = item;
+  return <article className={checked ? "creator-tool-card is-selected" : "creator-tool-card"}>
+    <div className="creator-tool-card-heading">
+      <label><input checked={checked} type="checkbox" onChange={onToggle} /><span><h3>{manifest.displayName ?? manifest.name}</h3><code>{manifest.name}{manifest.version ? ` · v${manifest.version}` : ""}</code></span></label>
+      <div className="creator-tool-badges"><span className={`creator-tool-badge risk-${manifest.riskLevel}`}>{riskLabel(manifest.riskLevel)}</span><span className="creator-tool-badge">{availabilityLabel(manifest.availability)}</span>{recommendation ? <span className="creator-tool-badge is-recommended">服务端推荐</span> : null}</div>
+    </div>
+    <p className="creator-tool-description">{toolDescriptionSummary(manifest.description)}</p>
+    {recommendation ? <p className="creator-tool-reason">推荐理由：{recommendation}</p> : null}
+    <dl className="creator-tool-details">
+      <ToolDetail label="权限" value={manifest.requiredPermissions.join("、") || "无需权限"} />
+      <ToolDetail label="访问级别" value={accessLabel(manifest.access)} />
+      <ToolDetail label="副作用" value={manifest.sideEffects.length ? manifest.sideEffects.map(sideEffectLabel).join("、") : "无已知副作用"} />
+      <ToolDetail label="适用场景" value={manifest.supportedScenarios.join("、") || "未标注"} />
+    </dl>
+    <details className="creator-tool-schema"><summary>输入格式（JSON Schema）</summary><div className="creator-tool-schema-content"><strong>输入</strong><pre>{JSON.stringify(manifest.inputSchema, null, 2)}</pre>{manifest.outputSchema ? <><strong>输出</strong><pre>{JSON.stringify(manifest.outputSchema, null, 2)}</pre></> : null}</div></details>
+    {diagnostics.length ? <details className="creator-tool-diagnostics"><summary>{diagnostics.length} 条校验信息</summary><ul>{diagnostics.map((item, index) => <li key={`${item.code}-${index}`}><strong>{item.severity === "error" ? "错误" : "警告"}</strong>：{item.message} <small>({item.code})</small></li>)}</ul></details> : <p className="creator-tool-valid">校验通过</p>}
+  </article>;
+}
+
+function toolDescriptionSummary(description: string): string {
+  const summary = description.split(/\s+Input:\s*/i, 1)[0]?.trim() || description.trim();
+  return summary.endsWith(".") ? summary : `${summary}.`;
+}
+
+function ToolDetail({ label, value }: { label: string; value: string }) {
+  return <div><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
+function riskLabel(risk: CreatorToolItem["manifest"]["riskLevel"]): string {
+  return { high: "高风险", low: "低风险", medium: "中风险", "input-dependent": "依输入判断" }[risk];
+}
+
+function availabilityLabel(availability: CreatorToolItem["manifest"]["availability"]): string {
+  return { internal: "内部工具", public: "公开工具", restricted: "受限工具" }[availability];
+}
+
+function accessLabel(access: CreatorToolItem["manifest"]["access"]): string {
+  const labels: string[] = [];
+  if (access.read === true) labels.push("只读");
+  else if (access.read === "input-dependent") labels.push("读取依输入判断");
+  if (access.write === true) labels.push("可写");
+  else if (access.write === "input-dependent") labels.push("写入依输入判断");
+  if (access.destructive === true) labels.push("可执行破坏性操作");
+  else if (access.destructive === "input-dependent") labels.push("破坏性依输入判断");
+  return labels.join("、") || "无数据访问";
+}
+
+function sideEffectLabel(effect: CreatorToolItem["manifest"]["sideEffects"][number]): string {
+  return { database: "数据库", "external-system": "外部系统", filesystem: "文件系统", network: "网络", unknown: "未分类", "user-notification": "用户通知" }[effect];
+}
+
+function smokeStatusLabel(status: "error" | "failed" | "passed"): string {
+  return { error: "错误", failed: "未通过", passed: "通过" }[status];
+}
+
+function smokeErrorTypeLabel(errorType: "model_error" | "runtime_error" | "task_failure"): string {
+  return { model_error: "模型错误", runtime_error: "运行错误", task_failure: "未满足预期" }[errorType];
 }
 
 function Diagnostics({ diagnostics }: { diagnostics: SkillDiagnostic[] }) {
