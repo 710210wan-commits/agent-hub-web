@@ -184,10 +184,10 @@ function SkillPublicationListDaily({ client }: { client: SkillMarketClient }) {
                 </div>
                 {expandedId === publication.id ? (
                   <dl className="skill-publication-metadata skill-publication-row-detail">
-                    <div><dt>Publication ID</dt><dd>{publication.id}</dd></div>
-                    <div><dt>状态 / 修订</dt><dd>{publication.status} / r{publication.revision}</dd></div>
-                    <div><dt>SHA-256</dt><dd><code>{publication.contentHash}</code></dd></div>
-                    <div><dt>Artifact Key</dt><dd><code>{publication.artifactKey}</code></dd></div>
+                    <div><dt className="skill-publication-metadata-label">Publication ID</dt><dd className="skill-publication-metadata-value">{publication.id}</dd></div>
+                    <div><dt className="skill-publication-metadata-label">状态 / 修订</dt><dd className="skill-publication-metadata-value">{publication.status} / r{publication.revision}</dd></div>
+                    <div><dt className="skill-publication-metadata-label">SHA-256</dt><dd className="skill-publication-metadata-value"><code className="skill-publication-metadata-code">{publication.contentHash}</code></dd></div>
+                    <div><dt className="skill-publication-metadata-label">Artifact Key</dt><dd className="skill-publication-metadata-value"><code className="skill-publication-metadata-code">{publication.artifactKey}</code></dd></div>
                   </dl>
                 ) : null}
               </article>

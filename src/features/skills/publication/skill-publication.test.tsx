@@ -101,12 +101,12 @@ describe("Skill publication management", () => {
     const row = rowOf(/demo-skill/);
     fireEvent.click(within(row).getByRole("button", { name: /查看详情/ }));
 
-    expect(within(row).getByText("Publication ID")).toBeInTheDocument();
-    expect(within(row).getByText(publication.id)).toBeInTheDocument();
+    expect(within(row).getByText("Publication ID")).toHaveClass("skill-publication-metadata-label");
+    expect(within(row).getByText(publication.id)).toHaveClass("skill-publication-metadata-value");
     expect(within(row).getByText("SHA-256")).toBeInTheDocument();
-    expect(within(row).getByText(publication.contentHash)).toBeInTheDocument();
+    expect(within(row).getByText(publication.contentHash)).toHaveClass("skill-publication-metadata-code");
     expect(within(row).getByText("Artifact Key")).toBeInTheDocument();
-    expect(within(row).getByText(publication.artifactKey)).toBeInTheDocument();
+    expect(within(row).getByText(publication.artifactKey)).toHaveClass("skill-publication-metadata-code");
 
     fireEvent.click(within(row).getByRole("button", { name: /查看详情/ }));
     expect(within(row).queryByText("Artifact Key")).not.toBeInTheDocument();

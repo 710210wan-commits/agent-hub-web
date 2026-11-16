@@ -56,6 +56,10 @@ describe("SkillDraftEditor", () => {
     render(<ModeProvider><SkillDraftEditor client={client} id="draft-1" /></ModeProvider>);
 
     const metadata = await screen.findByLabelText("元数据 JSON");
+    expect(screen.getByRole("button", { name: "保存修改" })).toHaveClass("primary-button", "creator-action-button");
+    expect(screen.getByRole("button", { name: "删除草稿" })).toHaveClass("secondary-button", "creator-action-button");
+    expect(screen.getByRole("link", { name: "Creator 继续编辑" })).toHaveClass("secondary-button", "creator-action-button");
+    expect(screen.getByRole("button", { name: "提交审核" })).toHaveClass("primary-button", "creator-action-button");
     fireEvent.change(metadata, { target: { value: '{"title":"Local"}' } });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
 

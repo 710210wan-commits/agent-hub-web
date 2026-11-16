@@ -321,6 +321,8 @@ describe("SkillCreator", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "确认工具并生成 Bundle" }));
     await screen.findByText("1 个文件，0 条 diagnostics。");
+    expect(screen.getByText(/Bundle 是根据已确认的 Spec 和工具配置生成的 Skill 文件包/)).toBeVisible();
+    expect(screen.getByText(/Diagnostics 是生成后的校验结果/)).toBeVisible();
     expect(operations.slice(-2)).toEqual(["confirmToolResolution", "generateSkillBundle"]);
     expect(screen.getByText("Smoke Case 从已确认的 Spec 示例和成功标准派生，可在执行前编辑。")).toBeVisible();
     expect(screen.getByRole("button", { name: "从 Spec 建议 Smoke Cases" })).toHaveClass("secondary-button");

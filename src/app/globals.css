@@ -1034,6 +1034,7 @@ a {
   resize: vertical;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 12px;
+  line-height: 1.55;
 }
 
 .skill-draft-actions,
@@ -1046,6 +1047,25 @@ a {
 .skill-draft-actions button,
 .skill-draft-submit button {
   width: fit-content;
+}
+
+.skill-draft-actions .skill-draft-danger-button {
+  border-color: #eec2b8;
+  background: #fff7f5;
+  color: #a13c26;
+}
+
+.skill-draft-actions .skill-draft-danger-button:hover:not(:disabled) {
+  border-color: #dfa393;
+  background: #fdeeea;
+}
+
+.skill-draft-submit h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
 }
 
 .skill-draft-or,
@@ -1301,7 +1321,13 @@ a {
 
 .creator-smoke-hint {
   color: var(--color-muted);
-  font-size: 11px !important;
+  font-size: 12px !important;
+  line-height: 1.65;
+}
+
+.creator-bundle-hint {
+  display: grid;
+  gap: 4px;
 }
 
 .creator-smoke-case {
@@ -1776,6 +1802,36 @@ a {
   margin: 0;
 }
 
+.skill-publication-list .page-heading h1 {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.skill-publication-list .page-heading p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.skill-publication-metadata-label {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.skill-publication-metadata-value {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.skill-publication-metadata-code {
+  font-size: 12px;
+  line-height: 1.65;
+}
+
 .skill-publication-copy {
   display: grid;
   grid-template-columns: 110px minmax(0, 1fr) auto;
@@ -1809,7 +1865,8 @@ a {
 
 .skill-publication-row-copy h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.4;
 }
 
 .skill-publication-row-copy small {
@@ -1821,7 +1878,8 @@ a {
 .skill-publication-row-copy p {
   margin: 4px 0 0;
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .skill-publication-row-copy code {
@@ -1843,7 +1901,9 @@ a {
   background: white;
   padding: 7px 11px;
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.35;
   cursor: pointer;
 }
 
@@ -1905,6 +1965,13 @@ a {
 
 .skill-publication-row-detail code {
   word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .skill-publication-metadata > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
 }
 
 .skill-mine-section > h2,
@@ -2040,6 +2107,164 @@ a {
 .history-item time {
   color: #aaaab0;
   font-size: 10px;
+}
+
+.skill-trigger-hint {
+  border-radius: 8px;
+  background: #f7f8fb;
+  padding: 9px 11px;
+  color: var(--color-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.6;
+}
+
+.skill-trigger-expectation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.skill-trigger-expectation legend {
+  width: 100%;
+  margin-bottom: 1px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.creator-section .skill-trigger-expectation label {
+  display: inline-flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.skill-trigger-expectation input { width: auto; margin: 0; }
+
+.skill-trigger-gate {
+  margin: 0;
+  border: 1px solid #eec2b8;
+  border-radius: 8px;
+  background: #fff7f5;
+  padding: 8px 10px;
+  color: #a13c33 !important;
+  font-size: 12px !important;
+  line-height: 1.5;
+}
+
+.skill-trigger-gate.is-passed {
+  border-color: #b9dbc4;
+  background: #f0faf3;
+  color: #28703d !important;
+}
+
+.skill-trigger-gate-hint {
+  margin: -6px 0 0 !important;
+  color: var(--color-muted) !important;
+  font-size: 11px !important;
+  line-height: 1.55;
+}
+
+.skill-trigger-case { gap: 9px; }
+.skill-trigger-case > p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.skill-trigger-case > span { font-size: 11px; }
+.skill-trigger-case-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.skill-trigger-case-heading > strong { color: var(--color-text); font-size: 12px; }
+.skill-trigger-case-status {
+  border-radius: 999px;
+  background: #f2f2ef;
+  padding: 2px 7px;
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+.skill-trigger-case-status.is-passed { background: #edf8f0; color: #28703d; }
+.skill-trigger-case-status.is-failed { background: #fff1ef; color: #a13c33; }
+.skill-trigger-case-button {
+  width: fit-content;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.skill-trigger-advanced {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+.skill-trigger-advanced summary {
+  width: fit-content;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.skill-trigger-advanced-content {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.skill-trigger-result {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.skill-trigger-result-status {
+  border-radius: 999px;
+  background: #edf8f0;
+  padding: 3px 8px;
+  color: #28703d;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.skill-trigger-result.is-failed .skill-trigger-result-status {
+  background: #fff1ef;
+  color: #a13c33;
+}
+
+.skill-trigger-result-body {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.skill-trigger-result-body > strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.skill-trigger-result-body > span {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.skill-trigger-result-body > p {
+  margin: 0;
+  color: #5f6067;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .primary-button,

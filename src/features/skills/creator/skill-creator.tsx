@@ -403,6 +403,7 @@ function SkillCreatorDaily({ client, draftId }: { client: SkillMarketClient; dra
       </CreatorSection> : null}
 
       {state.confirmedToolNames !== undefined ? <CreatorSection title="5–6. Bundle 与 Diagnostics">
+        <p className="creator-bundle-hint"><span>Bundle 是根据已确认的 Spec 和工具配置生成的 Skill 文件包，包含注册和运行所需内容。</span><span>Diagnostics 是生成后的校验结果，会检查文件结构、字段、工具引用和规则；0 条表示未发现问题。</span></p>
         {pending === "generate" ? <small>Bundle 生成请求已发送；当前后端契约不提供可确认的取消结果。</small> : null}
         {generationMs !== undefined ? <small>最近一次生成耗时：{generationMs} ms</small> : null}
         {state.bundle ? <><p>{Object.keys(state.bundle.files).length} 个文件，{state.bundle.diagnostics.length} 条 diagnostics。</p><Diagnostics diagnostics={state.bundle.diagnostics} /></> : null}

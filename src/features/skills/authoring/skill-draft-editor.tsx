@@ -161,10 +161,10 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
         {validation ? <p className="skill-draft-validation" role="alert">{validation}</p> : null}
         {mutationError ? <SkillMarketErrorState error={mutationError} onRecover={mutationError.recovery === "refresh" ? load : undefined} /> : null}
         {diagnostics.length ? <Diagnostics diagnostics={diagnostics} /> : null}
-        {draft.editable ? <div className="skill-draft-actions">
-          <button disabled={Boolean(action) || !dirty} type="button" onClick={() => void save()}>{action === "save" ? "正在保存…" : "保存修改"}</button>
-          <button disabled={Boolean(action)} type="button" onClick={() => void remove()}>{action === "delete" ? "正在删除…" : "删除草稿"}</button>
-          <Link href={`/skills/creator?mode=1&draftId=${encodeURIComponent(draft.id)}`}>Creator 继续编辑</Link>
+        {draft.editable ? <div className="skill-draft-actions creator-action-bar">
+          <button className="primary-button creator-action-button" disabled={Boolean(action) || !dirty} type="button" onClick={() => void save()}>{action === "save" ? "正在保存…" : "保存修改"}</button>
+          <button className="secondary-button creator-action-button skill-draft-danger-button" disabled={Boolean(action)} type="button" onClick={() => void remove()}>{action === "delete" ? "正在删除…" : "删除草稿"}</button>
+          <Link className="secondary-button creator-action-button" href={`/skills/creator?mode=1&draftId=${encodeURIComponent(draft.id)}`}>Creator 继续编辑</Link>
         </div> : null}
       </div>
 
@@ -173,7 +173,7 @@ function SkillDraftEditorDaily({ client, id }: { client: SkillMarketClient; id: 
         <p>修订 r{draft.revision} · {draft.fileCount} 个文件 · {unresolved} 个未解决错误</p>
         {dirty ? <p>请先保存当前修改再提交。</p> : null}
         {submission ? <p role="status">已提交审核：{submission.id}（r{submission.revision}）</p> : null}
-        {draft.editable ? <button disabled={Boolean(action) || dirty || unresolved > 0} type="button" onClick={() => void submit()}>{action === "submit" ? "正在提交…" : "提交审核"}</button> : null}
+        {draft.editable ? <div className="creator-action-bar"><button className="primary-button creator-action-button" disabled={Boolean(action) || dirty || unresolved > 0} type="button" onClick={() => void submit()}>{action === "submit" ? "正在提交…" : "提交审核"}</button></div> : null}
       </section>
     </section>
   );

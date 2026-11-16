@@ -82,7 +82,7 @@ export function ReviewEvidence({ submission }: { submission: ReviewSubmissionVie
               <time>{new Date(review.createdAt).toLocaleString("zh-CN")}</time>
             </article>
           ))}</div>
-        ) : <Missing />}
+        ) : <p className="skill-review-missing">暂无审核记录</p>}
       </EvidenceSection>
     </div>
   );
