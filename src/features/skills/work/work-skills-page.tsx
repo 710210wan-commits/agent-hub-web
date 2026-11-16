@@ -150,7 +150,10 @@ function WorkSkillsMarket({
     const next = skill.enabled === false;
     setTogglingSlugs((current) => [...current, skill.slug]);
     try {
-      await setEnabled(skill.slug, next);
+      const updated = await setEnabled(skill.slug, next);
+      setPreviewSkill((current) =>
+        current?.slug === updated.slug ? { ...current, ...updated } : current,
+      );
       showToast(`Skill 已${next ? "启用" : "禁用"}`);
     } catch (error) {
       showToast(errorMessage(error, "更新 Skill 启用状态失败"));

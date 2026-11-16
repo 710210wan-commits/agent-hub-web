@@ -171,6 +171,39 @@ describe("WorkSkillsPage 交互", () => {
     expect(onManageSkill).toHaveBeenCalledWith("mysql-reporter");
   });
 
+  it("预览弹窗在启停成功后同步最新状态，不会重复提交同一值", async () => {
+    const disabledSkill = {
+      ...(listEnvelope.data.find((skill) => skill.slug === "mysql-reporter") as WorkSkill),
+      enabled: false,
+    };
+    const api = apiStub({
+      listSkills: vi.fn(async () => ({
+        ...structuredClone(listEnvelope),
+        data: structuredClone(listEnvelope.data).map((skill) =>
+          skill.slug === disabledSkill.slug ? disabledSkill : skill,
+        ),
+      })),
+      setSkillEnabled: vi.fn(async (_slug: string, enabled: boolean) => ({
+        ...disabledSkill,
+        enabled,
+      })),
+    });
+    await renderPage(api);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /查看 MySQL Reporter 预览/ })[0]);
+    const dialog = await screen.findByRole("dialog");
+    const toggle = within(dialog).getByRole("switch", { name: "切换启用状态" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(within(dialog).getByText("已禁用")).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
+    expect(within(dialog).queryByText("已禁用")).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(api.setSkillEnabled).toHaveBeenNthCalledWith(2, "mysql-reporter", false));
+  });
+
   it("内置 Skill 预览不显示卸载", async () => {
     await renderPage(apiStub());
     fireEvent.click(screen.getAllByRole("button", { name: /查看 Deep Research 预览/ })[0]);

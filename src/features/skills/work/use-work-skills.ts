@@ -84,7 +84,7 @@ export function reduceWorkSkillsState(
 export interface UseWorkSkillsResult {
   refresh(): void;
   /** 启停后原地替换技能；失败抛错由调用方提示。 */
-  setEnabled(slug: string, enabled: boolean): Promise<void>;
+  setEnabled(slug: string, enabled: boolean): Promise<WorkSkill>;
   state: WorkSkillsListState;
 }
 
@@ -155,6 +155,7 @@ export function useWorkSkills(
     async (slug: string, enabled: boolean) => {
       const updated = await api.setSkillEnabled(slug, enabled);
       dispatch({ skill: updated, type: "work-skills-enabled-updated" });
+      return updated;
     },
     [api],
   );
