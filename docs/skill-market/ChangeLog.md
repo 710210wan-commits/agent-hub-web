@@ -1027,6 +1027,80 @@ Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migrat
 2. 更新 `.gitattributes`，固定 `src/features/chat/conversation/contracts/schema/*.json` 与 `generated/*.ts` 使用 LF；规范化后 Schema SHA-256 恢复为锁文件记录的 `d5bd3ae1b98758366c1e9a6e61f1b6c32cb0502c0739823a6d0e7367fe467472`，Git blob 内容未变化。
 3. 验证模式切换聚焦测试 34/34、Conversation lock/generator 测试 11/11、全量 Vitest 767/767、TypeScript strict 与 ESLint 全部通过。
 
+## 2026-11-16
+
+### 39. 优化 Creator 决策流程、草稿预览与审核提交兼容
+
+提交：`0c78bed`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T9、T10 后续体验与兼容修正`
+
+#### 问题
+
+- Creator 的“分析需求”“确认 Spec 并推荐工具”等关键动作缺少统一按钮层级，Spec 的触发边界、正反例、必需能力和确认状态没有完整展示，工具卡片直接铺开长描述与校验警告，字号和信息密度失衡。
+- 纯 Prompt Skill 明确不需要工具时仍可能显示“缺少能力/暂时无法生成 Bundle”；Smoke Test 的来源和结果不够清晰，保存后的草稿也无法直接预览生成的 `SKILL.md` 与 `skill-definition.json`。
+- Creator 保存的 Requirement、正反触发样例和 Smoke 证据只存在恢复态嵌套元数据中，作者工作台直接提交时后端读取不到顶层审核字段，页面最终只显示笼统的“请检查输入”。
+
+#### 修改方案
+
+- 重整 Creator 的步骤动作区、Spec 摘要、工具筛选/卡片、Bundle 阻断和 Smoke Evidence，明确 Spec 是后续工具解析、Bundle 生成和审核的冻结输入；所有控件字号低于区块标题并保持统一主次按钮样式。
+- 纯 Prompt Skill 保持 0 工具；新保存草稿同时写入审核所需的顶层 Requirement、触发示例、场景和 Smoke Evidence，后端兼容提交由 `DSI-agent-loop@4845c64` 提供。
+- “我的 Skill”草稿增加预览入口；草稿页按文件切换，Markdown 渲染、JSON 格式化和原文查看共用紧凑工具栏，并显示当前文件类型和字符数。
+
+#### **代码变更：**
+
+1. `skill-creator.tsx`、`creator-state.ts`：完整呈现 Spec、工具元数据和 Smoke 证据，修正无工具 Bundle 流程，并把审核字段同步到草稿顶层元数据。
+2. `skill-mine.tsx`、`skill-draft-editor.tsx`：增加草稿预览入口、文件导航、Markdown/JSON 预览和原文切换。
+3. `globals.css`：统一 Creator、工具、Smoke 和文件预览的按钮、字号、间距、状态与响应式布局。
+4. 扩展 Creator、草稿状态、我的 Skill 和草稿编辑器测试；聚焦测试、TypeScript strict、ESLint 及全量 Vitest 96 个测试文件/839 条测试全部通过。
+
+### 40. 支持对话 Markdown 表格横向滚动
+
+提交：`2b7874b`（表格容器与测试）；样式随 `0c78bed` 落盘
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`Skill 参与对话后续展示修正`
+
+#### 问题
+
+- Skill 参与对话后可能生成标题、列表和 GFM 表格；窄窗口下宽表格会挤压消息布局或溢出消息区域。
+
+#### 修改方案
+
+- 为 Markdown 表格增加可聚焦的横向滚动容器，保留原生 table 语义与键盘可访问性，标题和列表继续由统一 Markdown 渲染器处理。
+
+#### **代码变更：**
+
+1. `message-content.tsx`：为 `react-markdown` 注册 table 组件并包裹 `.message-table-scroll`。
+2. `chat-page.test.tsx`：覆盖标题、列表、表格语义和滚动容器结构。
+3. 验证已包含在全量 Vitest 96 个测试文件/839 条测试、TypeScript strict 与 ESLint 通过结果中。
+
+### 41. 同步 Work Skill 预览弹窗启停状态
+
+提交：`bbfc7e2`
+
+Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.md`
+
+对应 Plan 模块：`Work Task 4 后续状态修正`
+
+#### 问题
+
+- 在 Work Skill 预览弹窗中启用或禁用 Skill 后，列表状态已更新，但弹窗仍持有旧 Skill 快照；再次点击开关可能重复提交同一个目标值，状态文案也不会立即更新。
+
+#### 修改方案
+
+- `setEnabled` 返回服务端确认后的最新 Skill；页面 reducer 更新列表的同时，用同一响应原地更新当前预览对象，使开关、状态文案和下一次操作始终基于最新状态。
+
+#### **代码变更：**
+
+1. `use-work-skills.ts`：启停方法返回更新后的 `WorkSkill`。
+2. `work-skills-page.tsx`：成功后同步当前预览 Skill。
+3. `work-skills-page.test.tsx`：覆盖禁用 → 启用 → 再禁用的连续操作和弹窗文案更新。
+4. 验证已包含在全量 Vitest 96 个测试文件/839 条测试、TypeScript strict 与 ESLint 通过结果中。
+
 ## 后续条目模板
 
 ```markdown
