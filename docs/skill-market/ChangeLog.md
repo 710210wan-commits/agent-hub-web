@@ -1101,6 +1101,36 @@ Plan 文档：`docs/skill-market/2026-11-11-work-skill-frontend-implementation.m
 3. `work-skills-page.test.tsx`：覆盖禁用 → 启用 → 再禁用的连续操作和弹窗文案更新。
 4. 验证已包含在全量 Vitest 96 个测试文件/839 条测试、TypeScript strict 与 ESLint 通过结果中。
 
+### 42. 增加 Trigger 审核门禁并统一 Skill 操作按钮与排版
+
+提交：`8f2ce60`
+
+Plan 文档：`DSI-agent-loop/docs/plans/2026-11-05-skill-market-frontend-migration.md`
+
+对应 Plan 模块：`T8`（来源细化模块 `F-01～F-04` 后续审核体验修正）
+
+#### 问题
+
+- 审核详情在批准前不校验预置 Trigger Case 的通过状态，正向/反向 Case 未全部通过也能批准；Skill 规则要求显式选择而正向 Case 未包含显式选择语句时，没有任何冲突提示。
+- 预置 Case 只能逐条手动输入重跑，缺少一键运行全部未通过 Case 的入口；手动 Trigger Test 的期望结果用复选框表达，容易把“未显式选择 Skill”的普通请求误判为期望触发；Trigger 校验信息混在审核决定校验中，位置与语义都不清晰。
+- 草稿编辑、审核详情、审核决定和发布操作的按钮未复用全局主次按钮样式；Publication 展开元数据、页面标题与正文的字号行高不统一；审核历史为空时显示泛化的“后端未提供”；Creator 的 Bundle 与 Diagnostics 区块缺少说明文案。
+
+#### 修改方案
+
+- 批准前增加 Trigger 审核门禁：所有预置 Case（至少一条正向和一条反向）都必须获得查询与预期均匹配的通过记录才能批准；检测到“显式选择”规则与正向 Case 冲突时阻断批准，提示删除当前待审核提交并重新提交。
+- 新增“运行全部未通过 Case”单飞操作，按每条 Case 自身预期逐条执行并显示进度；手动测试折叠为“额外测试（不影响审核）”，期望结果改为单选并提供选择提示；Trigger 校验信息独立展示，决定校验移至审核决定区块内。
+- 草稿、审核、发布按钮统一挂载 `primary-button`/`secondary-button` + `creator-action-button`，危险操作使用统一 danger 样式；Publication 展开元数据使用专用 label/value/code 类名统一排版；空审核历史显示“暂无审核记录”。
+
+#### **代码变更：**
+
+1. `skill-review-detail.tsx`：新增 `triggerGateStatus`、`TriggerGate`、`hasExplicitSelectionCaseConflict` 与 `runMissingTriggerCases`；`TriggerCases` 为每条 Case 增加已通过/未通过/待测试状态徽标；手动测试迁入 `details` 高级区并用 radio 选择期望结果；批准前依次执行显式选择冲突校验与 Trigger 门禁校验。
+2. `review-evidence.tsx`：审核历史为空时显示“暂无审核记录”，替代泛化 Missing 文案。
+3. `skill-draft-editor.tsx`、`skill-review-detail.tsx`：保存、删除、Creator 继续编辑、提交审核、批准、拒绝、删除待审核提交、仅发布/发布并启用按钮统一挂载全局主次按钮类名。
+4. `skill-creator.tsx`：Bundle 与 Diagnostics 区块增加说明文案，解释 Bundle 生成来源与 diagnostics 含义。
+5. `skill-publication-list.tsx` 与 `globals.css`：Publication 展开元数据使用 `skill-publication-metadata-label/value/code` 类名；统一相关页面标题、正文、代码块与按钮的字号、字重和行高。
+6. 测试：`skill-review-detail.test.tsx` 新增门禁阻断与一键运行未通过 Case 用例；`skill-draft-editor.test.tsx`、`skill-creator.test.tsx`、`skill-publication.test.tsx` 断言新类名与文案。
+7. 验证 Skill 组件聚焦测试 112/112、TypeScript strict 与 ESLint 全部通过；本轮未重跑 Playwright、build 或全量 Vitest。
+
 ## 后续条目模板
 
 ```markdown
