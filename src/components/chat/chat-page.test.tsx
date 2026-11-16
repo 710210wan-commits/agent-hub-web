@@ -263,4 +263,26 @@ describe("MessageContent", () => {
     render(<MessageContent content="**尚未闭合" />);
     expect(screen.getByText("**尚未闭合")).toBeInTheDocument();
   });
+
+  it("renders structured answers and keeps wide tables scrollable", () => {
+    const { container } = render(
+      <MessageContent
+        content={[
+          "## 索引的工作原理",
+          "",
+          "- 降低读取范围",
+          "- 支持多表关联",
+          "",
+          "| 优点 | 说明 |",
+          "| --- | --- |",
+          "| 查询优化 | 快速定位记录 |",
+        ].join("\n")}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "索引的工作原理", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("list")).toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(container.querySelector(".message-table-scroll > table")).toBeInTheDocument();
+  });
 });
