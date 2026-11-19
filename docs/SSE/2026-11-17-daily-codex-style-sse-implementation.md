@@ -451,17 +451,21 @@ Agent Loop 必须把“可以公开输出”定义为明确、可测试的阶段
 
 **目标：** 在修改公共 API 前，用最小原型证明上游真实 chunk 顺序和 Agent Loop 的公开输出边界，并冻结 output 事件设计；本阶段不依赖尚未建设的 durable event 或浏览器链路。
 
-- [ ] 在后端为普通回答、tool call、混合 chunk、reasoning、取消和网络中断建立 provider fixture。
-- [ ] 增加“先收到 content、随后收到 tool call”的强制 fixture，覆盖最危险的延迟工具决策顺序。
-- [ ] 写失败测试，证明当前 provider `stream: false` 且无法产生正文 delta。
-- [ ] 用原型 public-output sink 验证目标模型及 Agent Loop 是否能在任何公开文本产生前可靠区分 final-answer、reasoning、普通 content 和 tool-call arguments。
-- [ ] 记录实际上游在各 fixture 中的事件顺序，并证明 public-output sink 只收到工具阶段结束后的最终正文。
-- [ ] 判断工具型问答能否安全复用同一次调用；若不能，记录无法复用的具体原因，采用工具阶段结束后的独立 final-answer 流，并测量该独立调用的首字时间。无法安全复用本身不是 Task 0 失败。
-- [ ] 确认单进程/多进程部署形态以及 PostgreSQL 通知能力。
-- [ ] 联合评审 `output.*` schema、partial snapshot、取消语义和容量上限。
-- [ ] 更新后端 approved Plan；此 Task 未通过前不得开始浏览器协议实现。
+- [x] 在后端为普通回答、tool call、混合 chunk、reasoning、取消和网络中断建立 provider fixture。
+- [x] 增加“先收到 content、随后收到 tool call”的强制 fixture，覆盖最危险的延迟工具决策顺序。
+- [x] 写失败测试，证明当前 provider `stream: false` 且无法产生正文 delta。
+- [x] 用原型 public-output sink 验证目标模型及 Agent Loop 是否能在任何公开文本产生前可靠区分 final-answer、reasoning、普通 content 和 tool-call arguments。
+- [x] 记录实际上游在各 fixture 中的事件顺序，并证明 public-output sink 只收到工具阶段结束后的最终正文。
+- [x] 判断工具型问答能否安全复用同一次调用；若不能，记录无法复用的具体原因，采用工具阶段结束后的独立 final-answer 流，并测量该独立调用的首字时间。无法安全复用本身不是 Task 0 失败。
+- [x] 确认单进程/多进程部署形态以及 PostgreSQL 通知能力。
+- [x] 联合评审 `output.*` schema、partial snapshot、取消语义和容量上限。
+- [x] 更新后端 approved Plan；此 Task 未通过前不得开始浏览器协议实现。
 
-**验收：** 有可重复 fixture 和上游事件顺序记录；在“先 content、后 tool call”fixture 中，原型 public-output sink 从未收到中间文本，只收到工具阶段结束后的最终正文增量。若同一次调用无法安全复用，文档已记录原因、选定独立 final-answer 调用，并报告其首字时间。durable event store 与浏览器的不泄漏由 Task 7 在真实链路上验收。
+**状态：已完成（2026-11-19）。** 后端 `daily-sse` 分支的 `ccbb4c7` 提交提供 fixture、RED/GREEN 原型测试和元数据探针；后端批准记录位于 `D:\0 ysq文件\DSI-agent-loop\docs\plans\2026-11-19-daily-public-answer-stream-spike.md`。
+
+**验收结果：** “先 content、后 tool call”fixture 的工具决策中间文本从未进入原型 public-output sink，独立 final-answer fixture 产生两个可拼接的真实公开增量。真实 `deepseek-v4-flash` 探针观察到 `role → reasoning → content → finish` 和 `role → reasoning → tool_call → finish`；独立、关闭工具的 final-answer 调用两次首个 content 分别为 1,940ms 和 2,285ms。OpenAI-compatible 流在首个 content 前没有 final-answer 标记，因此不能安全复用工具能力开启的同一次调用；后续实现固定使用工具阶段结束后的独立 tools-disabled final-answer 流。
+
+当前 Conversation 部署为单 `agent-api`，独立 worker 不执行 Conversation Turn；PostgreSQL 16.14 的双连接 `LISTEN/NOTIFY` 已实测成功。后端 Plan 已冻结 `output.*`、`partialOutput`、取消/失败语义、32,000 字符与 2,048 durable delta 上限，以及单 agent-api 下进程内 wake-up、多 agent-api 下 PostgreSQL 共享通知的边界。durable event store 与浏览器的不泄漏仍由 Task 7 在真实链路上验收。
 
 ### Task 1：后端模型流原语
 
