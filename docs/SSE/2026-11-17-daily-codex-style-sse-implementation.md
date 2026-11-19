@@ -461,7 +461,7 @@ Agent Loop 必须把“可以公开输出”定义为明确、可测试的阶段
 - [x] 联合评审 `output.*` schema、partial snapshot、取消语义和容量上限。
 - [x] 更新后端 approved Plan；此 Task 未通过前不得开始浏览器协议实现。
 
-**状态：已完成（2026-11-19）。** 后端 `daily-sse` 分支的 `ccbb4c7` 提交提供 fixture、RED/GREEN 原型测试和元数据探针；后端批准记录位于 `D:\0 ysq文件\DSI-agent-loop\docs\plans\2026-11-19-daily-public-answer-stream-spike.md`。
+**状态：已完成（2026-11-19）。** 后端 `daily-sse` 分支的 `ccbb4c7` 提交提供 fixture、RED/GREEN 原型测试和元数据探针；后端批准记录位于 `D:\0 ysq文件\DSI-agent-loop\docs\SSE\2026-11-19-daily-public-answer-stream-spike.md`。
 
 **验收结果：** “先 content、后 tool call”fixture 的工具决策中间文本从未进入原型 public-output sink，独立 final-answer fixture 产生两个可拼接的真实公开增量。真实 `deepseek-v4-flash` 探针观察到 `role → reasoning → content → finish` 和 `role → reasoning → tool_call → finish`；独立、关闭工具的 final-answer 调用两次首个 content 分别为 1,940ms 和 2,285ms。OpenAI-compatible 流在首个 content 前没有 final-answer 标记，因此不能安全复用工具能力开启的同一次调用；后续实现固定使用工具阶段结束后的独立 tools-disabled final-answer 流。
 
