@@ -30,6 +30,8 @@
 5. 模型产生的 reasoning 字段永不进入公共事件和浏览器。
 6. 后端积累的最终正文必须与完成时持久化的 assistant message 字节一致。
 7. 增量按时间或大小批处理，避免逐 token 写数据库和逐 token React render。
+8. `content` 字段本身不代表可公开；只有 Agent Loop 明确进入 final-answer 阶段后才能产生公共正文事件。
+9. 安全清理先于 durable event 写入和 SSE 投递，最终消息只从同一份已公开文本累积得到。
 
 ---
 
@@ -37,7 +39,16 @@
 
 ### 1. 等待与工具阶段
 
-用户发送后立即创建当前助手输出区域，不先渲染一个永久空白的 assistant 消息。正文尚未开始时，只显示一条当前安全活动摘要：
+用户发送后立即创建当前助手输出区域，不先渲染一个永久空白的 assistant 消息。界面按任务是否实际进入工具阶段采用不同节奏：
+
+| 场景 | 用户看到的效果 |
+| --- | --- |
+| 普通问答 | 请求发出后显示低调等待状态；首批正文到达后，等待状态直接让位给正文，不保留执行过程入口。 |
+| 查询知识库、调用工具 | 等待时原地更新一条具体状态，例如“正在查询知识库…”；正文开始后，将实际工具活动折叠到正文上方的“查看执行过程”。 |
+| 生成中 | 正文在同一位置逐批增长；用户在底部附近时跟随输出，主动向上滚动后保留阅读位置；停止按钮位于输入区。 |
+| 断线、停止或失败 | 已显示正文保留在原位；断线提供“重新连接”，主动停止显示“生成已停止”，失败显示具体且可处理的脱敏原因。 |
+
+普通问答正文尚未开始时，只显示一条低调等待状态：
 
 ```text
 AI  智能体平台
@@ -45,28 +56,28 @@ AI  智能体平台
 ● 正在分析请求…
 ```
 
-工具执行时替换当前活动，不连续堆叠重复状态：
+工具执行时原地替换当前活动，不连续堆叠重复状态：
 
 ```text
 ● 正在查询知识库…
 ● 正在使用工具…
-✓ 已完成 2 个步骤
 ```
 
 规则：
 
 - 同时只显示一个当前活动。
-- 完成的活动折叠为“已完成 N 个步骤”。
-- 可扩展区域只允许展示经过白名单映射的工具显示名和成功/失败状态。
+- 不默认展示“已完成 N 个步骤”；步骤总数不作为主要阅读信息。
+- 只有实际发生过工具活动时，正文开始后才显示“查看执行过程”入口。
+- “查看执行过程”只允许展示经过白名单映射的工具显示名、阶段和成功/失败状态。
 - 不展示模型推理、原始 tool input/output、内部服务名、Token、Cookie 或错误对象。
 - 活动区使用 `aria-live="polite"`，但相同文案不得反复播报。
 
 ### 2. 正文流式阶段
 
-第一个真实正文 delta 到达后，活动区收拢，正文在同一个 assistant 输出区域中逐段生长：
+第一个真实正文 delta 到达后，普通问答的等待状态直接消失；工具任务的活动区折叠为按需展开的“查看执行过程”。正文在同一个 assistant 输出区域中逐段生长：
 
 ```text
-✓ 已完成 2 个步骤
+[查看执行过程]  // 仅实际发生过工具活动时显示
 
 根据当前数据，风险主要集中在……▍
 ```
@@ -74,10 +85,10 @@ AI  智能体平台
 视觉与交互规则：
 
 - assistant 正文保持现有无气泡、左对齐样式；用户消息继续使用用户气泡。
-- 前端每 40–80ms 合并一次增量，默认 60ms。
+- 首批正文立即渲染；后续增量每 40–80ms 合并一次，默认 60ms。
 - 只在当前未完成正文末尾显示低调流式光标；完成、停止、失败和断线后移除。
-- 已稳定的 Markdown block 不重复解析；只更新最后一个未闭合 block。
-- 未闭合代码围栏先按安全纯文本展示；闭合后再启用完整代码样式。
+- 首版先保证真实增量、停止保留和断线续接；稳定 Markdown block 缓存与代码块渲染优化在真实长回答证明存在瓶颈后再纳入性能门禁。
+- 未闭合代码围栏必须安全展示，不得因语法高亮阻塞首版真实流式链路。
 - 用户位于底部附近时自动跟随；用户主动向上滚动后停止自动滚动，并显示“回到底部”。
 - delta 不得触发整个消息列表重新挂载，也不得改变既有消息的 selection snapshot。
 
@@ -185,6 +196,7 @@ type ConversationOutputCompletedEvent = {
 - `eventSeq` 继续作为 conversation 级总顺序，纳入现有补洞和重放逻辑。
 - `outputSeq` 是当前 `messageId` 内从 `1` 开始的连续十进制字符串。
 - `delta` 是 UTF-8 文本的追加片段；禁止发送全量正文冒充 delta。
+- `delta` 必须已经通过支持跨 chunk 边界的流式安全清理；事件库和 SSE 中不得出现清理前文本。
 - 单个 delta 建议不超过 8 KiB，Schema 必须设置明确上限。
 - 空 delta、重复 `outputSeq`、跳号、完成后继续 delta 都是协议错误。
 - `contentSha256` 用于前后端诊断和测试核对，不作为浏览器安全边界。
@@ -274,21 +286,29 @@ turn.failed
 
 ### 6. 模型流安全边界
 
-当前 Agent Loop 的模型调用同时承担“选择工具”和“生成最终答案”。直接转发 provider 的所有 chunk 可能泄露 reasoning、未完成 JSON 或工具参数，因此禁止把 provider 原始 SSE 直接透传给浏览器。
+当前 Agent Loop 的模型调用同时承担“选择工具”和“生成最终答案”。同一次调用可能先产生 `content`，随后才发起工具调用；因此，第一个 `content` 到达不等于已经进入公开最终回答阶段。直接转发 provider 的所有 chunk，或只过滤 reasoning/tool-call 字段，仍可能把工具决策过程中的文本提前公开。
 
 实施前必须完成一个 RED/Spike 验证，确认实际 OpenAI-compatible 上游在以下场景的 chunk 结构：
 
 - 普通最终回答；
 - native tool call；
 - content 与 tool call 混合；
+- 先收到 content、随后收到 tool call；
 - reasoning/content 分离；
 - 流中断与 provider error。
+
+Agent Loop 必须把“可以公开输出”定义为明确、可测试的阶段边界，并按场景选择路径：
+
+- 本轮明确无需工具时，直接进入 final-answer 阶段；首批通过安全清理的公开正文到达后立即发送。
+- 本轮可能使用工具时，先完成工具决策与执行，只向浏览器发送安全活动状态；确认工具阶段结束后，再进入 final-answer 阶段，并在该阶段关闭工具调用。
+- 如果上游能在任何正文产生前可靠标识 final-answer 阶段，可以安全复用同一次调用；否则使用单独一次流式 final-answer 调用，接受工具型问答首字时间增加，不能以提前公开不确定 content 换取低延迟。
 
 推荐实现独立的 `PublicAnswerStream` 适配层：
 
 - 只接收经过 Agent Loop 判定为公开最终回答的 text delta。
 - 丢弃 reasoning、tool-call argument delta 和 provider metadata。
-- 同时把公开 delta 累积为最终 `finalAnswer`，最终落库不得再次生成或改写。
+- 安全清理必须发生在 `output.delta` 写入 durable event store 和发送 SSE 之前；清理器必须保留足够的跨 chunk 尾部状态，覆盖敏感字符串横跨两个或多个 chunk 的情况。
+- 同时把同一份已清理、已公开的 delta 累积为最终 `finalAnswer`；最终落库不得再次生成、改写或从未清理文本重建。
 - 如果现有模型接口无法在流开始前证明内容是公开最终回答，则暂停正文协议实施并评审 Agent Loop 的 final-answer 阶段；不得用完整结果拆字作为替代。
 
 ---
@@ -429,16 +449,19 @@ turn.failed
 
 ### Task 0：联合契约与上游流 Spike
 
-**目标：** 在修改公共 API 前证明上游真实 chunk 语义，并冻结 output 事件设计。
+**目标：** 在修改公共 API 前，用最小原型证明上游真实 chunk 顺序和 Agent Loop 的公开输出边界，并冻结 output 事件设计；本阶段不依赖尚未建设的 durable event 或浏览器链路。
 
 - [ ] 在后端为普通回答、tool call、混合 chunk、reasoning、取消和网络中断建立 provider fixture。
+- [ ] 增加“先收到 content、随后收到 tool call”的强制 fixture，覆盖最危险的延迟工具决策顺序。
 - [ ] 写失败测试，证明当前 provider `stream: false` 且无法产生正文 delta。
-- [ ] 验证目标模型是否能可靠区分 public content、reasoning 和 tool-call arguments。
+- [ ] 用原型 public-output sink 验证目标模型及 Agent Loop 是否能在任何公开文本产生前可靠区分 final-answer、reasoning、普通 content 和 tool-call arguments。
+- [ ] 记录实际上游在各 fixture 中的事件顺序，并证明 public-output sink 只收到工具阶段结束后的最终正文。
+- [ ] 判断工具型问答能否安全复用同一次调用；若不能，记录无法复用的具体原因，采用工具阶段结束后的独立 final-answer 流，并测量该独立调用的首字时间。无法安全复用本身不是 Task 0 失败。
 - [ ] 确认单进程/多进程部署形态以及 PostgreSQL 通知能力。
 - [ ] 联合评审 `output.*` schema、partial snapshot、取消语义和容量上限。
 - [ ] 更新后端 approved Plan；此 Task 未通过前不得开始浏览器协议实现。
 
-**验收：** 有可重复测试数据；不存在“先透传全部 provider chunk，后续再过滤”的安全缺口。
+**验收：** 有可重复 fixture 和上游事件顺序记录；在“先 content、后 tool call”fixture 中，原型 public-output sink 从未收到中间文本，只收到工具阶段结束后的最终正文增量。若同一次调用无法安全复用，文档已记录原因、选定独立 final-answer 调用，并报告其首字时间。durable event store 与浏览器的不泄漏由 Task 7 在真实链路上验收。
 
 ### Task 1：后端模型流原语
 
@@ -454,16 +477,19 @@ turn.failed
 
 ### Task 2：Agent Loop 公开正文流边界
 
-**目标：** 只把最终用户可见正文转换为 `PublicAnswerStream`。
+**目标：** 建立明确的 final-answer 阶段，只把该阶段中最终用户可见的正文转换为 `PublicAnswerStream`。
 
 - [ ] 写失败测试：reasoning、工具参数和内部 JSON 不得进入 public delta。
+- [ ] 写失败测试：同一次调用先产生 content、随后产生 tool call 时，先前 content 不得进入 public delta。
 - [ ] 在 Agent Loop 中建立 public final-answer sink/AsyncIterable。
-- [ ] 每次输出同时 append 到 accumulator，最终 `finalAnswer` 只能来自该 accumulator。
-- [ ] 工具 Turn 继续使用现有安全活动事件，不把模型中间文本当最终正文。
+- [ ] 为“明确无需工具”和“可能使用工具”建立显式分支；后者在工具阶段结束前不得打开 public sink。
+- [ ] final-answer 阶段必须关闭工具调用；若上游无法提前可靠标识该阶段，则使用独立流式 final-answer 调用。
+- [ ] 每次已清理的公开输出同时 append 到 accumulator，最终 `finalAnswer` 只能来自该 accumulator。
+- [ ] 工具 Turn 在 final-answer 阶段前继续使用现有安全活动事件，不把任何模型中间 content 当最终正文。
 - [ ] cancel signal 必须中断 provider、停止新 delta，并返回 interrupted outcome。
 - [ ] 明确 provider 在部分输出后失败时的 outcome 和 partial 保留规则。
 
-**验收：** 所有完成 Turn 都满足 `join(deltas) === finalAnswer`；所有工具和 reasoning fixture 都无泄漏。
+**验收：** 所有完成 Turn 都满足 `join(cleanedDeltas) === finalAnswer`；所有工具、延迟 tool call、reasoning 和跨 chunk 敏感字符串 fixture 都无泄漏。
 
 ### Task 3：Durable output event 与 partial 投影
 
@@ -471,6 +497,7 @@ turn.failed
 
 - [ ] 扩展 shared Zod schema 和 OpenAPI，加入 `output.started/delta/completed`。
 - [ ] 预分配 assistant `messageId`，并贯穿 output 和最终 message。
+- [ ] 在 durable event 写入前执行有界、可流式的安全清理，并覆盖敏感字符串跨两个或多个 provider chunk 的测试。
 - [ ] 实现 80–120ms/大小/段落边界 accumulator flush。
 - [ ] 批量写 durable output events，并分配连续 conversation `eventSeq`。
 - [ ] 增加 partial output projection，覆盖 running/interrupted/failed snapshot。
@@ -478,7 +505,7 @@ turn.failed
 - [ ] 为单 Turn 最大字符数、最大 chunk 数、事件保留和清理设置硬上限。
 - [ ] 扩展 crash、lease loss、取消、重复 finish 和 transaction response-loss 测试。
 
-**验收：** 任意时刻崩溃后不会重复执行模型；重放可恢复到最后 committed chunk；完成消息与 delta 完全一致。
+**验收：** 任意时刻崩溃后不会重复执行模型；重放可恢复到最后 committed chunk；event store、SSE 和最终消息只包含同一份已清理公开文本，完成消息与 delta 完全一致。
 
 ### Task 4：低延迟 SSE 投递与 BFF 验证
 
@@ -489,9 +516,9 @@ turn.failed
 - [ ] 验证 REST `/events` 与 SSE 返回同一 output schema。
 - [ ] 验证心跳、背压、慢客户端断开和连接限额不会阻塞 Turn 执行。
 - [ ] 验证 `/agent-api`/网关透传 streaming body、`Last-Event-ID`、content type、`no-transform` 和 `X-Accel-Buffering`。
-- [ ] 增加首 delta 延迟、chunk 间延迟和慢客户端指标，但不记录正文内容。
+- [ ] 增加 commit-to-browser、final-answer 阶段开始到首批正文可见、chunk 间延迟和慢客户端指标，但不记录正文内容。
 
-**验收：** 本地/测试环境 p95 commit-to-browser 延迟小于 200ms；通知丢失时仍能通过轮询恢复。
+**验收：** 本地/测试环境 p95 commit-to-browser 延迟小于 200ms；同时单独报告“final-answer 阶段开始 → 首批正文可见”的 p50/p95，区分模型首字时间与事件投递时间；通知丢失时仍能通过轮询恢复。
 
 ### Task 5：前端 Schema 同步与 Daily reducer
 
@@ -512,24 +539,28 @@ turn.failed
 **目标：** 把真实 Daily delta 平滑呈现，不伪造、不抖动。
 
 - [ ] 在 Daily controller 中复用或抽取现有 `useBatchedDeltas`。
-- [ ] 非 delta 事件前 drain buffer；完成、停止、失败和断线时立即 flush。
+- [ ] 首批正文立即渲染，后续 delta 按约 60ms 合并；非 delta 事件前 drain buffer，完成、停止、失败和断线时立即 flush。
 - [ ] 给 `MessageList`/`MessageContent` 增加 streaming、partial、interrupted 状态。
+- [ ] 普通问答在正文开始后移除等待状态；只有实际工具活动时才显示可展开的“查看执行过程”，不默认显示步骤总数。
 - [ ] 实现流式光标和 `prefers-reduced-motion`。
 - [ ] 实现底部跟随、用户滚动接管和“回到底部”。
 - [ ] 实现复制正文、代码复制和重新生成。
-- [ ] 优化 Markdown 稳定 block，避免长正文全量抖动。
+- [ ] 记录真实长回答的 React commit 和渲染性能；仅在数据证明存在瓶颈时，再把稳定 Markdown block 缓存和代码块优化提升为首版门禁。
 - [ ] composer 在 `streaming` 中显示停止按钮，断线后显示重连而不是重新发送。
 
-**测试：** 60ms batching、partial Markdown、代码围栏、10k 字、用户滚动、复制、停止保留正文、可访问性。
+**测试：** 首批立即渲染、后续 60ms batching、工具过程按需展开、10k 字、用户滚动、复制、停止保留正文、可访问性；partial Markdown 与代码围栏至少保证安全和可读，不以高级缓存实现作为首版通过条件。
 
 ### Task 7：端到端与故障验收
 
 **目标：** 在真实 Daily contract 上证明端到端流式和恢复语义。
 
-- [ ] Playwright 验证首个 delta 到达后正文至少发生两次真实增长。
+- [ ] Playwright 优先验收正文至少发生两次真实增长，且增长来自多个真实 `output.delta`，不是前端拆字。
 - [ ] 验证最终刷新后历史正文与流式拼接一致。
-- [ ] 验证中途停止后没有后续 delta，partial 仍可见。
+- [ ] 验证中途停止后没有后续 delta，半截正文在刷新后仍可见。
 - [ ] 验证 SSE 中断后重连不重复文本、不重复模型执行。
+- [ ] 验证普通问答正文开始后没有执行过程入口；工具任务正文开始后可按需展开安全活动详情。
+- [ ] 在真实链路中验证“先 content、后 tool call”的中间文本既未写入 durable event store，也未到达浏览器。
+- [ ] 验证工具完成后的最终正文产生多个真实 `output.delta`，并在浏览器中至少分两次增长显示。
 - [ ] 验证 event gap 经 REST 修复后继续输出。
 - [ ] 验证 `RESYNC_REQUIRED` 重新安装 snapshot 后不丢失可读正文。
 - [ ] 验证认证失效、能力撤销、模型失败和慢客户端。
@@ -542,19 +573,22 @@ turn.failed
 ## 完成定义
 
 - Daily 的正文来自真实模型增量，而不是客户端拆字。
+- Agent Loop 只在明确进入 final-answer 阶段后公开正文；普通 content 不被默认视为最终回答。
 - 正文开始、追加、完成、取消、失败、断线和重连都有明确协议和 UI 状态。
 - `join(output.delta) === canonical assistant message` 有自动化测试保证。
 - 断线重连不重复执行模型、不重复正文、不跳过事件。
-- reasoning、工具参数、凭据和内部错误不进入浏览器、公共事件或日志。
+- reasoning、工具决策过程中的 content、工具参数、凭据和内部错误不进入浏览器、公共事件或日志。
+- 安全清理发生在事件持久化和 SSE 投递之前，并正确处理跨 chunk 敏感字符串。
 - Work 模式无回归。
 - 前后端 Schema、生成客户端、OpenAPI 和部署文档一致。
 
 ## 风险与评审点
 
-1. **最大风险：模型流与工具决策混合。** 若无法证明 content 是公开最终回答，必须先调整 Agent Loop final-answer 阶段，不能直接透传。
+1. **最大风险：模型流与工具决策混合。** `content` 可能先于 tool call 到达；若无法在输出前证明已经进入 final-answer 阶段，必须使用独立最终回答阶段，不能直接透传。工具型问答增加首字延迟是可接受的安全代价，并应被单独测量。
 2. **事件写放大。** 必须批量 chunk，并设置字符数、chunk 数和保留上限。
 3. **当前 1 秒轮询延迟。** 必须增加共享 wake-up，不能只把 poll interval 调得很小。
 4. **取消竞态。** cancel、provider 尾包和 terminal transaction 必须由 lease/Turn 状态裁决。
 5. **partial 历史语义。** interrupted/failed partial 必须显式标记，不能伪装成 completed assistant message。
 6. **多进程通知。** 进程内广播只能作为优化，不能成为 correctness 依赖。
 7. **范围冲突。** 本方案是新的 Daily conversation 公共协议工作，不属于现有 Skill Market 前端计划；实施前需要单独批准的跨仓库 Plan。
+8. **跨 chunk 安全清理。** 逐 chunk 无状态脱敏可能漏掉被拆开的敏感字符串；清理器必须有有界尾部状态，并在 durable event 写入前完成裁决。
