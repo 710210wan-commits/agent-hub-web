@@ -13,6 +13,7 @@ export type DailyConversationStatus =
   | "ready"
   | "submitting"
   | "working"
+  | "streaming"
   | "cancelling"
   | "completed"
   | "failed"
@@ -64,6 +65,7 @@ export interface DailyConversationState {
   status: DailyConversationStatus;
   activity: string | null;
   completedStepCount: number;
+  hasToolActivity: boolean;
   notice: string | null;
 }
 
@@ -129,6 +131,7 @@ export function createInitialDailyConversationState(
     status: "idle",
     activity: null,
     completedStepCount: 0,
+    hasToolActivity: false,
     notice: null,
   };
 }
@@ -157,6 +160,7 @@ export function dailyConversationReducer(
         key: action.key ?? state.key,
         conversation: action.conversation,
         activeOutput: null,
+        hasToolActivity: false,
         status: "ready",
         appliedSeq: "0",
         snapshotWatermark: action.conversation.lastEventSeq,
@@ -267,6 +271,7 @@ function installSnapshot(
     status: statusFromTurn(snapshot.activeTurn?.status),
     activity: activityFromTurn(snapshot.activeTurn?.status),
     completedStepCount: 0,
+    hasToolActivity: false,
     notice: null,
   };
 }
@@ -276,6 +281,7 @@ function applyReceipt(
   receipt: AcceptedConversationTurn,
 ): DailyConversationState {
   const existing = state.activeTurn;
+  const isNewTurn = existing?.turnId !== receipt.turnId;
   const pending = bindPending(
     state,
     receipt.userMessageId,
@@ -305,9 +311,12 @@ function applyReceipt(
   return {
     ...state,
     activeTurn,
+    activeOutput: isNewTurn ? null : state.activeOutput,
     pendingSend: pending,
     status: statusFromTurn(receipt.status),
     activity: activityFromTurn(receipt.status),
+    completedStepCount: isNewTurn ? 0 : state.completedStepCount,
+    hasToolActivity: isNewTurn ? false : state.hasToolActivity,
   };
 }
 
@@ -417,7 +426,12 @@ function applyEvent(
     case "tool.started":
       if (event.turnId !== next.activeTurn?.turnId) return next;
       if (isTerminal(next.activeTurn.status)) return next;
-      return { ...next, status: "working", activity: "正在使用工具…" };
+      return {
+        ...next,
+        status: "working",
+        activity: "正在使用工具…",
+        hasToolActivity: true,
+      };
     case "tool.completed":
       if (event.turnId !== next.activeTurn?.turnId) return next;
       if (isTerminal(next.activeTurn.status)) return next;
@@ -426,6 +440,7 @@ function applyEvent(
         status: "working",
         activity: "正在处理…",
         completedStepCount: next.completedStepCount + 1,
+        hasToolActivity: true,
       };
     case "output.started":
       if (isSnapshotReplay(next, event.eventSeq)) return next;
@@ -468,6 +483,8 @@ function startOutput(
   }
   return {
     ...state,
+    status: "streaming",
+    activity: null,
     activeOutput: {
       messageId: event.messageId,
       turnId: event.turnId,
@@ -567,6 +584,7 @@ function applyTurn(
     status: statusFromTurn(turn.status),
     activity: activityFromTurn(turn.status),
     completedStepCount: isNewTurn ? 0 : state.completedStepCount,
+    hasToolActivity: isNewTurn ? false : state.hasToolActivity,
     notice:
       turn.status === "failed"
         ? "任务执行失败"

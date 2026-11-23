@@ -1,6 +1,12 @@
+"use client";
+
+import { useState } from "react";
+
 import type { ChatRunView } from "@/features/chat/reducer/chat-state";
 
 export function ActivityLine({ run }: { run: ChatRunView }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (run.status === "working" && run.activity) {
     return (
       <div className="activity-line" data-testid="activity-line">
@@ -10,14 +16,29 @@ export function ActivityLine({ run }: { run: ChatRunView }) {
     );
   }
 
+  const hasToolActivity = run.hasToolActivity ?? (run.completedStepCount > 0);
   if (
-    run.completedStepCount > 0 &&
+    hasToolActivity &&
     ["streaming", "completed", "stopped", "disconnected"].includes(run.status)
   ) {
     return (
-      <button className="completed-steps" type="button">
-        已完成 {run.completedStepCount} 个步骤
-      </button>
+      <div className="execution-process">
+        <button
+          aria-expanded={expanded}
+          className="completed-steps"
+          onClick={() => setExpanded(value => !value)}
+          type="button"
+        >
+          查看执行过程
+        </button>
+        {expanded ? (
+          <div className="execution-process-detail">
+            {run.completedStepCount > 0
+              ? `已完成 ${run.completedStepCount} 个工具步骤`
+              : "工具执行已开始"}
+          </div>
+        ) : null}
+      </div>
     );
   }
 

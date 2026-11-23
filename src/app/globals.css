@@ -2711,6 +2711,30 @@ a {
   overflow-wrap: anywhere;
 }
 
+.streaming-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  vertical-align: -0.14em;
+  animation: streaming-cursor-blink 1s steps(2, start) infinite;
+}
+
+@keyframes streaming-cursor-blink {
+  50% {
+    opacity: 0.18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming-cursor,
+  .activity-dot {
+    animation: none;
+  }
+}
+
 .message-assistant .message-markdown h1,
 .message-assistant .message-markdown h2,
 .message-assistant .message-markdown h3,
@@ -2795,6 +2819,50 @@ a {
   border-top: 1px solid var(--color-border);
 }
 
+.message-code-block {
+  position: relative;
+}
+
+.message-copy-code {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 88%);
+  padding: 4px 7px;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.message-copy-code:hover,
+.message-actions button:hover {
+  color: var(--color-text);
+}
+
+.message-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.message-actions button {
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.message-partial-status {
+  margin: 10px 0 0;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
 .message-table-scroll {
   max-width: 100%;
   margin: 16px 0 20px;
@@ -2873,6 +2941,29 @@ a {
   background: transparent;
   padding: 8px 0 0;
   color: var(--color-muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.execution-process-detail {
+  margin-top: 6px;
+  border-left: 2px solid var(--color-border);
+  padding-left: 10px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.return-to-bottom {
+  position: fixed;
+  z-index: 21;
+  right: max(24px, calc((100vw - var(--sidebar-width) - 820px) / 2));
+  bottom: 150px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: white;
+  box-shadow: var(--shadow-soft);
+  padding: 7px 11px;
+  color: var(--color-text);
   cursor: pointer;
   font-size: 11px;
 }

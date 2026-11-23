@@ -193,10 +193,33 @@ describe("dailyConversationReducer", () => {
       content: "",
       status: "streaming",
     });
+    expect(started).toMatchObject({ status: "streaming", activity: null });
     expect(second.activeOutput).toMatchObject({ lastOutputSeq: "2", content: "第一段正文", status: "streaming" });
     expect(completed.activeOutput?.status).toBe("completed");
     expect(closed.activeOutput).toBeNull();
     expect(closed.messagesById[assistantMessageId]).toEqual(canonical);
+  });
+
+  it("records real tool activity for an on-demand execution disclosure", () => {
+    const running = dailyConversationReducer(
+      dailyConversationReducer(createInitialDailyConversationState(`${conversationId}:1`), {
+        type: "receipt.apply",
+        receipt: receipt("running"),
+      }),
+      {
+        type: "event.apply",
+        event: event("1", "tool.started", {
+          stepId: "90000000-0000-4000-8000-000000000009",
+          toolCallId: "private-call",
+          toolName: "private-tool",
+        }),
+      },
+    );
+
+    expect(running).toMatchObject({
+      hasToolActivity: true,
+      activity: "正在使用工具…",
+    });
   });
 
   it("rejects output identity mismatches, sequence gaps, completion mismatch, and post-completion delta", () => {
@@ -624,7 +647,9 @@ describe("dailyConversationReducer", () => {
     });
 
     expect(afterFirst.completedStepCount).toBe(1);
+    expect(afterFirst.hasToolActivity).toBe(true);
     expect(afterSecond.completedStepCount).toBe(0);
+    expect(afterSecond.hasToolActivity).toBe(false);
     expect(afterLateOldTool.completedStepCount).toBe(0);
     expect(afterLateOldTool.activity).toBe("正在准备…");
   });

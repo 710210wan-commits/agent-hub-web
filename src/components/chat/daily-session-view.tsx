@@ -108,6 +108,12 @@ function AuthenticatedDailySessionView({
   };
   const run = presentRun(controller.state);
   const showEmpty = controller.messages.length === 0 && !controller.state.conversation;
+  const showWaitingActivity = Boolean(
+    controller.state.activity && !controller.state.activeOutput?.content,
+  );
+  const canRegenerate = ["completed", "failed", "stopped"].includes(
+    controller.state.status,
+  );
 
   return (
     <section aria-label="决策持久会话" className="daily-session-view">
@@ -138,10 +144,15 @@ function AuthenticatedDailySessionView({
           <p>可以直接发送第一条消息</p>
         </section>
       ) : (
-        <MessageList messages={controller.messages} />
+        <MessageList
+          followOutput
+          messages={controller.messages}
+          onRegenerate={canRegenerate ? () => void controller.regenerate() : undefined}
+          run={run}
+        />
       )}
 
-      {controller.state.activity ? <ActivityLine run={run} /> : null}
+      {showWaitingActivity ? <ActivityLine run={run} /> : null}
       {controller.state.notice ? (
         <div className="run-actions">
           <InlineError message={controller.state.notice} />
@@ -178,6 +189,7 @@ function AuthenticatedDailySessionView({
 function composerStatus(status: string): ChatRunState {
   if (status === "submitting") return "submitting";
   if (status === "working" || status === "cancelling") return "working";
+  if (status === "streaming") return "streaming";
   return "idle";
 }
 
@@ -185,15 +197,18 @@ function presentRun(input: {
   status: string;
   activity: string | null;
   completedStepCount: number;
+  hasToolActivity: boolean;
   notice: string | null;
   activeTurn: { turnId: string } | null;
+  activeOutput: { messageId: string } | null;
 }): ChatRunView {
   return {
-    status: input.activity ? "working" : composerStatus(input.status),
+    status: input.activity && !input.activeOutput ? "working" : composerStatus(input.status),
     runId: input.activeTurn?.turnId ?? null,
-    assistantMessageId: null,
+    assistantMessageId: input.activeOutput?.messageId ?? null,
     activity: input.activity,
     completedStepCount: input.completedStepCount,
+    hasToolActivity: input.hasToolActivity,
     notice: input.notice,
   };
 }

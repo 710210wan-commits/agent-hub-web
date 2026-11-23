@@ -112,7 +112,9 @@ describe("ChatPage", () => {
     submit();
 
     expect(await screen.findByText("主要风险")).toBeInTheDocument();
-    expect(screen.getByText("已完成 3 个步骤")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看执行过程" }));
+    expect(screen.getByText("已完成 3 个工具步骤")).toBeInTheDocument();
     expect(screen.queryByText("正在读取项目资料")).not.toBeInTheDocument();
   });
 
@@ -262,6 +264,12 @@ describe("MessageContent", () => {
   it("renders partial Markdown without throwing", () => {
     render(<MessageContent content="**尚未闭合" />);
     expect(screen.getByText("**尚未闭合")).toBeInTheDocument();
+  });
+
+  it("keeps an unfinished streaming code fence readable", () => {
+    render(<MessageContent content={"```ts\nconst partial = true"} streaming />);
+    expect(screen.getByText("const partial = true")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("正在生成");
   });
 
   it("renders structured answers and keeps wide tables scrollable", () => {

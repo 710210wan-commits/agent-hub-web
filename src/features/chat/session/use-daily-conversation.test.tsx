@@ -196,9 +196,103 @@ describe("useDailyConversation", () => {
       content: "第一批第二批",
       status: "streaming",
     });
-    expect(result.current.messages).toEqual([
+    await waitFor(() => expect(result.current.messages).toEqual([
       expect.objectContaining({ id: assistantMessageId, content: "第一批第二批", streaming: true }),
-    ]);
+    ]));
+    unmount();
+  });
+
+  it("shows the first delta immediately and batches later deltas for about 60ms", async () => {
+    const releaseBurst = deferred<void>();
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      streamEvents: vi.fn(async function* (_id, _input, signal) {
+        yield outputEvent("1", "output.started", { mode: "append" });
+        yield outputEvent("2", "output.delta", { outputSeq: "1", delta: "首批" });
+        await releaseBurst.promise;
+        yield outputEvent("3", "output.delta", { outputSeq: "2", delta: "第二批" });
+        yield outputEvent("4", "output.delta", { outputSeq: "3", delta: "第三批" });
+        yield* waitStream([], signal);
+      }),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.appliedSeq).toBe("2"));
+    expect(result.current.messages.at(-1)?.content).toBe("首批");
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        releaseBurst.resolve();
+        await releaseBurst.promise;
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(result.current.state.appliedSeq).toBe("4");
+      expect(result.current.messages.at(-1)?.content).toBe("首批");
+
+      act(() => vi.advanceTimersByTime(59));
+      expect(result.current.messages.at(-1)?.content).toBe("首批");
+      act(() => vi.advanceTimersByTime(1));
+      expect(result.current.messages.at(-1)?.content).toBe("首批第二批第三批");
+    } finally {
+      vi.useRealTimers();
+    }
+    unmount();
+  });
+
+  it("flushes buffered text before output completion", async () => {
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      streamEvents: vi.fn((_id, _input, signal) => waitStream([
+        outputEvent("1", "output.started", { mode: "append" }),
+        outputEvent("2", "output.delta", { outputSeq: "1", delta: "首批" }),
+        outputEvent("3", "output.delta", { outputSeq: "2", delta: "尾批" }),
+        outputEvent("4", "output.completed", {
+          outputSeq: "2",
+          charCount: 4,
+          contentSha256: "a".repeat(64),
+        }),
+      ], signal)),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.appliedSeq).toBe("4"));
+    expect(result.current.messages.at(-1)).toMatchObject({
+      content: "首批尾批",
+      streaming: false,
+      partialStatus: "completed",
+    });
+    unmount();
+  });
+
+  it("flushes buffered text and preserves it when the stream disconnects", async () => {
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      streamEvents: vi.fn(async function* () {
+        yield outputEvent("1", "output.started", { mode: "append" });
+        yield outputEvent("2", "output.delta", { outputSeq: "1", delta: "已显示" });
+        yield outputEvent("3", "output.delta", { outputSeq: "2", delta: "的尾部" });
+        throw new DailySessionClientError({
+          code: "STREAM_DISCONNECTED",
+          message: "连接断开",
+        });
+      }),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.status).toBe("disconnected"));
+    expect(result.current.messages.at(-1)).toMatchObject({
+      content: "已显示的尾部",
+      streaming: false,
+      partialStatus: "disconnected",
+    });
     unmount();
   });
 

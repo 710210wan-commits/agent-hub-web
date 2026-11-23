@@ -7,7 +7,7 @@ export interface DailySessionViewMessage extends ChatMessage {
   ordinal: string;
   pending?: boolean;
   streaming?: boolean;
-  partialStatus?: DailyActiveOutput["status"];
+  partialStatus?: DailyActiveOutput["status"] | "disconnected";
 }
 
 const unsupportedMessage = "暂不支持展示的消息";

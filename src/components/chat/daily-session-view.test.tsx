@@ -104,6 +104,17 @@ function publicEvent(
   } as ConversationPublicEvent;
 }
 
+function outputEvent(
+  eventSeq: string,
+  type: "output.started" | "output.delta" | "output.completed",
+  payload: Record<string, unknown>,
+): ConversationPublicEvent {
+  return {
+    ...publicEvent(eventSeq, type, payload),
+    messageId: "50000000-0000-4000-8000-000000000005",
+  } as ConversationPublicEvent;
+}
+
 function activeTurn(status: "queued" | "running" | "completed") {
   return {
     turnId: "20000000-0000-4000-8000-000000000002",
@@ -373,6 +384,62 @@ describe("DailySessionView", () => {
     });
     expect(await screen.findByText("最终正文")).toBeInTheDocument();
     expect(screen.queryByTestId("activity-line")).not.toBeInTheDocument();
+  });
+
+  it("replaces waiting activity with streamed text and an on-demand tool disclosure", async () => {
+    const client = makeClient({
+      streamEvents: vi.fn(async function* () {
+        yield publicEvent("1", "turn.started", { turn: activeTurn("running") });
+        yield publicEvent("2", "tool.started", {
+          stepId: "private-step",
+          toolCallId: "private-call",
+          toolName: "private-tool-name",
+        });
+        yield publicEvent("3", "tool.completed", {
+          stepId: "private-step",
+          toolCallId: "private-call",
+          toolName: "private-tool-name",
+          status: "completed",
+          turn: 1,
+        });
+        yield outputEvent("4", "output.started", { mode: "append" });
+        yield outputEvent("5", "output.delta", {
+          outputSeq: "1",
+          delta: "首批公开正文",
+        });
+      }),
+    });
+    renderView(client);
+
+    expect(await screen.findByText("首批公开正文")).toBeInTheDocument();
+    expect(screen.queryByText("正在处理…")).not.toBeInTheDocument();
+    expect(screen.queryByText("private-tool-name")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "停止" })).toBeInTheDocument();
+  });
+
+  it("regenerates through a new canonical turn using the last user input", async () => {
+    const submitTurn = vi.fn<DailySessionClient["submitTurn"]>(async () => accepted());
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () =>
+        snapshot(
+          [
+            message("40000000-0000-4000-8000-000000000004", "1", "请重新分析", "user"),
+            message("50000000-0000-4000-8000-000000000005", "2", "原回答"),
+          ],
+          null,
+          activeTurn("completed"),
+        ),
+      ),
+      submitTurn,
+    });
+    renderView(client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "重新生成" }));
+    await waitFor(() => expect(submitTurn).toHaveBeenCalledOnce());
+    expect(submitTurn.mock.calls[0]?.[1]).toMatchObject({
+      input: { kind: "text", text: "请重新分析" },
+    });
   });
 
   it("uses canonical cancel for an active turn", async () => {

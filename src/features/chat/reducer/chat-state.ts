@@ -17,6 +17,7 @@ export interface ChatRunView {
   activity: string | null;
   notice: string | null;
   completedStepCount: number;
+  hasToolActivity?: boolean;
 }
 
 export interface ChatState {
