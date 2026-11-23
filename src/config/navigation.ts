@@ -5,6 +5,7 @@ import { withMode } from "./modes";
 export type NavigationIcon =
   | "chat"
   | "history"
+  | "assistants"
   | "gis"
   | "knowledge"
   | "skill"
@@ -22,6 +23,7 @@ export interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   { id: "chat", label: "新对话", href: "/chat", icon: "chat", section: "primary" },
   { id: "history", label: "历史对话", href: "/history", icon: "history", section: "primary" },
+  { id: "assistants", label: "助手广场", href: "/assistants", icon: "assistants", section: "primary" },
   { id: "gis", label: "GIS 工作台", href: "/gis", icon: "gis", section: "capabilities" },
   { id: "knowledge", label: "知识库", href: "/knowledge", icon: "knowledge", section: "capabilities" },
   { id: "skill", label: "Skill", href: "/skills", icon: "skill", section: "capabilities" },
@@ -33,6 +35,8 @@ export function getNavigation(mode: AppMode): NavigationItem[] {
   const legacyFrontendUrl = readPublicRuntimeConfig().legacyFrontendUrl;
   return navigationItems.map((item) => ({
     ...item,
-    href: item.id === "gis" ? legacyFrontendUrl : withMode(item.href, mode),
+    href: item.id === "gis" ? legacyFrontendUrl
+      : item.id === "assistants" ? item.href
+        : withMode(item.href, mode),
   }));
 }

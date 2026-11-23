@@ -48,6 +48,7 @@ describe("AppShell", () => {
     ).toEqual([
       "新对话",
       "历史对话",
+      "助手广场",
       "GIS 工作台",
       "知识库",
       "Skill",
@@ -63,6 +64,8 @@ describe("AppShell", () => {
         );
         expect(link).toHaveAttribute("target", "_blank");
         expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      } else if (link.textContent?.trim() === "助手广场") {
+        expect(link).toHaveAttribute("href", "/assistants");
       } else {
         expect(link).toHaveAttribute("href", expect.stringContaining("mode=2"));
       }
@@ -102,7 +105,7 @@ describe("AppShell", () => {
     expect(push).toHaveBeenNthCalledWith(2, "/chat?mode=2&draft=draft-2");
     expect(push.mock.calls.flat().join(" ")).not.toContain("conversation=");
   });
-  it.each(["/knowledge", "/knowledge/kb-1", "/mcp", "/mcp/server-1"])("hides mode switching on shared resource %s without losing work navigation", pathname => {
+  it.each(["/knowledge", "/knowledge/kb-1", "/mcp", "/mcp/server-1", "/assistants", "/assistants/resume-screening"])("hides mode switching on shared resource %s without losing work navigation", pathname => {
     pageState.pathname = pathname;
     render(<AuthProvider><ModeProvider><AppShell title="共享资源">资源</AppShell></ModeProvider></AuthProvider>);
     expect(screen.queryByRole("button", { name: "决策" })).not.toBeInTheDocument();
