@@ -324,8 +324,6 @@ Plan 文档：`docs/SSE/2026-11-17-daily-codex-style-sse-implementation.md`
 - `pnpm run build` 首次在 Codex 沙箱内因 Turbopack 无法创建 CSS worker 子进程失败；相同命令获准在沙箱外重跑后成功编译、类型检查并生成 14/14 静态页面，确认不是代码构建错误。
 - `git diff --check` 通过；Task 6、Task 7 仍未完成，不能声称约 60ms 前端 batching、最终 UI 交互或真实浏览器多次增长端到端验收已经完成。
 
-## 2026-11-24
-
 ### 9. 完成 Task 6 前端 batching 与 Codex 式输出 UI
 
 提交：前端实现 `2e7acba`
@@ -368,3 +366,44 @@ Plan 文档：`docs/SSE/2026-11-17-daily-codex-style-sse-implementation.md`
 - `pnpm run test:e2e:daily-session` 首轮因 canonical fixture 缺少 Task 5 必填 `partialOutput` 产生契约拒绝；补为 `null` 后 18/18 通过，覆盖身份、能力、活动、停止、断线重连、历史和删除。
 - Task 6 直接影响面的默认 Playwright 定向回归为 mock Chat 3/3、Work history 1/1。默认全套首轮 32 passed、3 failed；聊天旧步骤断言更新后定向通过，剩余 Skill Market Creator/Trigger 两项独立复跑仍因既有文案/状态断言失败，未修改其产品代码或将其误记为通过。
 - `git diff --check` 通过；Task 7 仍需在真实 Daily 后端链路验证多个真实 `output.delta`、停止刷新保留、重连无重复及中间决策文本零泄漏。
+
+### 10. 实施 Task 7 真实流式与故障恢复联合验收
+
+提交：本次 Task 7 联合验收提交
+
+Plan 文档：`docs/SSE/2026-11-17-daily-codex-style-sse-implementation.md`
+
+对应 Plan 模块：Task 7
+
+#### 问题
+
+- 既有 canonical Playwright 主要使用受控 fixture，尚未证明真实 PostgreSQL event store、Agent Loop、SSE、BFF 和浏览器能联合产生多次正文增长。
+- 工具决策先产生 content、随后产生 tool call 时，仍需在真实事件库和浏览器两端证明中间文字零泄漏。
+- 完成、取消、断线重连后，canonical 消息、partial、工具过程入口和固定 composer 覆盖层之间仍缺少浏览器级联合验收。
+- 新增独立真实链路 spec 后，默认 Playwright 会误收该文件并在未启动测试后端时失败，需要显式隔离测试配置。
+
+#### 修改方案
+
+- 建立独立真实链路 Playwright 配置，同时启动 disposable PostgreSQL Conversation 测试服务和 real transport 前端；测试服务复用生产 server、scheduler、event store、Agent Loop 与 SSE，不返回 mock answer。
+- 用确定性 provider fixture 控制普通多 delta、延迟 tool call、取消尾包和重连间隔；通过 REST event store、snapshot、浏览器 DOM 与 server 调用计数交叉核对。
+- 修复完成态 canonical assistant message 丢失执行过程锚点的问题，并让 fixed composer dock 的透明区域不再拦截断线后的“重新连接”按钮。
+- 默认 Playwright 显式排除需要专用后端的真实链路 spec；专用命令单独负责完整装配和数据库生命周期。
+
+#### 代码变更
+
+1. 新增 `playwright.daily-sse-real.config.ts` 和 `test:e2e:daily-sse-real`，在 3107/3207 端口分别启动 real transport 前端与后端测试服务，并只收集 `daily-sse-real.spec.ts`。
+2. 新增 `e2e/daily-sse-real.spec.ts` 四个浏览器用例：核对普通/工具正文多个 durable delta 与多次 DOM 增长、刷新 exact history、取消无晚到 delta、SSE 断线重连无重复执行。
+3. 默认 `playwright.config.ts` 增加 `daily-sse-real.spec.ts` ignore，避免 mock 配置误运行需要 PostgreSQL/Agent Loop 的专用 spec。
+4. `daily-session-view.tsx` 新增完成/停止/失败/断线展示状态映射，并按 active Turn 查找 canonical assistant message；`output.completed` 收口 draft 后，真实工具活动仍绑定在正确消息上方。
+5. 扩展 `daily-session-view.test.tsx`，让工具流 fixture 完整经过 `output.completed → message.created → turn.completed`，验证 canonical 收口后“查看执行过程”仍存在。
+6. `globals.css` 让 `.composer-dock` 背景层不接收 pointer events、`.composer` 自身继续可交互，断线提示和重连按钮不再被固定渐变层遮挡。
+
+#### 验证结果
+
+- TDD RED：真实 Playwright 首次因后端 harness 尚不存在失败；补齐 harness 后，真实工具用例暴露 canonical 收口后执行过程入口消失，组件测试同步 RED；最小状态映射和消息关联实现后转绿。重连用例随后真实暴露 composer dock 拦截点击，调整 pointer events 后 4/4 通过。
+- `pnpm run test:e2e:daily-sse-real` 4/4 通过。普通与工具回答均验证多个 `output.delta`、浏览器至少两次真实增长和 delta 拼接 exact match；普通回答无过程入口，工具回答可展开 1 个安全步骤。
+- 同一真实套件验证延迟 tool-call 前的 `PRIVATE_CONTENT_BEFORE_DELAYED_TOOL_CALL` 不存在于 REST events、snapshot 或浏览器；工具结束后的正文仍分多个 delta。取消后仅 1 个公开 delta，700ms 后无尾包，刷新保留 partial；重连后正文无重复且 `finalStreamCalls=1`。
+- Task 7 focused Vitest 为 10 files、132/132；其中 hook/reducer 用例覆盖 event gap 经 REST 补洞、`RESYNC_REQUIRED` snapshot、断线 partial、认证与能力错误。前端全量 Vitest 97 files、861/861，Daily canonical Playwright 18/18。
+- `pnpm run typecheck`、`pnpm run lint`、`verify:conversation-schema`、`check:conversation-client` 和生产构建均通过；构建完成 14/14 静态页面。权威 Schema 仍为 `conversation.v1@0.1.5`、19 operations，生成客户端无 drift。
+- 默认 Playwright 为 32 passed、3 failed、1 skipped；Work history 1/1、Work Skills 4/4 通过。3 个失败均为 Task 6 已记录的既有 Skill Market lifecycle 漂移（Smoke 文案、Trigger review timeout、创建修订 URL），本 Task 未修改其产品代码。
+- 因最终门禁明确要求默认 Playwright 全部通过，Task 7 目前只能记为“实现完成、最终全绿门禁未完成”，不能声明整项已完成。

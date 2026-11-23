@@ -193,6 +193,14 @@ function composerStatus(status: string): ChatRunState {
   return "idle";
 }
 
+function presentedRunStatus(status: string): ChatRunState {
+  if (status === "completed") return "completed";
+  if (status === "stopped") return "stopped";
+  if (status === "failed") return "failed";
+  if (status === "disconnected" || status === "stale") return "disconnected";
+  return composerStatus(status);
+}
+
 function presentRun(input: {
   status: string;
   activity: string | null;
@@ -201,11 +209,27 @@ function presentRun(input: {
   notice: string | null;
   activeTurn: { turnId: string } | null;
   activeOutput: { messageId: string } | null;
+  messagesById: Record<string, {
+    messageId: string;
+    role: "user" | "assistant";
+    turnId: string;
+  }>;
 }): ChatRunView {
+  const canonicalAssistant = input.activeTurn
+    ? Object.values(input.messagesById).find(
+        message =>
+          message.role === "assistant" &&
+          message.turnId === input.activeTurn?.turnId,
+      )
+    : undefined;
   return {
-    status: input.activity && !input.activeOutput ? "working" : composerStatus(input.status),
+    status:
+      input.activity && !input.activeOutput
+        ? "working"
+        : presentedRunStatus(input.status),
     runId: input.activeTurn?.turnId ?? null,
-    assistantMessageId: input.activeOutput?.messageId ?? null,
+    assistantMessageId:
+      input.activeOutput?.messageId ?? canonicalAssistant?.messageId ?? null,
     activity: input.activity,
     completedStepCount: input.completedStepCount,
     hasToolActivity: input.hasToolActivity,

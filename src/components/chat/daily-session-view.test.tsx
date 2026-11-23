@@ -407,6 +407,24 @@ describe("DailySessionView", () => {
           outputSeq: "1",
           delta: "首批公开正文",
         });
+        yield outputEvent("6", "output.completed", {
+          outputSeq: "1",
+          charCount: 6,
+          contentSha256: "a".repeat(64),
+        });
+        const assistant = message(
+          "50000000-0000-4000-8000-000000000005",
+          "2",
+          "首批公开正文",
+        );
+        yield {
+          ...publicEvent("7", "message.created", { message: assistant }),
+          messageId: assistant.messageId,
+        } as ConversationPublicEvent;
+        yield publicEvent("8", "turn.completed", {
+          turn: activeTurn("completed"),
+          messageId: assistant.messageId,
+        });
       }),
     });
     renderView(client);
@@ -415,7 +433,8 @@ describe("DailySessionView", () => {
     expect(screen.queryByText("正在处理…")).not.toBeInTheDocument();
     expect(screen.queryByText("private-tool-name")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "停止" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "重新生成" })).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
   });
 
   it("regenerates through a new canonical turn using the last user input", async () => {

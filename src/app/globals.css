@@ -3004,6 +3004,7 @@ a {
   justify-content: center;
   padding: 28px 24px 24px;
   background: linear-gradient(180deg, rgb(255 255 255 / 0%) 0%, white 36%);
+  pointer-events: none;
 }
 
 .composer {
@@ -3013,6 +3014,7 @@ a {
   background: white;
   box-shadow: var(--shadow-soft);
   padding: 11px 12px 10px;
+  pointer-events: auto;
 }
 
 .composer textarea {

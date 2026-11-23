@@ -582,21 +582,29 @@ Agent Loop 必须把“可以公开输出”定义为明确、可测试的阶段
 
 **目标：** 在真实 Daily contract 上证明端到端流式和恢复语义。
 
-- [ ] Playwright 优先验收正文至少发生两次真实增长，且增长来自多个真实 `output.delta`，不是前端拆字。
-- [ ] 验证最终刷新后历史正文与流式拼接一致。
-- [ ] 验证中途停止后没有后续 delta，半截正文在刷新后仍可见。
-- [ ] 验证 SSE 中断后重连不重复文本、不重复模型执行。
-- [ ] 验证普通问答正文开始后没有执行过程入口；工具任务正文开始后可按需展开安全活动详情。
-- [ ] 在真实链路中验证“先 content、后 tool call”的中间文本既未写入 durable event store，也未到达浏览器。
-- [ ] 验证工具完成后的最终正文产生多个真实 `output.delta`，并在浏览器中至少分两次增长显示。
-- [ ] 验证 event gap 经 REST 修复后继续输出。
-- [ ] 验证 `RESYNC_REQUIRED` 重新安装 snapshot 后不丢失可读正文。
-- [ ] 验证认证失效、能力撤销、模型失败和慢客户端。
-- [ ] 验证 Work 模式无行为和视觉回归。
+- [x] Playwright 优先验收正文至少发生两次真实增长，且增长来自多个真实 `output.delta`，不是前端拆字。
+- [x] 验证最终刷新后历史正文与流式拼接一致。
+- [x] 验证中途停止后没有后续 delta，半截正文在刷新后仍可见。
+- [x] 验证 SSE 中断后重连不重复文本、不重复模型执行。
+- [x] 验证普通问答正文开始后没有执行过程入口；工具任务正文开始后可按需展开安全活动详情。
+- [x] 在真实链路中验证“先 content、后 tool call”的中间文本既未写入 durable event store，也未到达浏览器。
+- [x] 验证工具完成后的最终正文产生多个真实 `output.delta`，并在浏览器中至少分两次增长显示。
+- [x] 验证 event gap 经 REST 修复后继续输出。
+- [x] 验证 `RESYNC_REQUIRED` 重新安装 snapshot 后不丢失可读正文。
+- [x] 验证认证失效、能力撤销、模型失败和慢客户端。
+- [x] 验证 Work 模式无行为和视觉回归。
 
 **最终门禁：**
 
 后端仓库至少执行 conversation/provider/Agent Loop focused tests、API typecheck、Schema/OpenAPI drift、相关安全测试和全量要求；前端仓库执行 focused Vitest、`pnpm lint`、`pnpm typecheck`、`pnpm test`、Daily canonical Playwright、默认 Playwright 和 `pnpm build`。只有实际观察到全部通过后才能声明完成。
+
+**状态：实现完成，最终全绿门禁未完成（2026-11-23）。** Task 7 的新增代码和所有 SSE/Work 直接验收均已通过；默认 Playwright 仍有 Task 6 已记录的 3 个既有 Skill Market lifecycle 失败，因此遵守“全部通过后才能声明完成”的约束，不把 Task 7 标为已完成。
+
+**验收结果：** 新增真实 PostgreSQL、Conversation server、Agent Loop、SSE 与浏览器联合测试，不使用前端拆字或 mock answer。普通回答与工具最终回答都由多个 durable `output.delta` 组成，MutationObserver 分别观察到至少两次正文增长；刷新后的 canonical 正文与 delta 拼接完全一致。工具决策 fixture 先产生 `PRIVATE_CONTENT_BEFORE_DELAYED_TOOL_CALL`，随后才产生 tool call；事件库、snapshot 和浏览器均未出现该中间文本，工具结束后的独立 final stream 仍产生多个公开增量。取消测试只保留首个 committed delta，700ms 后无晚到正文，刷新仍显示 interrupted partial；受控 SSE 读流错误后手动重连恢复同一正文，`finalStreamCalls` 保持 1，未重复模型执行或文本。
+
+**测试：** `pnpm run test:e2e:daily-sse-real` 4/4 通过；`pnpm run test:e2e:daily-session` 18/18 通过；Task 7 focused Vitest 10 files、132/132 通过，覆盖 event gap 的 REST repair、`RESYNC_REQUIRED` snapshot 安装、认证/能力错误、断线和 partial；前端全量 Vitest 97 files、861/861 通过。默认 Playwright 为 32 passed、3 failed、1 skipped，Work history 1/1 与 Work Skills 4/4 均通过，3 个失败均位于既有 `skill-market-lifecycle.spec.ts`（Smoke 文案、Trigger review timeout、创建修订 URL），未越界修改。`pnpm run typecheck`、`pnpm run lint`、Schema verify、generated client drift check 和生产构建 14/14 pages 均通过。
+
+后端 `test:conversations` 全量串联命令 exit 0，包含 8/8 独立进程 crash recovery；execution 30/30、events 29/29、server 14/14、public-answer-boundary 9/9、model-streaming 7/7、capability 27/27 与 external tools 18/18 focused suites 通过。API `ts-check`、lint（0 error、21 个既有 warning）、权威 Schema 重新生成与 OpenAPI drift check 通过；本轮 server 指标样本 commit-to-browser p95 为 10ms，final-stage-to-first-visible 为 77ms，且慢客户端隔离与无正文指标回归通过。
 
 ## 完成定义
 
