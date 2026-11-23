@@ -471,72 +471,92 @@ Agent Loop 必须把“可以公开输出”定义为明确、可测试的阶段
 
 **目标：** 增加内部流接口，同时不影响现有非流 JSON/工具调用。
 
-- [ ] 为 `ModelProviderAdapter` 增加独立 stream 方法或独立 streaming adapter，保留现有 `generate()`。
-- [ ] 实现 OpenAI-compatible SSE parser，覆盖任意网络分块、UTF-8 边界、多行 data、`[DONE]`、error 和 abort。
-- [ ] 在 Gateway 层保留 timeout、并发限制、取消和安全日志；明确流开始后不得自动重试并重复输出。
-- [ ] 只向上层暴露 normalized provider events，不暴露原始响应对象。
-- [ ] 为 reasoning、content、tool call 和 usage 分别建类型。
+- [x] 为 `ModelProviderAdapter` 增加独立 stream 方法或独立 streaming adapter，保留现有 `generate()`。
+- [x] 实现 OpenAI-compatible SSE parser，覆盖任意网络分块、UTF-8 边界、多行 data、`[DONE]`、error 和 abort。
+- [x] 在 Gateway 层保留 timeout、并发限制、取消和安全日志；明确流开始后不得自动重试并重复输出。
+- [x] 只向上层暴露 normalized provider events，不暴露原始响应对象。
+- [x] 为 reasoning、content、tool call 和 usage 分别建类型。
 
 **测试：** provider parser、gateway timeout/abort、首 chunk 前重试、首 chunk 后禁止透明重试、敏感数据扫描。
+
+**状态：已完成（2026-11-19）。** 后端 `daily-sse` 分支提交 `c34028d` 增加独立 provider/Gateway async-iterable stream、归一化事件类型和 OpenAI-compatible 增量 SSE parser；执行 Plan 位于 `D:\0 ysq文件\DSI-agent-loop\docs\SSE\2026-11-19-daily-model-stream-primitives.md`。
+
+**验收结果：** `pnpm agent:test:model-streaming` 7/7 通过，覆盖逐字节中文 UTF-8、CRLF/LF、多行 `data:`、comment、`[DONE]`、usage、工具参数增量、malformed/premature/provider/HTTP error、reader cancel、timeout/caller abort、early return、并发许可释放、首事件前重试和首事件后禁止重试。`pnpm agent:test:model-adapter` 与 `pnpm ts-check` 通过，现有 `generate()` 调用链不变；本 Task 未接入 Agent Loop、Conversation event store 或浏览器。
 
 ### Task 2：Agent Loop 公开正文流边界
 
 **目标：** 建立明确的 final-answer 阶段，只把该阶段中最终用户可见的正文转换为 `PublicAnswerStream`。
 
-- [ ] 写失败测试：reasoning、工具参数和内部 JSON 不得进入 public delta。
-- [ ] 写失败测试：同一次调用先产生 content、随后产生 tool call 时，先前 content 不得进入 public delta。
-- [ ] 在 Agent Loop 中建立 public final-answer sink/AsyncIterable。
-- [ ] 为“明确无需工具”和“可能使用工具”建立显式分支；后者在工具阶段结束前不得打开 public sink。
-- [ ] final-answer 阶段必须关闭工具调用；若上游无法提前可靠标识该阶段，则使用独立流式 final-answer 调用。
-- [ ] 每次已清理的公开输出同时 append 到 accumulator，最终 `finalAnswer` 只能来自该 accumulator。
-- [ ] 工具 Turn 在 final-answer 阶段前继续使用现有安全活动事件，不把任何模型中间 content 当最终正文。
-- [ ] cancel signal 必须中断 provider、停止新 delta，并返回 interrupted outcome。
-- [ ] 明确 provider 在部分输出后失败时的 outcome 和 partial 保留规则。
+- [x] 写失败测试：reasoning、工具参数和内部 JSON 不得进入 public delta。
+- [x] 写失败测试：同一次调用先产生 content、随后产生 tool call 时，先前 content 不得进入 public delta。
+- [x] 在 Agent Loop 中建立 public final-answer sink/AsyncIterable。
+- [x] 为“明确无需工具”和“可能使用工具”建立显式分支；后者在工具阶段结束前不得打开 public sink。
+- [x] final-answer 阶段必须关闭工具调用；若上游无法提前可靠标识该阶段，则使用独立流式 final-answer 调用。
+- [x] 每次已清理的公开输出同时 append 到 accumulator，最终 `finalAnswer` 只能来自该 accumulator。
+- [x] 工具 Turn 在 final-answer 阶段前继续使用现有安全活动事件，不把任何模型中间 content 当最终正文。
+- [x] cancel signal 必须中断 provider、停止新 delta，并返回 interrupted outcome。
+- [x] 明确 provider 在部分输出后失败时的 outcome 和 partial 保留规则。
 
 **验收：** 所有完成 Turn 都满足 `join(cleanedDeltas) === finalAnswer`；所有工具、延迟 tool call、reasoning 和跨 chunk 敏感字符串 fixture 都无泄漏。
+
+**状态：已完成（2026-11-19）。** 后端 `daily-sse` 分支提交 `cf55ac2` 建立内部 `PublicAnswerSink`、跨 chunk 安全清理与 Agent Loop final-answer 分支，`2a5bda4` 补充无 sink 时保持原 `decide()` 路径的兼容回归；执行 Plan 位于 `D:\0 ysq文件\DSI-agent-loop\docs\SSE\2026-11-19-daily-public-answer-boundary.md`。
+
+**验收结果：** `pnpm agent:test:public-answer-boundary` 最终 9/9 通过。无工具路径不调用 `decide()` 而直接流式回答；工具路径的 content-then-tool 决策文本和非流 final decision 均未进入 sink，工具结束后才启动 `tools: []` / `toolChoice: none` 的独立 final stream。reasoning、tool arguments、provider metadata、内部 tool JSON、跨 chunk assignment credential 和完整 PEM 私钥块均未泄漏。完成路径满足 `join(publicDeltas) === result.finalAnswer === assistantMessage.content`；取消/失败不 flush withheld buffer，只保留已公开 partial。本 Task 仍未新增 durable `output.*`、snapshot partial、公共 SSE 或浏览器接线。
 
 ### Task 3：Durable output event 与 partial 投影
 
 **目标：** 让正文增量可排序、可补洞、可重连、可在 snapshot 中恢复。
 
-- [ ] 扩展 shared Zod schema 和 OpenAPI，加入 `output.started/delta/completed`。
-- [ ] 预分配 assistant `messageId`，并贯穿 output 和最终 message。
-- [ ] 在 durable event 写入前执行有界、可流式的安全清理，并覆盖敏感字符串跨两个或多个 provider chunk 的测试。
-- [ ] 实现 80–120ms/大小/段落边界 accumulator flush。
-- [ ] 批量写 durable output events，并分配连续 conversation `eventSeq`。
-- [ ] 增加 partial output projection，覆盖 running/interrupted/failed snapshot。
-- [ ] 完成事务写 `output.completed + message.created + turn.completed`，核对长度和 SHA-256。
-- [ ] 为单 Turn 最大字符数、最大 chunk 数、事件保留和清理设置硬上限。
-- [ ] 扩展 crash、lease loss、取消、重复 finish 和 transaction response-loss 测试。
+- [x] 扩展 shared Zod schema 和 OpenAPI，加入 `output.started/delta/completed`。
+- [x] 预分配 assistant `messageId`，并贯穿 output 和最终 message。
+- [x] 在 durable event 写入前执行有界、可流式的安全清理，并覆盖敏感字符串跨两个或多个 provider chunk 的测试。
+- [x] 实现 80–120ms/大小/段落边界 accumulator flush。
+- [x] 批量写 durable output events，并分配连续 conversation `eventSeq`。
+- [x] 增加 partial output projection，覆盖 running/interrupted/failed snapshot。
+- [x] 完成事务写 `output.completed + message.created + turn.completed`，核对长度和 SHA-256。
+- [x] 为单 Turn 最大字符数、最大 chunk 数、事件保留和清理设置硬上限。
+- [x] 扩展 crash、lease loss、取消、重复 finish 和 transaction response-loss 测试。
 
 **验收：** 任意时刻崩溃后不会重复执行模型；重放可恢复到最后 committed chunk；event store、SSE 和最终消息只包含同一份已清理公开文本，完成消息与 delta 完全一致。
+
+**状态：已完成（2026-11-20）。** 后端 `daily-sse` 分支提交 `1d80d77`，执行 Plan 为 `D:\0 ysq文件\DSI-agent-loop\docs\SSE\2026-11-20-daily-durable-output-events.md`。新增 output draft 与 `output_message_id` 解决最终消息尚未创建时的 durable event 外键问题；公共投影仍复用统一 `messageId`。
+
+**验收结果：** shared contract/OpenAPI、100ms/4KiB/段落/终态 batching、8KiB UTF-8 安全切片、32,000 code points、2,048 durable deltas、partial snapshot 和原子完成事务均有自动化覆盖。成功路径验证 `output.completed → message.created → turn.completed`、同一预分配 ID、joined delta/draft/canonical message 完全一致及 SHA-256；失败路径验证只保留 committed partial，不创建 assistant message，且较新的成功 Turn 不会重新投影旧 partial。独立 OS 进程在 `output.delta` commit 后被终止，新进程恢复时不调用模型，保留 exact partial 并标记 interrupted。后端 Conversation 全量 305 个测试通过，新增 output crash phase 单独通过；Task 4 的 post-commit wake-up 和浏览器投递仍未实施。
 
 ### Task 4：低延迟 SSE 投递与 BFF 验证
 
 **目标：** committed delta 通常在 200ms 内到达浏览器，同时保留 durable fallback。
 
-- [ ] 为 event stream 增加 commit 后定向 wake-up。
-- [ ] 多进程使用共享通知；数据库轮询仅作兜底。
-- [ ] 验证 REST `/events` 与 SSE 返回同一 output schema。
-- [ ] 验证心跳、背压、慢客户端断开和连接限额不会阻塞 Turn 执行。
-- [ ] 验证 `/agent-api`/网关透传 streaming body、`Last-Event-ID`、content type、`no-transform` 和 `X-Accel-Buffering`。
-- [ ] 增加 commit-to-browser、final-answer 阶段开始到首批正文可见、chunk 间延迟和慢客户端指标，但不记录正文内容。
+- [x] 为 event stream 增加 commit 后定向 wake-up。
+- [x] 多进程使用共享通知；数据库轮询仅作兜底。
+- [x] 验证 REST `/events` 与 SSE 返回同一 output schema。
+- [x] 验证心跳、背压、慢客户端断开和连接限额不会阻塞 Turn 执行。
+- [x] 验证 `/agent-api`/网关透传 streaming body、`Last-Event-ID`、content type、`no-transform` 和 `X-Accel-Buffering`。
+- [x] 增加 commit-to-browser、final-answer 阶段开始到首批正文可见、chunk 间延迟和慢客户端指标，但不记录正文内容。
 
 **验收：** 本地/测试环境 p95 commit-to-browser 延迟小于 200ms；同时单独报告“final-answer 阶段开始 → 首批正文可见”的 p50/p95，区分模型首字时间与事件投递时间；通知丢失时仍能通过轮询恢复。
+
+**状态：已完成（2026-11-22）。** 后端 `daily-sse` 分支实现提交 `cf8d835`、证据提交 `ab34679`，执行 Plan 为 `D:\0 ysq文件\DSI-agent-loop\docs\SSE\2026-11-22-daily-conversation-event-wakeup.md`。采用事务后 PostgreSQL `LISTEN/NOTIFY` 定向唤醒，周期轮询继续作为正确性兜底。
+
+**验收结果：** 跨 pool 提交/回滚/通知丢失 focused tests 4/4、Conversation events 29/29、server 14/14 和后端 Conversation 全量套件通过。通知驱动重复样本的 commit-to-browser p95 为 7ms，commit-return-to-browser p95 为 22～24ms；带 40ms provider 等待的 final-stage-to-first-visible 样本为 77ms、83ms。真实 `/agent-api` 验证正文可在 Turn 完成前到达，并覆盖 `text/event-stream`、`no-transform`、`X-Accel-Buffering: no`、`Last-Event-ID`、慢客户端隔离和无正文指标。前端只读代理/client 回归 37/37 通过；本 Task 未修改前端源代码。
 
 ### Task 5：前端 Schema 同步与 Daily reducer
 
 **目标：** Daily 能以严格状态机消费 output events。
 
-- [ ] 先更新后端权威 Schema，再运行前端 conversation client generator/check。
-- [ ] 为 reducer 写 `output.started/delta/completed` RED tests。
-- [ ] 增加 `activeOutput`：`messageId`、`turnId`、`lastOutputSeq`、content、status。
-- [ ] 拒绝 message/turn 不匹配、`outputSeq` 跳号和完成后 delta。
-- [ ] 重复 event 幂等忽略；conversation `eventSeq` 跳号继续走现有 REST 补洞。
-- [ ] canonical `message.created` 到达时核对并收口 draft。
-- [ ] snapshot 安装、重连、RESYNC、取消、失败时正确恢复或保留 partial。
+- [x] 先更新后端权威 Schema，再运行前端 conversation client generator/check。
+- [x] 为 reducer 写 `output.started/delta/completed` RED tests。
+- [x] 增加 `activeOutput`：`messageId`、`turnId`、`lastOutputSeq`、content、status。
+- [x] 拒绝 message/turn 不匹配、`outputSeq` 跳号和完成后 delta。
+- [x] 重复 event 幂等忽略；conversation `eventSeq` 跳号继续走现有 REST 补洞。
+- [x] canonical `message.created` 到达时核对并收口 draft。
+- [x] snapshot 安装、重连、RESYNC、取消、失败时正确恢复或保留 partial。
 
 **测试：** reducer、adapter、hook、snapshot/stream race、REST/SSE 交错、旧页合并、身份切换和 abort。
+
+**状态：已完成（2026-11-23）。** 前端 `daily-sse` 分支提交 `de8f212` 同步后端 `DSI@1d80d77` 的权威 Schema 和生成客户端，并以严格 `activeOutput` 状态机消费 durable output events。Task 6 的约 60ms batching、流式视觉状态和交互仍未实施。
+
+**验收结果：** 先加入 reducer/adapter 用例得到 5 个预期 RED，再做最小实现转绿。focused suite 10 files、137/137 通过，覆盖严格 output 顺序、身份/序号/终态拒绝、重复幂等、snapshot watermark replay、canonical 收口、REST 补 `output.started` 后续接 SSE delta、RESYNC partial、旧页合并、身份切换和 abort。Schema 固定制品验证、生成客户端 drift check、TypeScript、ESLint、生产构建均通过；前端全量 Vitest 96 files、849/849 通过。
 
 ### Task 6：前端 batching 与 Codex 式输出 UI
 
