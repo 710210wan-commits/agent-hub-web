@@ -73,6 +73,7 @@ function snapshot(overrides: Partial<ConversationSnapshot> = {}): ConversationSn
     messages: [message(assistantMessageId, "assistant", "2")],
     nextCursor: null,
     lastEventSeq: "3",
+    partialOutput: null,
     ...overrides,
   };
 }
@@ -93,6 +94,21 @@ function event(
     turnId,
     taskId,
     ...(type === "message.created" ? { messageId: userMessageId } : {}),
+  } as ConversationPublicEvent;
+}
+
+function outputEvent(
+  eventSeq: string,
+  type: "output.started" | "output.delta" | "output.completed",
+  payload: Record<string, unknown>,
+  overrides: Partial<ConversationPublicEvent> = {},
+): ConversationPublicEvent {
+  return {
+    ...event(eventSeq, type, payload),
+    messageId: assistantMessageId,
+    turnId,
+    taskId,
+    ...overrides,
   } as ConversationPublicEvent;
 }
 
@@ -135,6 +151,178 @@ function pendingState() {
 }
 
 describe("dailyConversationReducer", () => {
+  it("streams ordered output into one strict active draft and closes it with the canonical message", () => {
+    const started = dailyConversationReducer(
+      dailyConversationReducer(createInitialDailyConversationState(`${conversationId}:1`), {
+        type: "receipt.apply",
+        receipt: receipt("running"),
+      }),
+      { type: "event.apply", event: outputEvent("1", "output.started", { mode: "append" }) },
+    );
+    const first = dailyConversationReducer(started, {
+      type: "event.apply",
+      event: outputEvent("2", "output.delta", { outputSeq: "1", delta: "第一段" }),
+    });
+    const second = dailyConversationReducer(first, {
+      type: "event.apply",
+      event: outputEvent("3", "output.delta", { outputSeq: "2", delta: "正文" }),
+    });
+    const completed = dailyConversationReducer(second, {
+      type: "event.apply",
+      event: outputEvent("4", "output.completed", {
+        outputSeq: "2",
+        charCount: 5,
+        contentSha256: "a".repeat(64),
+      }),
+    });
+    const canonical = message(assistantMessageId, "assistant", "2");
+    canonical.content = { kind: "text", text: "第一段正文" };
+    const closed = dailyConversationReducer(completed, {
+      type: "event.apply",
+      event: {
+        ...event("5", "message.created", { message: canonical }),
+        messageId: assistantMessageId,
+      } as ConversationPublicEvent,
+    });
+
+    expect(started.activeOutput).toEqual({
+      messageId: assistantMessageId,
+      turnId,
+      taskId,
+      lastOutputSeq: "0",
+      content: "",
+      status: "streaming",
+    });
+    expect(second.activeOutput).toMatchObject({ lastOutputSeq: "2", content: "第一段正文", status: "streaming" });
+    expect(completed.activeOutput?.status).toBe("completed");
+    expect(closed.activeOutput).toBeNull();
+    expect(closed.messagesById[assistantMessageId]).toEqual(canonical);
+  });
+
+  it("rejects output identity mismatches, sequence gaps, completion mismatch, and post-completion delta", () => {
+    const running = dailyConversationReducer(createInitialDailyConversationState(`${conversationId}:1`), {
+      type: "receipt.apply",
+      receipt: receipt("running"),
+    });
+    expect(() => dailyConversationReducer(running, {
+      type: "event.apply",
+      event: outputEvent("1", "output.started", { mode: "append" }, { turnId: "21000000-0000-4000-8000-000000000012" }),
+    })).toThrow("公开正文事件与当前 Turn 不匹配");
+
+    const started = dailyConversationReducer(running, {
+      type: "event.apply",
+      event: outputEvent("1", "output.started", { mode: "append" }),
+    });
+    expect(() => dailyConversationReducer(started, {
+      type: "event.apply",
+      event: outputEvent("2", "output.delta", { outputSeq: "2", delta: "跳号" }),
+    })).toThrow("公开正文序号不连续");
+    const delta = dailyConversationReducer(started, {
+      type: "event.apply",
+      event: outputEvent("2", "output.delta", { outputSeq: "1", delta: "正文" }),
+    });
+    expect(() => dailyConversationReducer(delta, {
+      type: "event.apply",
+      event: outputEvent("3", "output.completed", { outputSeq: "1", charCount: 99, contentSha256: "b".repeat(64) }),
+    })).toThrow("公开正文完成校验失败");
+    const completed = dailyConversationReducer(delta, {
+      type: "event.apply",
+      event: outputEvent("3", "output.completed", { outputSeq: "1", charCount: 2, contentSha256: "b".repeat(64) }),
+    });
+    expect(() => dailyConversationReducer(completed, {
+      type: "event.apply",
+      event: outputEvent("4", "output.delta", { outputSeq: "2", delta: "晚到" }),
+    })).toThrow("公开正文已经结束");
+
+    const wrongMessage = message(assistantMessageId, "assistant", "2");
+    wrongMessage.content = { kind: "text", text: "与已公开内容不一致" };
+    expect(() => dailyConversationReducer(completed, {
+      type: "event.apply",
+      event: {
+        ...event("4", "message.created", { message: wrongMessage }),
+        messageId: assistantMessageId,
+      } as ConversationPublicEvent,
+    })).toThrow("最终消息与公开正文草稿不一致");
+  });
+
+  it("ignores an exact duplicate output event without appending its delta twice", () => {
+    const running = dailyConversationReducer(createInitialDailyConversationState(`${conversationId}:1`), {
+      type: "receipt.apply",
+      receipt: receipt("running"),
+    });
+    const started = dailyConversationReducer(running, { type: "event.apply", event: outputEvent("1", "output.started", { mode: "append" }) });
+    const deltaEvent = outputEvent("2", "output.delta", { outputSeq: "1", delta: "只追加一次" });
+    const once = dailyConversationReducer(started, { type: "event.apply", event: deltaEvent });
+    const duplicate = dailyConversationReducer(once, { type: "event.apply", event: deltaEvent });
+    expect(duplicate).toBe(once);
+    expect(duplicate.activeOutput?.content).toBe("只追加一次");
+  });
+
+  it("restores snapshot partial output and preserves it across disconnect, cancel, and failure", () => {
+    const installed = dailyConversationReducer(createInitialDailyConversationState(`${conversationId}:1`), {
+      type: "snapshot.install",
+      snapshot: snapshot({
+        activeTurn: turnState("running"),
+        partialOutput: {
+          messageId: assistantMessageId,
+          turnId,
+          taskId,
+          lastOutputSeq: "2",
+          content: "刷新后保留的半截正文",
+          status: "streaming",
+          updatedAt: "2026-11-09T01:03:05.000Z",
+        },
+      }),
+    });
+    const disconnected = dailyConversationReducer(installed, { type: "stream.disconnected" });
+    const cancelling = dailyConversationReducer(disconnected, { type: "cancel.requested" });
+    const failed = dailyConversationReducer(cancelling, {
+      type: "event.apply",
+      event: event("1", "turn.failed", {
+        turn: { ...turnState("running"), status: "failed", errorCode: "MODEL_ERROR" },
+      }),
+    });
+
+    expect(installed.activeOutput).toMatchObject({ content: "刷新后保留的半截正文", lastOutputSeq: "2", status: "streaming" });
+    expect(disconnected.activeOutput).toEqual(installed.activeOutput);
+    expect(cancelling.activeOutput).toEqual(installed.activeOutput);
+    expect(failed.activeOutput).toMatchObject({ content: "刷新后保留的半截正文", status: "failed" });
+  });
+
+  it("keeps snapshot output authoritative while replaying to its watermark, then appends future deltas", () => {
+    const installed = dailyConversationReducer(createInitialDailyConversationState(`${conversationId}:1`), {
+      type: "snapshot.install",
+      snapshot: snapshot({
+        activeTurn: turnState("running"),
+        lastEventSeq: "2",
+        partialOutput: {
+          messageId: assistantMessageId,
+          turnId,
+          taskId,
+          lastOutputSeq: "1",
+          content: "快照正文",
+          status: "streaming",
+          updatedAt: "2026-11-09T01:03:05.000Z",
+        },
+      }),
+    });
+    const replayedStart = dailyConversationReducer(installed, {
+      type: "event.apply",
+      event: outputEvent("1", "output.started", { mode: "append" }),
+    });
+    const replayedDelta = dailyConversationReducer(replayedStart, {
+      type: "event.apply",
+      event: outputEvent("2", "output.delta", { outputSeq: "1", delta: "不得重复" }),
+    });
+    const future = dailyConversationReducer(replayedDelta, {
+      type: "event.apply",
+      event: outputEvent("3", "output.delta", { outputSeq: "2", delta: "继续" }),
+    });
+
+    expect(replayedDelta.activeOutput?.content).toBe("快照正文");
+    expect(future.activeOutput).toMatchObject({ content: "快照正文继续", lastOutputSeq: "2" });
+  });
+
   it("installs a snapshot as canonical message map with a separate recovery watermark", () => {
     const duplicate = message(assistantMessageId, "assistant", "2");
     const installed = dailyConversationReducer(

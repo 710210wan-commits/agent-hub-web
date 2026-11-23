@@ -126,6 +126,7 @@ function snapshot(
     messages,
     nextCursor,
     lastEventSeq: "0",
+    partialOutput: null,
   };
 }
 

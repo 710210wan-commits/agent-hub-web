@@ -32,6 +32,15 @@ export interface DailyActiveTurn {
   errorCode?: string | null;
 }
 
+export interface DailyActiveOutput {
+  messageId: string;
+  turnId: string;
+  taskId: string;
+  lastOutputSeq: string;
+  content: string;
+  status: "streaming" | "completed" | "interrupted" | "failed";
+}
+
 export interface PendingDailySend {
   capabilitySelection: CapabilitySelection;
   clientRequestId: string;
@@ -47,6 +56,7 @@ export interface DailyConversationState {
   conversation: ConversationMetadata | null;
   messagesById: Readonly<Record<string, ConversationMessage>>;
   activeTurn: DailyActiveTurn | null;
+  activeOutput: DailyActiveOutput | null;
   pendingSend: PendingDailySend | null;
   appliedSeq: string;
   snapshotWatermark: string | null;
@@ -96,6 +106,13 @@ export class ConversationSequenceGapError extends Error {
   }
 }
 
+export class ConversationOutputProtocolError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConversationOutputProtocolError";
+  }
+}
+
 export function createInitialDailyConversationState(
   key: string,
 ): DailyConversationState {
@@ -104,6 +121,7 @@ export function createInitialDailyConversationState(
     conversation: null,
     messagesById: {},
     activeTurn: null,
+    activeOutput: null,
     pendingSend: null,
     appliedSeq: "0",
     snapshotWatermark: null,
@@ -138,6 +156,7 @@ export function dailyConversationReducer(
         ...state,
         key: action.key ?? state.key,
         conversation: action.conversation,
+        activeOutput: null,
         status: "ready",
         appliedSeq: "0",
         snapshotWatermark: action.conversation.lastEventSeq,
@@ -232,6 +251,16 @@ function installSnapshot(
     conversation: snapshot.conversation,
     messagesById,
     activeTurn: snapshot.activeTurn,
+    activeOutput: snapshot.partialOutput
+      ? {
+          messageId: snapshot.partialOutput.messageId,
+          turnId: snapshot.partialOutput.turnId,
+          taskId: snapshot.partialOutput.taskId,
+          lastOutputSeq: snapshot.partialOutput.lastOutputSeq,
+          content: snapshot.partialOutput.content,
+          status: snapshot.partialOutput.status,
+        }
+      : null,
     appliedSeq: "0",
     snapshotWatermark: snapshot.lastEventSeq,
     nextCursor: snapshot.nextCursor,
@@ -331,6 +360,28 @@ function applyEvent(
       };
     case "message.created": {
       const message = event.payload.message;
+      let activeOutput = next.activeOutput;
+      if (
+        message.role === "assistant" &&
+        activeOutput &&
+        (message.messageId === activeOutput.messageId ||
+          message.turnId === activeOutput.turnId)
+      ) {
+        if (
+          event.messageId !== activeOutput.messageId ||
+          message.messageId !== activeOutput.messageId ||
+          message.turnId !== activeOutput.turnId ||
+          event.turnId !== activeOutput.turnId ||
+          activeOutput.status !== "completed" ||
+          message.content.kind !== "text" ||
+          message.content.text !== activeOutput.content
+        ) {
+          throw new ConversationOutputProtocolError(
+            "最终消息与公开正文草稿不一致",
+          );
+        }
+        activeOutput = null;
+      }
       const messagesById = {
         ...next.messagesById,
         [message.messageId]: message,
@@ -344,7 +395,7 @@ function applyEvent(
               "accepted",
             )
           : next.pendingSend;
-      return { ...next, messagesById, pendingSend };
+      return { ...next, messagesById, pendingSend, activeOutput };
     }
     case "turn.queued":
       next = {
@@ -376,7 +427,120 @@ function applyEvent(
         activity: "正在处理…",
         completedStepCount: next.completedStepCount + 1,
       };
+    case "output.started":
+      if (isSnapshotReplay(next, event.eventSeq)) return next;
+      return startOutput(next, event);
+    case "output.delta":
+      if (isSnapshotReplay(next, event.eventSeq)) return next;
+      return appendOutput(next, event);
+    case "output.completed":
+      if (isSnapshotReplay(next, event.eventSeq)) return next;
+      return completeOutput(next, event);
   }
+}
+
+function isSnapshotReplay(
+  state: DailyConversationState,
+  eventSeq: string,
+): boolean {
+  return Boolean(
+    state.snapshotWatermark &&
+      compareSequence(eventSeq, state.snapshotWatermark) <= 0,
+  );
+}
+
+function startOutput(
+  state: DailyConversationState,
+  event: Extract<ConversationPublicEvent, { type: "output.started" }>,
+): DailyConversationState {
+  if (
+    !state.activeTurn ||
+    state.activeTurn.turnId !== event.turnId ||
+    state.activeTurn.taskId !== event.taskId ||
+    isTerminal(state.activeTurn.status)
+  ) {
+    throw new ConversationOutputProtocolError(
+      "公开正文事件与当前 Turn 不匹配",
+    );
+  }
+  if (state.activeOutput) {
+    throw new ConversationOutputProtocolError("公开正文已经开始");
+  }
+  return {
+    ...state,
+    activeOutput: {
+      messageId: event.messageId,
+      turnId: event.turnId,
+      taskId: event.taskId,
+      lastOutputSeq: "0",
+      content: "",
+      status: "streaming",
+    },
+  };
+}
+
+function appendOutput(
+  state: DailyConversationState,
+  event: Extract<ConversationPublicEvent, { type: "output.delta" }>,
+): DailyConversationState {
+  const output = requireOutputIdentity(state, event);
+  if (output.status !== "streaming") {
+    throw new ConversationOutputProtocolError("公开正文已经结束");
+  }
+  const expected = (BigInt(output.lastOutputSeq) + BigInt(1)).toString();
+  if (event.payload.outputSeq !== expected) {
+    throw new ConversationOutputProtocolError(
+      `公开正文序号不连续：期望 ${expected}，收到 ${event.payload.outputSeq}`,
+    );
+  }
+  return {
+    ...state,
+    activeOutput: {
+      ...output,
+      lastOutputSeq: event.payload.outputSeq,
+      content: output.content + event.payload.delta,
+    },
+  };
+}
+
+function completeOutput(
+  state: DailyConversationState,
+  event: Extract<ConversationPublicEvent, { type: "output.completed" }>,
+): DailyConversationState {
+  const output = requireOutputIdentity(state, event);
+  if (output.status !== "streaming") {
+    throw new ConversationOutputProtocolError("公开正文已经结束");
+  }
+  if (
+    event.payload.outputSeq !== output.lastOutputSeq ||
+    event.payload.charCount !== Array.from(output.content).length
+  ) {
+    throw new ConversationOutputProtocolError("公开正文完成校验失败");
+  }
+  return { ...state, activeOutput: { ...output, status: "completed" } };
+}
+
+function requireOutputIdentity(
+  state: DailyConversationState,
+  event: Extract<
+    ConversationPublicEvent,
+    { type: "output.delta" | "output.completed" }
+  >,
+): DailyActiveOutput {
+  const output = state.activeOutput;
+  if (
+    !output ||
+    output.messageId !== event.messageId ||
+    output.turnId !== event.turnId ||
+    output.taskId !== event.taskId ||
+    state.activeTurn?.turnId !== event.turnId ||
+    state.activeTurn.taskId !== event.taskId
+  ) {
+    throw new ConversationOutputProtocolError(
+      "公开正文事件与当前 Turn 不匹配",
+    );
+  }
+  return output;
 }
 
 function applyTurn(
@@ -391,9 +555,15 @@ function applyTurn(
     return state;
   }
   const isNewTurn = state.activeTurn?.turnId !== turn.turnId;
+  const activeOutput =
+    state.activeOutput?.turnId === turn.turnId &&
+    (turn.status === "failed" || turn.status === "interrupted")
+      ? { ...state.activeOutput, status: turn.status }
+      : state.activeOutput;
   return {
     ...state,
     activeTurn: turn,
+    activeOutput,
     status: statusFromTurn(turn.status),
     activity: activityFromTurn(turn.status),
     completedStepCount: isNewTurn ? 0 : state.completedStepCount,

@@ -580,6 +580,7 @@ export function useDailyConversation({
       projectDailySessionMessages(
         selectDailyConversationMessages(visibleState),
         visibleState.pendingSend,
+        visibleState.activeOutput,
       ),
     [visibleState],
   );

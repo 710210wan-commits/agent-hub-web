@@ -1,11 +1,13 @@
 import type { ChatMessage } from "@/features/chat/contracts/chat";
 import type { ConversationMessage } from "@/features/chat/transports/daily-session-contract";
-import type { PendingDailySend } from "./daily-conversation-reducer";
+import type { DailyActiveOutput, PendingDailySend } from "./daily-conversation-reducer";
 import { snapshotCapabilitySelection } from "../capabilities/contracts";
 
 export interface DailySessionViewMessage extends ChatMessage {
   ordinal: string;
   pending?: boolean;
+  streaming?: boolean;
+  partialStatus?: DailyActiveOutput["status"];
 }
 
 const unsupportedMessage = "暂不支持展示的消息";
@@ -46,10 +48,28 @@ export function mergeDailySessionMessages(
 export function projectDailySessionMessages(
   messages: ConversationMessage[],
   pending: PendingDailySend | null,
+  activeOutput: DailyActiveOutput | null = null,
 ): DailySessionViewMessage[] {
-  const projected = messages
+  let projected = messages
     .map(adaptDailySessionMessage)
     .sort(compareViewMessages);
+  if (
+    activeOutput?.content &&
+    !messages.some(message => message.messageId === activeOutput.messageId)
+  ) {
+    projected = sortDailySessionMessages([
+      ...projected,
+      {
+        id: activeOutput.messageId,
+        role: "assistant",
+        content: activeOutput.content,
+        createdAt: 0,
+        ordinal: "streaming",
+        streaming: activeOutput.status === "streaming",
+        partialStatus: activeOutput.status,
+      },
+    ]);
+  }
   if (!pending) return projected;
   if (pending.status === "blocked" || pending.status === "failed") {
     return projected;
@@ -84,11 +104,20 @@ function compareViewMessages(
   left: DailySessionViewMessage,
   right: DailySessionViewMessage,
 ): number {
-  if (left.ordinal === "pending") return right.ordinal === "pending" ? 0 : 1;
-  if (right.ordinal === "pending") return -1;
+  const leftRank = specialOrdinalRank(left.ordinal);
+  const rightRank = specialOrdinalRank(right.ordinal);
+  if (leftRank !== 0 || rightRank !== 0) {
+    return leftRank === rightRank ? left.id.localeCompare(right.id) : leftRank - rightRank;
+  }
   const a = BigInt(left.ordinal);
   const b = BigInt(right.ordinal);
   return a < b ? -1 : a > b ? 1 : left.id.localeCompare(right.id);
+}
+
+function specialOrdinalRank(ordinal: string): number {
+  if (ordinal === "pending") return 1;
+  if (ordinal === "streaming") return 2;
+  return 0;
 }
 
 function visibleContent(message: ConversationMessage): string {
