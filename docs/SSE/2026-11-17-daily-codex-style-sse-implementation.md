@@ -562,17 +562,21 @@ Agent Loop 必须把“可以公开输出”定义为明确、可测试的阶段
 
 **目标：** 把真实 Daily delta 平滑呈现，不伪造、不抖动。
 
-- [ ] 在 Daily controller 中复用或抽取现有 `useBatchedDeltas`。
-- [ ] 首批正文立即渲染，后续 delta 按约 60ms 合并；非 delta 事件前 drain buffer，完成、停止、失败和断线时立即 flush。
-- [ ] 给 `MessageList`/`MessageContent` 增加 streaming、partial、interrupted 状态。
-- [ ] 普通问答在正文开始后移除等待状态；只有实际工具活动时才显示可展开的“查看执行过程”，不默认显示步骤总数。
-- [ ] 实现流式光标和 `prefers-reduced-motion`。
-- [ ] 实现底部跟随、用户滚动接管和“回到底部”。
-- [ ] 实现复制正文、代码复制和重新生成。
-- [ ] 记录真实长回答的 React commit 和渲染性能；仅在数据证明存在瓶颈时，再把稳定 Markdown block 缓存和代码块优化提升为首版门禁。
-- [ ] composer 在 `streaming` 中显示停止按钮，断线后显示重连而不是重新发送。
+- [x] 在 Daily controller 中复用或抽取现有 `useBatchedDeltas`。
+- [x] 首批正文立即渲染，后续 delta 按约 60ms 合并；非 delta 事件前 drain buffer，完成、停止、失败和断线时立即 flush。
+- [x] 给 `MessageList`/`MessageContent` 增加 streaming、partial、interrupted 状态。
+- [x] 普通问答在正文开始后移除等待状态；只有实际工具活动时才显示可展开的“查看执行过程”，不默认显示步骤总数。
+- [x] 实现流式光标和 `prefers-reduced-motion`。
+- [x] 实现底部跟随、用户滚动接管和“回到底部”。
+- [x] 实现复制正文、代码复制和重新生成。
+- [x] 记录真实长回答的 React commit 和渲染性能；仅在数据证明存在瓶颈时，再把稳定 Markdown block 缓存和代码块优化提升为首版门禁。
+- [x] composer 在 `streaming` 中显示停止按钮，断线后显示重连而不是重新发送。
 
 **测试：** 首批立即渲染、后续 60ms batching、工具过程按需展开、10k 字、用户滚动、复制、停止保留正文、可访问性；partial Markdown 与代码围栏至少保证安全和可读，不以高级缓存实现作为首版通过条件。
+
+**状态：已完成（2026-11-24）。** 前端 `daily-sse` 分支提交 `2e7acba` 将严格协议状态与 UI 展示缓冲分离：reducer 仍逐事件校验，首批正文立即显示，后续 delta 复用 `useBatchedDeltas` 以 60ms 合并。重新生成通过现有 `submitTurn` 创建新 Turn，不伪造本地答案；Task 7 的真实后端多 delta 浏览器验收仍未实施。
+
+**验收结果：** TDD RED 首次暴露 reducer 未进入 streaming、未记录工具活动、delta 直接逐次展示，以及光标/partial/复制/折叠/滚动入口缺失；最小实现后 Task 6 focused suite 10 files、112/112 通过。覆盖首批立即、59ms 不刷新/60ms 合并、完成与断线即时 flush、停止/失败 partial、工具过程按需展开、流式停止按钮、重新生成新 Turn、完整回答/代码复制、用户滚动接管、回到底部、未闭合 Markdown/代码围栏和 reduced-motion 样式。隔离的 10k 字 React Profiler commit 为 22.76ms，未观察到需要稳定 Markdown block 缓存的证据。全量 Vitest 97 files、861/861、Daily canonical Playwright 18/18、Task 6 影响面的 mock Chat + Work history 4/4、TypeScript、ESLint 与生产构建通过。默认 Playwright 首轮 32 passed、3 failed；其中聊天旧断言已更新并定向通过，剩余两个 Skill Market Creator/Trigger 失败经独立复跑确认仍是其既有文案/状态测试漂移，未在本 Task 越界修改。
 
 ### Task 7：端到端与故障验收
 

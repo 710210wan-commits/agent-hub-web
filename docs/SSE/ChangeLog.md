@@ -323,3 +323,48 @@ Plan 文档：`docs/SSE/2026-11-17-daily-codex-style-sse-implementation.md`
 - `pnpm run typecheck` 与 `pnpm run lint` 通过；全量 `pnpm test` 为 96 files、849/849 通过。
 - `pnpm run build` 首次在 Codex 沙箱内因 Turbopack 无法创建 CSS worker 子进程失败；相同命令获准在沙箱外重跑后成功编译、类型检查并生成 14/14 静态页面，确认不是代码构建错误。
 - `git diff --check` 通过；Task 6、Task 7 仍未完成，不能声称约 60ms 前端 batching、最终 UI 交互或真实浏览器多次增长端到端验收已经完成。
+
+## 2026-11-24
+
+### 9. 完成 Task 6 前端 batching 与 Codex 式输出 UI
+
+提交：前端实现 `2e7acba`
+
+Plan 文档：`docs/SSE/2026-11-17-daily-codex-style-sse-implementation.md`
+
+对应 Plan 模块：Task 6
+
+#### 问题
+
+- Task 5 已严格消费每个 `output.delta`，但直接把协议状态投影到 React 会让突发 delta 逐帧抖动；同时首批正文不能为了 batching 延迟。
+- 正文开始后仍可能保留等待状态，工具步骤默认显示总数，普通问答正文上方不够干净。
+- streaming/partial 状态、停止入口、滚动接管、复制与重新生成尚未形成完整用户交互。
+
+#### 修改方案
+
+- 保持 reducer 对每个事件立即校验，另设仅用于展示的正文缓冲：首个 delta 直接追加，后续片段复用 `useBatchedDeltas` 以 60ms 合并。
+- 所有非 delta 事件先 flush；完成、失败、停止、断线、RESYNC 和身份切换不会遗留隐藏正文。
+- 正文一出现就移除等待状态；只有收到真实 `tool.*` 后才在正文上方提供“查看执行过程”，不再默认显示步骤计数。
+- 消息组件统一承载流式光标、partial 状态、复制、滚动跟随和最新回答重新生成；重新生成只调用 canonical `submitTurn`。
+
+#### 代码变更
+
+1. `use-daily-conversation.ts` 接入 `useBatchedDeltas`，新增 display-only output buffer；首 delta 立即显示，后续 delta 60ms flush，协议 reducer 仍同步维护完整正文和序号。
+2. controller 在 `output.completed`、Turn 终态、断线、取消、RESYNC 和 snapshot/身份安装前清空或 flush buffer；断线时把正文标成可读 partial，重连继续同一 message ID。
+3. Daily reducer 新增 `streaming` 会话状态和 `hasToolActivity`，在 `output.started` 清除等待文案，在新 Turn/receipt 重置工具过程，并仅根据真实 `tool.started/completed` 打开执行过程入口。
+4. `MessageList`/`MessageContent` 新增 streaming cursor、interrupted/failed/disconnected 提示、回答复制、代码块复制、最新回答重新生成，以及底部跟随/用户接管/回到底部。
+5. `ActivityLine` 改为按需展开“查看执行过程”；详情仅显示安全的工具步骤摘要，不展示工具名、call ID 或参数。
+6. composer 将 Daily `streaming` 映射为运行态，停止按钮继续调用 canonical cancel；断线只提供重新连接，不提供重新生成。
+7. CSS 增加 cursor、partial、复制按钮、执行过程和回到底部样式，并在 `prefers-reduced-motion: reduce` 下关闭 cursor/activity 动画。
+8. canonical Playwright fixture 补齐权威 snapshot 必填字段 `partialOutput: null`；mock Chat E2E 更新为按需执行过程断言。
+
+#### 验证结果
+
+- TDD RED：首次 focused 运行中 reducer 2 个、消息 UI 4 个和 batching 1 个预期失败，分别证明 streaming/tool 状态、光标/复制/折叠/滚动与 60ms 展示缓冲尚不存在；最小实现后转绿。
+- Task 6 focused suite 10 files、112/112 通过。batching 用例确认首批立即显示，后续两批在 59ms 仍不可见、60ms 一次合并；完成与断线会在定时器前 flush，正文无丢失或重复。
+- 组件/Hook 测试覆盖 interrupted/failed/disconnected partial、停止按钮、工具活动按需展开、普通回答无过程入口、最新回答新 Turn 重新生成、回答/围栏代码复制、用户滚动后不抢位置和“回到底部”。
+- Markdown 测试覆盖未闭合粗体与未闭合代码围栏的安全可读；10,000 字回答不截断，隔离 React Profiler commit 实测 22.76ms，因此未加入未经数据证明的 Markdown block 缓存。
+- `pnpm run typecheck`、`pnpm run lint` 通过；`pnpm test` 全量为 97 files、861/861；`pnpm run build` 成功编译、类型检查并生成 14/14 静态页面。
+- `pnpm run test:e2e:daily-session` 首轮因 canonical fixture 缺少 Task 5 必填 `partialOutput` 产生契约拒绝；补为 `null` 后 18/18 通过，覆盖身份、能力、活动、停止、断线重连、历史和删除。
+- Task 6 直接影响面的默认 Playwright 定向回归为 mock Chat 3/3、Work history 1/1。默认全套首轮 32 passed、3 failed；聊天旧步骤断言更新后定向通过，剩余 Skill Market Creator/Trigger 两项独立复跑仍因既有文案/状态断言失败，未修改其产品代码或将其误记为通过。
+- `git diff --check` 通过；Task 7 仍需在真实 Daily 后端链路验证多个真实 `output.delta`、停止刷新保留、重连无重复及中间决策文本零泄漏。
