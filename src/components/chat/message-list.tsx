@@ -7,9 +7,11 @@ import { MessageContent } from "./message-content";
 export function MessageList({
   messages,
   run,
+  onOpenScreeningResult,
 }: {
   messages: ChatMessage[];
   run?: ChatRunView;
+  onOpenScreeningResult?(batchId: string): void;
 }) {
   return (
     <div aria-label="会话消息" className="message-list">
@@ -22,6 +24,25 @@ export function MessageList({
             </div>
           ) : null}
           {message.content ? <MessageContent content={message.content} /> : null}
+          {message.attachments?.length ? (
+            <div aria-label="已上传文件" className="message-capabilities">
+              {message.attachments.map((attachment) => (
+                <span className="capability-history-chip" key={attachment.fileId}>
+                  {attachment.role === "job_description" ? "职位描述" : "简历"} · {attachment.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {message.artifactRefs?.map((artifact) => (
+            <button
+              className="secondary-button"
+              key={`${artifact.kind}:${artifact.batchId}`}
+              onClick={() => onOpenScreeningResult?.(artifact.batchId)}
+              type="button"
+            >
+              查看筛选结果
+            </button>
+          ))}
           {message.role === "user" && message.selection ? (
             <div aria-label="本轮能力" className="message-capabilities">
               {([

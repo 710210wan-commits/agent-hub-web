@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { defaultDailyCapabilityClient, useDailyCapabilities, type DailyCapabilityClient } from "@/features/chat/capabilities/use-daily-capabilities";
+import {
+  createHrScreeningClient,
+  type HrScreeningClient,
+} from "@/features/hr-screening/api/hr-screening-client";
+import { HrScreeningView } from "@/features/hr-screening/components/hr-screening-view";
 
 import { ErrorState } from "@/components/states/error-state";
 import { InlineError } from "@/components/states/inline-error";
@@ -26,22 +31,25 @@ export function DailySessionView({
   conversationId,
   onConversationResolved,
   capabilityClient = defaultDailyCapabilityClient,
+  hrClient,
 }: {
   client: DailySessionClient;
   conversationId?: string;
   onConversationResolved?(conversationId: string): void;
   capabilityClient?: DailyCapabilityClient;
+  hrClient?: HrScreeningClient;
 }) {
   const auth = useDailySessionAuthBridge();
   if (!auth.enabled) return <DailySessionAuthNotice />;
 
   return (
     <AuthenticatedDailySessionView
-      key={auth.identityGeneration}
+      key={`${auth.identityGeneration}:${conversationId ?? "new"}`}
       capabilityClient={capabilityClient}
       client={client}
       conversationId={conversationId}
       identityGeneration={auth.identityGeneration}
+      hrClient={hrClient}
       onAuthRequired={auth.onAuthRequired}
       onConversationResolved={onConversationResolved}
     />
@@ -53,6 +61,7 @@ function AuthenticatedDailySessionView({
   client,
   conversationId,
   identityGeneration,
+  hrClient: hrClientOverride,
   onAuthRequired,
   onConversationResolved,
 }: {
@@ -60,6 +69,7 @@ function AuthenticatedDailySessionView({
   client: DailySessionClient;
   conversationId?: string;
   identityGeneration: number;
+  hrClient?: HrScreeningClient;
   onAuthRequired(): void;
   onConversationResolved?(conversationId: string): void;
 }) {
@@ -73,6 +83,25 @@ function AuthenticatedDailySessionView({
   const [input, setInput] = useState("");
   const [selection, setSelection] = useState(createEmptySelection);
   const capabilities = useDailyCapabilities(capabilityClient, identityGeneration, onAuthRequired);
+  const hrClient = useMemo(() => hrClientOverride ?? createHrScreeningClient(), [hrClientOverride]);
+  const isHrConversation = controller.state.conversation?.assistantId === "resume-screening";
+  const [resultSelection, setResultSelection] = useState<{ batchId?: string; candidateId?: string }>(() => {
+    if (typeof window === "undefined") return {};
+    const params = new URLSearchParams(window.location.search);
+    return {
+      batchId: params.get("batch") ?? undefined,
+      candidateId: params.get("candidate") ?? undefined,
+    };
+  });
+  const selectScreeningResult = (selection: { batchId?: string; candidateId?: string }) => {
+    setResultSelection(selection);
+    const url = new URL(window.location.href);
+    if (selection.batchId) url.searchParams.set("batch", selection.batchId);
+    else url.searchParams.delete("batch");
+    if (selection.candidateId) url.searchParams.set("candidate", selection.candidateId);
+    else url.searchParams.delete("candidate");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  };
   const hasInitialConversation = Boolean(conversationId);
   const isInitialLoading =
     hasInitialConversation &&
@@ -130,6 +159,21 @@ function AuthenticatedDailySessionView({
         </button>
       ) : null}
 
+      {isHrConversation ? (
+        <HrScreeningView
+          key={controller.state.conversation!.conversationId}
+          client={hrClient}
+          conversationId={controller.state.conversation!.conversationId}
+          onAuthRequired={onAuthRequired}
+          onCanonicalAction={async text => { await controller.submit(text, createEmptySelection()); }}
+          onSelectionChange={selectScreeningResult}
+          progress={controller.state.toolProgress}
+          refreshToken={controller.state.hrRefreshToken}
+          selectedBatchId={resultSelection.batchId}
+          selectedCandidateId={resultSelection.candidateId}
+        />
+      ) : null}
+
       {showEmpty ? (
         <ChatEmptyState mode="daily" onSelectPrompt={setInput} />
       ) : controller.messages.length === 0 ? (
@@ -138,7 +182,10 @@ function AuthenticatedDailySessionView({
           <p>可以直接发送第一条消息</p>
         </section>
       ) : (
-        <MessageList messages={controller.messages} />
+        <MessageList
+          messages={controller.messages}
+          onOpenScreeningResult={isHrConversation ? batchId => selectScreeningResult({ batchId }) : undefined}
+        />
       )}
 
       {controller.state.activity ? <ActivityLine run={run} /> : null}
@@ -159,7 +206,7 @@ function AuthenticatedDailySessionView({
       ) : null}
 
       <Composer
-        capabilityMode="selectable"
+        capabilityMode={isHrConversation ? "locked" : "selectable"}
         capabilityCatalog={capabilities.catalog}
         capabilityNotice={capabilities.notice}
         input={input}

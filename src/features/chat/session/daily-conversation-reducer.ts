@@ -54,6 +54,14 @@ export interface DailyConversationState {
   status: DailyConversationStatus;
   activity: string | null;
   completedStepCount: number;
+  toolProgress: {
+    batchId: string;
+    phase: string;
+    completedCount: number;
+    failedCount: number;
+    totalCount: number;
+  } | null;
+  hrRefreshToken: number;
   notice: string | null;
 }
 
@@ -111,6 +119,8 @@ export function createInitialDailyConversationState(
     status: "idle",
     activity: null,
     completedStepCount: 0,
+    toolProgress: null,
+    hrRefreshToken: 0,
     notice: null,
   };
 }
@@ -178,6 +188,7 @@ export function dailyConversationReducer(
       return {
         ...state,
         status: statusFromTurn(state.activeTurn?.status),
+        hrRefreshToken: state.hrRefreshToken + 1,
         notice: null,
       };
     case "recovery.stale":
@@ -238,6 +249,8 @@ function installSnapshot(
     status: statusFromTurn(snapshot.activeTurn?.status),
     activity: activityFromTurn(snapshot.activeTurn?.status),
     completedStepCount: 0,
+    toolProgress: null,
+    hrRefreshToken: state.hrRefreshToken + 1,
     notice: null,
   };
 }
@@ -376,6 +389,16 @@ function applyEvent(
         activity: "正在处理…",
         completedStepCount: next.completedStepCount + 1,
       };
+    case "tool.progress":
+      if (event.turnId !== next.activeTurn?.turnId) return next;
+      if (isTerminal(next.activeTurn.status)) return next;
+      return {
+        ...next,
+        status: "working",
+        activity: "正在筛选简历…",
+        toolProgress: { ...event.payload },
+        hrRefreshToken: next.hrRefreshToken + 1,
+      };
   }
 }
 
@@ -397,6 +420,11 @@ function applyTurn(
     status: statusFromTurn(turn.status),
     activity: activityFromTurn(turn.status),
     completedStepCount: isNewTurn ? 0 : state.completedStepCount,
+    toolProgress: isNewTurn ? null : state.toolProgress,
+    hrRefreshToken:
+      isTerminal(turn.status) && !isTerminal(state.activeTurn?.status ?? "queued")
+        ? state.hrRefreshToken + 1
+        : state.hrRefreshToken,
     notice:
       turn.status === "failed"
         ? "任务执行失败"

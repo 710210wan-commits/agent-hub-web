@@ -143,8 +143,24 @@ function renderHistoryContent(input: {
           title="暂无决策历史会话"
         />
       ) : (
-        <ul aria-label="决策历史会话" className="history-list">
-          {store.conversations.map((conversation) => (
+        <>
+        {store.conversations.some((conversation) => conversation.assistantId === "resume-screening") ? (
+          <section aria-labelledby="recent-conversations-title">
+            <h2 id="recent-conversations-title">最近会话</h2>
+            <ul aria-label="最近会话" className="history-list">
+              {store.conversations.slice(0, 5).map((conversation) => (
+                <li key={`recent:${conversation.conversationId}`}>
+                  <Link href={conversationHref(conversation)}>{conversation.title || "未命名会话"}</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {store.conversations.some((conversation) => conversation.assistantId === "resume-screening") ? (
+          <section>
+            <h2>简历筛选助手</h2>
+            <ul aria-label="简历筛选助手会话" className="history-list">
+              {store.conversations.filter(conversation => conversation.assistantId === "resume-screening").map((conversation) => (
             <li className="daily-history-item" key={conversation.conversationId}>
               {input.editingId === conversation.conversationId ? (
                 <form className="daily-history-rename" onSubmit={input.submitRename}>
@@ -174,7 +190,7 @@ function renderHistoryContent(input: {
                 <>
                   <Link
                     className="history-item daily-history-link"
-                    href={`/chat?mode=1&conversation=${encodeURIComponent(conversation.conversationId)}`}
+                    href={conversationHref(conversation)}
                   >
                     <Clock3 aria-hidden="true" size={17} />
                     <span className="history-item-copy">
@@ -206,7 +222,68 @@ function renderHistoryContent(input: {
               )}
             </li>
           ))}
-        </ul>
+            </ul>
+          </section>
+        ) : null}
+        {store.conversations.some((conversation) => !conversation.assistantId) ? (
+          <section>
+            <h2>通用助手</h2>
+            <ul aria-label="决策历史会话" className="history-list">
+              {store.conversations.filter(conversation => !conversation.assistantId).map((conversation) => (
+                <li className="daily-history-item" key={conversation.conversationId}>
+                  {input.editingId === conversation.conversationId ? (
+                    <form className="daily-history-rename" onSubmit={input.submitRename}>
+                      <label>
+                        <span className="sr-only">会话标题</span>
+                        <input
+                          aria-label="会话标题"
+                          autoFocus
+                          maxLength={200}
+                          onChange={(event) => input.setDraftTitle(event.target.value)}
+                          required
+                          value={input.draftTitle}
+                        />
+                      </label>
+                      <button className="primary-button" disabled={store.renamingId === conversation.conversationId} type="submit">保存</button>
+                      <button className="text-button" onClick={input.cancelRename} type="button">取消</button>
+                    </form>
+                  ) : (
+                    <>
+                      <Link className="history-item daily-history-link" href={conversationHref(conversation)}>
+                        <Clock3 aria-hidden="true" size={17} />
+                        <span className="history-item-copy">
+                          <strong>{conversation.title || "未命名会话"}</strong>
+                        </span>
+                        <time dateTime={conversation.updatedAt}>
+                          {dateFormatter.format(new Date(conversation.updatedAt))}
+                        </time>
+                      </Link>
+                      <button
+                        aria-label={`重命名 ${conversation.title || "未命名会话"}`}
+                        className="daily-history-rename-button"
+                        disabled={Boolean(store.deletingId)}
+                        onClick={() => input.startRename(conversation)}
+                        type="button"
+                      >
+                        <Pencil aria-hidden="true" size={14} />
+                      </button>
+                      <button
+                        aria-label={`删除 ${conversation.title || "未命名会话"}`}
+                        className="daily-history-rename-button daily-history-delete-button"
+                        disabled={Boolean(store.deletingId) || Boolean(store.renamingId)}
+                        onClick={() => input.removeConversation(conversation)}
+                        type="button"
+                      >
+                        <Trash2 aria-hidden="true" size={14} />
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        </>
       )}
       {store.nextCursor ? (
         <div className="daily-history-load-more">
@@ -227,4 +304,11 @@ function renderHistoryContent(input: {
       ) : null}
     </>
   );
+}
+
+function conversationHref(conversation: ConversationMetadata): string {
+  const assistant = conversation.assistantId
+    ? `&assistant=${encodeURIComponent(conversation.assistantId)}`
+    : "";
+  return `/chat?mode=1${assistant}&conversation=${encodeURIComponent(conversation.conversationId)}`;
 }

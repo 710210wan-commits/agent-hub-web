@@ -14,6 +14,8 @@ import type {
   ConversationSnapshot,
 } from "@/features/chat/transports/daily-session-contract";
 import { AuthProvider, useAuth } from "@/providers/auth-provider";
+import type { HrScreeningClient } from "@/features/hr-screening/api/hr-screening-client";
+import type { HrConversationState } from "@/features/assistants/contracts/generated";
 
 import { DailySessionView } from "./daily-session-view";
 
@@ -169,6 +171,7 @@ function renderView(
   authClient = makeAuthClient(),
   initialConversationId: string | null = conversationId,
   onConversationResolved?: (id: string) => void,
+  hrClient?: HrScreeningClient,
 ) {
   return render(
     <AuthProvider client={authClient}>
@@ -177,6 +180,7 @@ function renderView(
         client={client}
         conversationId={initialConversationId ?? undefined}
         onConversationResolved={onConversationResolved}
+        hrClient={hrClient}
       />
     </AuthProvider>,
   );
@@ -203,6 +207,53 @@ function AuthStatusProbe() {
 }
 
 describe("DailySessionView", () => {
+  it("locks generic capabilities for HR and starts screening through the Daily controller", async () => {
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => ({
+        ...snapshot(),
+        conversation: metadata({ assistantId: "resume-screening", assistantVersion: 1 }),
+      })),
+      submitTurn: vi.fn(async () => accepted()),
+    });
+    const hrState: HrConversationState = {
+      conversationId,
+      assistantId: "resume-screening",
+      assistantVersion: 1,
+      retentionUntil: "2026-12-19T00:00:00.000Z",
+      activeJobDescription: null,
+      activeCriteria: {
+        criteriaVersionId: "70000000-0000-4000-8000-000000000007",
+        conversationId,
+        jobDescriptionVersionId: "60000000-0000-4000-8000-000000000006",
+        version: 1,
+        status: "confirmed",
+        criteria: [{ criterionId: "40000000-0000-4000-8000-000000000004", kind: "required", title: "TypeScript", instruction: "合成标准", evidenceExpectation: "合成证据" }],
+        createdAt: "2026-11-19T00:00:00.000Z",
+        confirmedAt: "2026-11-19T00:00:00.000Z",
+      },
+      activeBatch: null,
+      latestCompletedBatch: null,
+      candidates: [],
+    };
+    const hrClient = {
+      getState: vi.fn().mockResolvedValue(hrState),
+      startBatch: vi.fn(),
+    } as unknown as HrScreeningClient;
+    renderView(client, undefined, makeAuthClient(), conversationId, undefined, hrClient);
+
+    expect(await screen.findByRole("button", { name: "开始筛选" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^知识库/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Skill/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^MCP/ })).not.toBeInTheDocument();
+    expect(screen.getByText("简历筛选助手使用固定筛选能力")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "开始筛选" }));
+    await waitFor(() => expect(client.submitTurn).toHaveBeenCalledWith(conversationId, expect.objectContaining({
+      input: { kind: "text", text: "确认筛选标准并开始筛选" },
+      capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
+    }), expect.any(AbortSignal)));
+    expect(hrClient.startBatch).not.toHaveBeenCalled();
+  });
+
   it("keeps catalog 403 local and invalidates global auth on 401", async () => {
     const capabilityClient = { getCatalog: vi.fn().mockRejectedValue(new DailySessionClientError({ status: 403, code: "FORBIDDEN", message: "denied" })) };
     const view = render(<AuthProvider client={makeAuthClient()}><AuthStatusProbe /><DailySessionView client={makeClient()} capabilityClient={capabilityClient} /></AuthProvider>);

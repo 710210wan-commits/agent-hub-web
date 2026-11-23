@@ -12,6 +12,17 @@ export interface ChatMessage {
   content: string;
   createdAt: number;
   selection?: ChatSelectionSnapshot;
+  attachments?: Array<{
+    fileId: string;
+    role: "job_description" | "resume";
+    name: string;
+    contentType: string;
+    sizeBytes: number;
+  }>;
+  artifactRefs?: Array<{
+    kind: "screening_result";
+    batchId: string;
+  }>;
 }
 
 export interface CreateChatRunInput {

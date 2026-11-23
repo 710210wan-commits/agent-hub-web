@@ -32,6 +32,59 @@ function message(
 }
 
 describe("daily Session message adapter", () => {
+  it("renders assistant setup as safe attachment metadata without file bodies", () => {
+    const projected = adaptDailySessionMessage(
+      message("40000000-0000-4000-8000-000000000099", {
+        role: "user",
+        content: {
+          kind: "assistant_setup",
+          assistantId: "resume-screening",
+          assistantVersion: 1,
+          prompt: "请筛选这些候选人",
+          attachments: [
+            {
+              fileId: "60000000-0000-4000-8000-000000000001",
+              role: "resume",
+              name: "候选人甲.pdf",
+              contentType: "application/pdf",
+              sizeBytes: 2048,
+            },
+          ],
+          fileBody: "DO_NOT_RENDER",
+          objectKey: "private/object/key",
+        },
+      }) as ConversationMessage,
+    );
+
+    expect(projected.content).toBe("请筛选这些候选人");
+    expect(projected.attachments).toEqual([
+      expect.objectContaining({ name: "候选人甲.pdf", role: "resume" }),
+    ]);
+    expect(JSON.stringify(projected)).not.toContain("DO_NOT_RENDER");
+    expect(JSON.stringify(projected)).not.toContain("private/object/key");
+  });
+
+  it("keeps known screening result artifacts and ignores unknown artifact kinds", () => {
+    const projected = adaptDailySessionMessage(
+      message("40000000-0000-4000-8000-000000000098", {
+        artifactRefs: [
+          {
+            kind: "screening_result",
+            batchId: "70000000-0000-4000-8000-000000000001",
+          },
+          { kind: "private_artifact", secret: "DO_NOT_RENDER" },
+        ],
+      }) as ConversationMessage,
+    );
+
+    expect(projected.artifactRefs).toEqual([
+      {
+        kind: "screening_result",
+        batchId: "70000000-0000-4000-8000-000000000001",
+      },
+    ]);
+    expect(JSON.stringify(projected)).not.toContain("DO_NOT_RENDER");
+  });
   it("preserves historical selection independently of current catalog or caller edits", () => {
     const input = message("old-message", { role: "user", capabilitySelection: {
       knowledgeBaseIds: ["deleted-kb"], skillIds: ["market:old-publication"], mcpServerIds: ["old-server"],
