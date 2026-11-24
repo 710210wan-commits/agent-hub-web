@@ -19,6 +19,13 @@ import { ScreeningResultDrawer } from "./screening-result-drawer";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const requestId = () => crypto.randomUUID();
+const parseLabels = {
+  uploaded: "待解析",
+  queued: "等待解析",
+  parsing: "解析中",
+  parsed: "已解析",
+  failed: "解析失败",
+};
 
 export function HrScreeningView({
   client,
@@ -138,21 +145,22 @@ export function HrScreeningView({
           }}
         />
       ) : (
-        <button onClick={() => void mutate(() => client.generateCriteria(conversationId, requestId()), "标准生成失败，请稍后重试")} type="button">
+        <button className="hr-button hr-button-primary" onClick={() => void mutate(() => client.generateCriteria(conversationId, requestId()), "标准生成失败，请稍后重试")} type="button">
           生成筛选标准
         </button>
       )}
       {state.activeCriteria?.status === "confirmed" && !state.activeBatch ? (
-        <button onClick={() => void onCanonicalAction("确认筛选标准并开始筛选")} type="button">开始筛选</button>
+        <button className="hr-button hr-button-primary" onClick={() => void onCanonicalAction("确认筛选标准并开始筛选")} type="button">开始筛选</button>
       ) : null}
 
-      <section aria-label="岗位描述" className="state-card">
+      <section aria-label="岗位描述" className="hr-panel">
         <h2>岗位描述</h2>
         <label>
           岗位描述
           <textarea aria-label="岗位描述" onChange={event => setJdText(event.target.value)} value={jdText} />
         </label>
         <button
+          className="hr-button"
           disabled={!jdText.trim()}
           onClick={() => void mutate(async () => {
             await client.replaceJobDescription(conversationId, { kind: "text", text: jdText.trim(), clientRequestId: requestId() });
@@ -182,7 +190,7 @@ export function HrScreeningView({
         </label>
       </section>
 
-      <section aria-label="候选人文件" className="state-card">
+      <section aria-label="候选人文件" className="hr-panel">
         <h2>候选人简历</h2>
         <input
           accept=".pdf,.docx"
@@ -195,13 +203,14 @@ export function HrScreeningView({
           type="file"
         />
         {pendingFiles.map((file, index) => (
-          <span key={`${file.name}:${file.size}:${index}`}>
-            {file.name}
-            <button aria-label={`移除 ${file.name}`} onClick={() => setPendingFiles(current => current.filter((_, i) => i !== index))} type="button">移除</button>
+          <span className="hr-file-row" key={`${file.name}:${file.size}:${index}`}>
+            <span>{file.name}</span>
+            <button className="hr-button" aria-label={`移除 ${file.name}`} onClick={() => setPendingFiles(current => current.filter((_, i) => i !== index))} type="button">移除</button>
           </span>
         ))}
         {pendingFiles.length ? (
           <button
+            className="hr-button hr-button-primary"
             onClick={() => void mutate(async () => {
               const { draft } = await uploads.createUploadDraft("resume-screening", requestId());
               for (const file of pendingFiles) await uploads.uploadDraftFile(draft.draftId, "resume", file);
@@ -213,32 +222,37 @@ export function HrScreeningView({
             上传并绑定 {pendingFiles.length} 份简历
           </button>
         ) : null}
-        <ul>
+        <ul className="hr-candidate-list">
           {state.candidates.map(candidate => (
-            <li key={candidate.candidateId}>
-              <span>{candidate.displayName}</span>
-              <small>{candidate.status === "retired" ? "已退役" : candidate.parseStatus}</small>
-              {renaming === candidate.candidateId ? (
-                <>
-                  <input aria-label="候选人显示名称" onChange={event => setCandidateName(event.target.value)} value={candidateName} />
-                  <button
-                    onClick={() => void mutate(async () => {
-                      await client.updateCandidate(conversationId, candidate.candidateId, { action: "rename", displayName: candidateName, clientRequestId: requestId() });
-                      setRenaming(null);
-                    })}
-                    type="button"
-                  >
-                    保存候选人名称
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => { setRenaming(candidate.candidateId); setCandidateName(candidate.displayName); }} type="button">重命名候选人</button>
-              )}
-              {candidate.status === "active" ? (
-                <button onClick={() => void mutate(() => client.updateCandidate(conversationId, candidate.candidateId, { action: "retire", clientRequestId: requestId() }))} type="button">退役候选人</button>
-              ) : (
-                <button onClick={() => void mutate(() => client.updateCandidate(conversationId, candidate.candidateId, { action: "reactivate", clientRequestId: requestId() }))} type="button">重新激活候选人</button>
-              )}
+            <li className="hr-candidate-row" key={candidate.candidateId}>
+              <div className="hr-candidate-identity">
+                <span>{candidate.displayName}</span>
+                <small>{candidate.status === "retired" ? "已退役" : parseLabels[candidate.parseStatus]}</small>
+              </div>
+              <div className="hr-actions">
+                {renaming === candidate.candidateId ? (
+                  <>
+                    <input aria-label="候选人显示名称" onChange={event => setCandidateName(event.target.value)} value={candidateName} />
+                    <button
+                      className="hr-button"
+                      onClick={() => void mutate(async () => {
+                        await client.updateCandidate(conversationId, candidate.candidateId, { action: "rename", displayName: candidateName, clientRequestId: requestId() });
+                        setRenaming(null);
+                      })}
+                      type="button"
+                    >
+                      保存候选人名称
+                    </button>
+                  </>
+                ) : (
+                  <button className="hr-button" onClick={() => { setRenaming(candidate.candidateId); setCandidateName(candidate.displayName); }} type="button">重命名候选人</button>
+                )}
+                {candidate.status === "active" ? (
+                  <button className="hr-button" onClick={() => void mutate(() => client.updateCandidate(conversationId, candidate.candidateId, { action: "retire", clientRequestId: requestId() }))} type="button">退役候选人</button>
+                ) : (
+                  <button className="hr-button" onClick={() => void mutate(() => client.updateCandidate(conversationId, candidate.candidateId, { action: "reactivate", clientRequestId: requestId() }))} type="button">重新激活候选人</button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -249,7 +263,7 @@ export function HrScreeningView({
       {selection.batchId || invalidResult ? (
         <ScreeningResultDrawer
           candidates={state.candidates}
-          criteria={state.activeCriteria?.criteria ?? []}
+          activeCriteria={state.activeCriteria}
           invalid={invalidResult}
           loading={resultLoading}
           onCancel={() => void mutate(async () => {

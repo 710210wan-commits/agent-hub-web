@@ -27,45 +27,58 @@ export function CriteriaCard({
   };
 
   return (
-    <section aria-label="筛选标准" className="state-card">
-      <header>
+    <section aria-label="筛选标准" className="hr-panel">
+      <header className="hr-panel-heading">
         <h2>筛选标准</h2>
-        <span>版本 {version.version} · {confirmed ? "已确认" : "草稿"}</span>
+        <span className="hr-muted">版本 {version.version} · {confirmed ? "已确认" : "草稿"}</span>
       </header>
-      {draft.map((criterion, index) => (
-        <fieldset key={criterion.criterionId} disabled={confirmed || busy}>
+      {(confirmed ? version.criteria : draft).map((criterion, index) => (
+        <fieldset className="hr-criterion" key={criterion.criterionId} disabled={busy}>
           <legend>{criterion.kind === "required" ? "硬性条件" : "加分条件"} {index + 1}</legend>
-          <label>
-            标准标题
-            <input
-              aria-label={index === 0 ? "标准标题" : `标准标题 ${index + 1}`}
-              onChange={event => update(criterion.criterionId, "title", event.target.value)}
-              value={criterion.title}
-            />
-          </label>
-          <label>
-            评估说明
-            <textarea
-              aria-label={index === 0 ? "评估说明" : `评估说明 ${index + 1}`}
-              onChange={event => update(criterion.criterionId, "instruction", event.target.value)}
-              value={criterion.instruction}
-            />
-          </label>
-          <label>
-            证据要求
-            <textarea
-              aria-label={index === 0 ? "证据要求" : `证据要求 ${index + 1}`}
-              onChange={event => update(criterion.criterionId, "evidenceExpectation", event.target.value)}
-              value={criterion.evidenceExpectation}
-            />
-          </label>
+          {confirmed ? (
+            <dl className="hr-criterion-details">
+              <div><dt>标准标题</dt><dd>{criterion.title}</dd></div>
+              <div><dt>评估说明</dt><dd>{criterion.instruction}</dd></div>
+              <div><dt>证据要求</dt><dd>{criterion.evidenceExpectation}</dd></div>
+            </dl>
+          ) : (
+            <div className="hr-criterion-fields">
+              <label>
+                标准标题
+                <input
+                  aria-label={index === 0 ? "标准标题" : `标准标题 ${index + 1}`}
+                  onChange={event => update(criterion.criterionId, "title", event.target.value)}
+                  value={criterion.title}
+                />
+              </label>
+              <label>
+                评估说明
+                <textarea
+                  aria-label={index === 0 ? "评估说明" : `评估说明 ${index + 1}`}
+                  onChange={event => update(criterion.criterionId, "instruction", event.target.value)}
+                  value={criterion.instruction}
+                  rows={3}
+                />
+              </label>
+              <label>
+                证据要求
+                <textarea
+                  aria-label={index === 0 ? "证据要求" : `证据要求 ${index + 1}`}
+                  onChange={event => update(criterion.criterionId, "evidenceExpectation", event.target.value)}
+                  value={criterion.evidenceExpectation}
+                  rows={3}
+                />
+              </label>
+            </div>
+          )}
         </fieldset>
       ))}
       {error ? <p role="alert">{error}</p> : null}
-      <div className="run-actions">
+      <div className="hr-actions">
         {!confirmed ? (
           <>
             <button
+              className="hr-button"
               disabled={busy || draft.some(criterion => !criterion.title.trim() || !criterion.instruction.trim() || !criterion.evidenceExpectation.trim())}
               onClick={() => {
                 setBusy(true);
@@ -79,6 +92,7 @@ export function CriteriaCard({
               保存标准
             </button>
             <button
+              className="hr-button hr-button-primary"
               disabled={busy || dirty}
               onClick={() => {
                 setBusy(true);

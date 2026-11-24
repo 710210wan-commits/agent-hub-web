@@ -19,7 +19,9 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   });
   await page.getByLabel("上传候选人简历").setInputFiles(
     Array.from({ length: 20 }, (_, index) => ({
-      name: `candidate-${String(index + 1).padStart(2, "0")}.pdf`,
+      name: index === 0
+        ? `合成简历-${"LongCandidateFileName".repeat(5)}.pdf`
+        : `candidate-${String(index + 1).padStart(2, "0")}.pdf`,
       mimeType: "application/pdf",
       buffer: Buffer.from(`%PDF-1.7\nSynthetic candidate ${index + 1}; PRIVATE_RESUME_BODY\n`),
     })),
@@ -56,8 +58,19 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await expect(page.getByRole("button", { name: "查看完整结果" })).toBeVisible();
   await page.goto("/history?mode=1");
   await expect(page.getByRole("heading", { name: "简历筛选助手" })).toBeVisible();
+  const recents = page.getByRole("list", { name: "最近会话" });
+  const recentHr = recents.getByRole("link", { name: /合成岗位筛选/ });
+  await expect(recentHr).toBeVisible();
+  await expect(recentHr.locator("time[datetime]")).toBeVisible();
   await page.getByRole("list", { name: "简历筛选助手会话" }).getByRole("link", { name: /合成岗位筛选/ }).click();
-  await expect(page.getByRole("textbox", { name: "标准标题" })).toHaveValue("高级 TypeScript");
+  const criteria = page.getByRole("region", { name: "筛选标准" });
+  await expect(criteria.getByText("高级 TypeScript", { exact: true })).toBeVisible();
+  await expect(criteria.getByRole("textbox")).toHaveCount(0);
+  await page.setViewportSize({ width: 860, height: 900 });
+  await expect.poll(() => criteria.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  const candidates = page.getByRole("region", { name: "候选人文件" });
+  await expect(candidates.getByText("已解析").first()).toBeVisible();
+  await expect.poll(() => candidates.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await expect(page.getByText("PRIVATE_RESUME_BODY")).toHaveCount(0);
 });
 
