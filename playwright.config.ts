@@ -8,6 +8,7 @@ export default defineConfig({
     "daily-session-j1.spec.ts",
     "daily-capabilities.spec.ts",
     "daily-sse-real.spec.ts",
+    "hr-resume-screening.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,

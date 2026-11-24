@@ -17,7 +17,7 @@ export function AppShell({
   topbarControl?: ReactNode;
 }) {
   const pathname = usePathname();
-  const sharedResource = /^\/(?:knowledge|mcp)(?:\/|$)/.test(pathname);
+  const sharedResource = /^\/(?:knowledge|mcp|assistants)(?:\/|$)/.test(pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (

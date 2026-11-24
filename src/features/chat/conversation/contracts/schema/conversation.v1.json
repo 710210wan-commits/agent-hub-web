@@ -54,6 +54,136 @@
         ],
         "type": "object"
       },
+      "AssistantArtifactReference": {
+        "additionalProperties": false,
+        "properties": {
+          "batchId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "kind": {
+            "const": "screening_result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "batchId"
+        ],
+        "type": "object"
+      },
+      "AssistantSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "allowedOptionalCapabilities": {
+            "items": {
+              "enum": [
+                "knowledge_base",
+                "skill",
+                "mcp"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "type": "array"
+          },
+          "icon": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "modelPolicy": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "requiredSkills": {
+            "items": {
+              "maxLength": 80,
+              "minLength": 1,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array"
+          },
+          "resultRenderer": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "retentionDays": {
+            "maximum": 365,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "runtime": {
+            "const": "dsi-native",
+            "type": "string"
+          },
+          "setupProfile": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "status": {
+            "const": "published",
+            "type": "string"
+          },
+          "summary": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "maxLength": 32,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 12,
+            "type": "array"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "maximum": 2147483647,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "name",
+          "summary",
+          "icon",
+          "tags",
+          "status",
+          "runtime",
+          "requiredSkills",
+          "allowedOptionalCapabilities",
+          "setupProfile",
+          "resultRenderer",
+          "modelPolicy",
+          "retentionDays"
+        ],
+        "type": "object"
+      },
       "CancelledConversationTurn": {
         "additionalProperties": false,
         "properties": {
@@ -192,6 +322,147 @@
                   }
                 ]
               },
+              "assistantConfig": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "allowedOptionalCapabilities": {
+                        "items": {
+                          "enum": [
+                            "knowledge_base",
+                            "skill",
+                            "mcp"
+                          ],
+                          "type": "string"
+                        },
+                        "maxItems": 3,
+                        "type": "array"
+                      },
+                      "icon": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "id": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "modelPolicy": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "name": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "requiredSkills": {
+                        "items": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "maxItems": 20,
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "resultRenderer": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "retentionDays": {
+                        "maximum": 365,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "runtime": {
+                        "const": "dsi-native",
+                        "type": "string"
+                      },
+                      "setupProfile": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "status": {
+                        "const": "published",
+                        "type": "string"
+                      },
+                      "summary": {
+                        "maxLength": 500,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "tags": {
+                        "items": {
+                          "maxLength": 32,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 12,
+                        "type": "array"
+                      },
+                      "version": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 2147483647,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "name",
+                      "summary",
+                      "icon",
+                      "tags",
+                      "status",
+                      "runtime",
+                      "requiredSkills",
+                      "allowedOptionalCapabilities",
+                      "setupProfile",
+                      "resultRenderer",
+                      "modelPolicy",
+                      "retentionDays"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantId": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantVersion": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "conversationId": {
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -263,6 +534,115 @@
         },
         "required": [
           "conversation"
+        ],
+        "type": "object"
+      },
+      "ConversationAssistantSetupContent": {
+        "additionalProperties": false,
+        "properties": {
+          "attachments": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "contentType": {
+                  "enum": [
+                    "application/pdf",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  ],
+                  "type": "string"
+                },
+                "fileId": {
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string"
+                },
+                "name": {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "role": {
+                  "enum": [
+                    "job_description",
+                    "resume"
+                  ],
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "exclusiveMinimum": 0,
+                  "maximum": 10485760,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "fileId",
+                "role",
+                "name",
+                "contentType",
+                "sizeBytes"
+              ],
+              "type": "object"
+            },
+            "maxItems": 51,
+            "minItems": 2,
+            "type": "array"
+          },
+          "kind": {
+            "const": "assistant_setup",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text",
+          "attachments"
+        ],
+        "type": "object"
+      },
+      "ConversationAttachment": {
+        "additionalProperties": false,
+        "properties": {
+          "contentType": {
+            "enum": [
+              "application/pdf",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ],
+            "type": "string"
+          },
+          "fileId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "job_description",
+              "resume"
+            ],
+            "type": "string"
+          },
+          "sizeBytes": {
+            "exclusiveMinimum": 0,
+            "maximum": 10485760,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId",
+          "role",
+          "name",
+          "contentType",
+          "sizeBytes"
         ],
         "type": "object"
       },
@@ -642,6 +1022,147 @@
                   }
                 ]
               },
+              "assistantConfig": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "allowedOptionalCapabilities": {
+                        "items": {
+                          "enum": [
+                            "knowledge_base",
+                            "skill",
+                            "mcp"
+                          ],
+                          "type": "string"
+                        },
+                        "maxItems": 3,
+                        "type": "array"
+                      },
+                      "icon": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "id": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "modelPolicy": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "name": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "requiredSkills": {
+                        "items": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "maxItems": 20,
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "resultRenderer": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "retentionDays": {
+                        "maximum": 365,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "runtime": {
+                        "const": "dsi-native",
+                        "type": "string"
+                      },
+                      "setupProfile": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "status": {
+                        "const": "published",
+                        "type": "string"
+                      },
+                      "summary": {
+                        "maxLength": 500,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "tags": {
+                        "items": {
+                          "maxLength": 32,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 12,
+                        "type": "array"
+                      },
+                      "version": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 2147483647,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "name",
+                      "summary",
+                      "icon",
+                      "tags",
+                      "status",
+                      "runtime",
+                      "requiredSkills",
+                      "allowedOptionalCapabilities",
+                      "setupProfile",
+                      "resultRenderer",
+                      "modelPolicy",
+                      "retentionDays"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantId": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantVersion": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "conversationId": {
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -812,6 +1333,147 @@
                                 }
                               ]
                             },
+                            "assistantConfig": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "allowedOptionalCapabilities": {
+                                      "items": {
+                                        "enum": [
+                                          "knowledge_base",
+                                          "skill",
+                                          "mcp"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "maxItems": 3,
+                                      "type": "array"
+                                    },
+                                    "icon": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "modelPolicy": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "requiredSkills": {
+                                      "items": {
+                                        "maxLength": 80,
+                                        "minLength": 1,
+                                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                        "type": "string"
+                                      },
+                                      "maxItems": 20,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    },
+                                    "resultRenderer": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "retentionDays": {
+                                      "maximum": 365,
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    },
+                                    "runtime": {
+                                      "const": "dsi-native",
+                                      "type": "string"
+                                    },
+                                    "setupProfile": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "const": "published",
+                                      "type": "string"
+                                    },
+                                    "summary": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "tags": {
+                                      "items": {
+                                        "maxLength": 32,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "maxItems": 12,
+                                      "type": "array"
+                                    },
+                                    "version": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 2147483647,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "version",
+                                    "name",
+                                    "summary",
+                                    "icon",
+                                    "tags",
+                                    "status",
+                                    "runtime",
+                                    "requiredSkills",
+                                    "allowedOptionalCapabilities",
+                                    "setupProfile",
+                                    "resultRenderer",
+                                    "modelPolicy",
+                                    "retentionDays"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantId": {
+                              "anyOf": [
+                                {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantVersion": {
+                              "anyOf": [
+                                {
+                                  "maximum": 2147483647,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "conversationId": {
                               "format": "uuid",
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -963,6 +1625,147 @@
                                   "format": "date-time",
                                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                                   "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantConfig": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "allowedOptionalCapabilities": {
+                                      "items": {
+                                        "enum": [
+                                          "knowledge_base",
+                                          "skill",
+                                          "mcp"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "maxItems": 3,
+                                      "type": "array"
+                                    },
+                                    "icon": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "modelPolicy": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "requiredSkills": {
+                                      "items": {
+                                        "maxLength": 80,
+                                        "minLength": 1,
+                                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                        "type": "string"
+                                      },
+                                      "maxItems": 20,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    },
+                                    "resultRenderer": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "retentionDays": {
+                                      "maximum": 365,
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    },
+                                    "runtime": {
+                                      "const": "dsi-native",
+                                      "type": "string"
+                                    },
+                                    "setupProfile": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "const": "published",
+                                      "type": "string"
+                                    },
+                                    "summary": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "tags": {
+                                      "items": {
+                                        "maxLength": 32,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "maxItems": 12,
+                                      "type": "array"
+                                    },
+                                    "version": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 2147483647,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "version",
+                                    "name",
+                                    "summary",
+                                    "icon",
+                                    "tags",
+                                    "status",
+                                    "runtime",
+                                    "requiredSkills",
+                                    "allowedOptionalCapabilities",
+                                    "setupProfile",
+                                    "resultRenderer",
+                                    "modelPolicy",
+                                    "retentionDays"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantId": {
+                              "anyOf": [
+                                {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantVersion": {
+                              "anyOf": [
+                                {
+                                  "maximum": 2147483647,
+                                  "minimum": 1,
+                                  "type": "integer"
                                 },
                                 {
                                   "type": "null"
@@ -1126,6 +1929,147 @@
                                 }
                               ]
                             },
+                            "assistantConfig": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "allowedOptionalCapabilities": {
+                                      "items": {
+                                        "enum": [
+                                          "knowledge_base",
+                                          "skill",
+                                          "mcp"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "maxItems": 3,
+                                      "type": "array"
+                                    },
+                                    "icon": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "modelPolicy": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "requiredSkills": {
+                                      "items": {
+                                        "maxLength": 80,
+                                        "minLength": 1,
+                                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                        "type": "string"
+                                      },
+                                      "maxItems": 20,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    },
+                                    "resultRenderer": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "retentionDays": {
+                                      "maximum": 365,
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    },
+                                    "runtime": {
+                                      "const": "dsi-native",
+                                      "type": "string"
+                                    },
+                                    "setupProfile": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "const": "published",
+                                      "type": "string"
+                                    },
+                                    "summary": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "tags": {
+                                      "items": {
+                                        "maxLength": 32,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "maxItems": 12,
+                                      "type": "array"
+                                    },
+                                    "version": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 2147483647,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "version",
+                                    "name",
+                                    "summary",
+                                    "icon",
+                                    "tags",
+                                    "status",
+                                    "runtime",
+                                    "requiredSkills",
+                                    "allowedOptionalCapabilities",
+                                    "setupProfile",
+                                    "resultRenderer",
+                                    "modelPolicy",
+                                    "retentionDays"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantId": {
+                              "anyOf": [
+                                {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantVersion": {
+                              "anyOf": [
+                                {
+                                  "maximum": 2147483647,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "conversationId": {
                               "format": "uuid",
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -1277,6 +2221,147 @@
                                   "format": "date-time",
                                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                                   "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantConfig": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "allowedOptionalCapabilities": {
+                                      "items": {
+                                        "enum": [
+                                          "knowledge_base",
+                                          "skill",
+                                          "mcp"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "maxItems": 3,
+                                      "type": "array"
+                                    },
+                                    "icon": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "modelPolicy": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "requiredSkills": {
+                                      "items": {
+                                        "maxLength": 80,
+                                        "minLength": 1,
+                                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                        "type": "string"
+                                      },
+                                      "maxItems": 20,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    },
+                                    "resultRenderer": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "retentionDays": {
+                                      "maximum": 365,
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    },
+                                    "runtime": {
+                                      "const": "dsi-native",
+                                      "type": "string"
+                                    },
+                                    "setupProfile": {
+                                      "maxLength": 80,
+                                      "minLength": 1,
+                                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "const": "published",
+                                      "type": "string"
+                                    },
+                                    "summary": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "tags": {
+                                      "items": {
+                                        "maxLength": 32,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "maxItems": 12,
+                                      "type": "array"
+                                    },
+                                    "version": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 2147483647,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "version",
+                                    "name",
+                                    "summary",
+                                    "icon",
+                                    "tags",
+                                    "status",
+                                    "runtime",
+                                    "requiredSkills",
+                                    "allowedOptionalCapabilities",
+                                    "setupProfile",
+                                    "resultRenderer",
+                                    "modelPolicy",
+                                    "retentionDays"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantId": {
+                              "anyOf": [
+                                {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "assistantVersion": {
+                              "anyOf": [
+                                {
+                                  "maximum": 2147483647,
+                                  "minimum": 1,
+                                  "type": "integer"
                                 },
                                 {
                                   "type": "null"
@@ -1752,7 +2837,7 @@
                           "additionalProperties": false,
                           "properties": {
                             "artifactRefs": {
-                              "description": "Current executor emits ConversationTaskResultReference (kind=task_result, taskId); user messages have none. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
+                              "description": "Known refs: ConversationTaskResultReference and AssistantArtifactReference. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
                               "items": {},
                               "type": "array"
                             },
@@ -1803,7 +2888,7 @@
                             },
                             "content": {
                               "additionalProperties": {},
-                              "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
+                              "description": "Known bodies: ConversationKnownMessageContent. User: text, daily_report, or assistant_setup; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
                               "propertyNames": {
                                 "type": "string"
                               },
@@ -2599,6 +3684,120 @@
                     "payload": {
                       "additionalProperties": false,
                       "properties": {
+                        "batchId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "completedCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "failedCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "phase": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "pattern": "^[a-z][a-z0-9_-]*$",
+                          "type": "string"
+                        },
+                        "stepId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "toolCallId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "toolName": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "totalCount": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 50,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "stepId",
+                        "toolCallId",
+                        "toolName",
+                        "batchId",
+                        "phase",
+                        "completedCount",
+                        "failedCount",
+                        "totalCount"
+                      ],
+                      "type": "object"
+                    },
+                    "schemaVersion": {
+                      "const": 1,
+                      "type": "number"
+                    },
+                    "taskId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "turnId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "type": {
+                      "const": "tool.progress",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "eventId",
+                    "eventSeq",
+                    "conversationId",
+                    "schemaVersion",
+                    "type",
+                    "occurredAt",
+                    "turnId",
+                    "taskId",
+                    "payload"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "conversationId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "eventId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "eventSeq": {
+                      "pattern": "^(0|[1-9][0-9]{0,18})$",
+                      "type": "string"
+                    },
+                    "messageId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "occurredAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                      "type": "string"
+                    },
+                    "payload": {
+                      "additionalProperties": false,
+                      "properties": {
                         "status": {
                           "enum": [
                             "completed",
@@ -2972,6 +4171,73 @@
               "reportType"
             ],
             "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "attachments": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "contentType": {
+                      "enum": [
+                        "application/pdf",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      ],
+                      "type": "string"
+                    },
+                    "fileId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "name": {
+                      "maxLength": 255,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "role": {
+                      "enum": [
+                        "job_description",
+                        "resume"
+                      ],
+                      "type": "string"
+                    },
+                    "sizeBytes": {
+                      "exclusiveMinimum": 0,
+                      "maximum": 10485760,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "fileId",
+                    "role",
+                    "name",
+                    "contentType",
+                    "sizeBytes"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 51,
+                "minItems": 2,
+                "type": "array"
+              },
+              "kind": {
+                "const": "assistant_setup",
+                "type": "string"
+              },
+              "text": {
+                "maxLength": 1000,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "text",
+              "attachments"
+            ],
+            "type": "object"
           }
         ]
       },
@@ -2996,6 +4262,147 @@
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                       "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "assistantConfig": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "allowedOptionalCapabilities": {
+                          "items": {
+                            "enum": [
+                              "knowledge_base",
+                              "skill",
+                              "mcp"
+                            ],
+                            "type": "string"
+                          },
+                          "maxItems": 3,
+                          "type": "array"
+                        },
+                        "icon": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "id": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "modelPolicy": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "name": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "requiredSkills": {
+                          "items": {
+                            "maxLength": 80,
+                            "minLength": 1,
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                            "type": "string"
+                          },
+                          "maxItems": 20,
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "resultRenderer": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "retentionDays": {
+                          "maximum": 365,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "runtime": {
+                          "const": "dsi-native",
+                          "type": "string"
+                        },
+                        "setupProfile": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "status": {
+                          "const": "published",
+                          "type": "string"
+                        },
+                        "summary": {
+                          "maxLength": 500,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "tags": {
+                          "items": {
+                            "maxLength": 32,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "maxItems": 12,
+                          "type": "array"
+                        },
+                        "version": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 2147483647,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "name",
+                        "summary",
+                        "icon",
+                        "tags",
+                        "status",
+                        "runtime",
+                        "requiredSkills",
+                        "allowedOptionalCapabilities",
+                        "setupProfile",
+                        "resultRenderer",
+                        "modelPolicy",
+                        "retentionDays"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "assistantId": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "assistantVersion": {
+                  "anyOf": [
+                    {
+                      "maximum": 2147483647,
+                      "minimum": 1,
+                      "type": "integer"
                     },
                     {
                       "type": "null"
@@ -3093,7 +4500,7 @@
         "additionalProperties": false,
         "properties": {
           "artifactRefs": {
-            "description": "Current executor emits ConversationTaskResultReference (kind=task_result, taskId); user messages have none. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
+            "description": "Known refs: ConversationTaskResultReference and AssistantArtifactReference. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
             "items": {},
             "type": "array"
           },
@@ -3144,7 +4551,7 @@
           },
           "content": {
             "additionalProperties": {},
-            "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
+            "description": "Known bodies: ConversationKnownMessageContent. User: text, daily_report, or assistant_setup; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
             "propertyNames": {
               "type": "string"
             },
@@ -3217,7 +4624,7 @@
               "additionalProperties": false,
               "properties": {
                 "artifactRefs": {
-                  "description": "Current executor emits ConversationTaskResultReference (kind=task_result, taskId); user messages have none. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
+                  "description": "Known refs: ConversationTaskResultReference and AssistantArtifactReference. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
                   "items": {},
                   "type": "array"
                 },
@@ -3268,7 +4675,7 @@
                 },
                 "content": {
                   "additionalProperties": {},
-                  "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
+                  "description": "Known bodies: ConversationKnownMessageContent. User: text, daily_report, or assistant_setup; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
                   "propertyNames": {
                     "type": "string"
                   },
@@ -3349,6 +4756,238 @@
         ],
         "type": "object"
       },
+      "ConversationMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "agentKey": {
+            "enum": [
+              "agent-loop",
+              "border-defense-qa",
+              "border-defense-daily-report"
+            ],
+            "type": "string"
+          },
+          "archivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assistantConfig": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "allowedOptionalCapabilities": {
+                    "items": {
+                      "enum": [
+                        "knowledge_base",
+                        "skill",
+                        "mcp"
+                      ],
+                      "type": "string"
+                    },
+                    "maxItems": 3,
+                    "type": "array"
+                  },
+                  "icon": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "id": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "type": "string"
+                  },
+                  "modelPolicy": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "requiredSkills": {
+                    "items": {
+                      "maxLength": 80,
+                      "minLength": 1,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                      "type": "string"
+                    },
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "resultRenderer": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "type": "string"
+                  },
+                  "retentionDays": {
+                    "maximum": 365,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "runtime": {
+                    "const": "dsi-native",
+                    "type": "string"
+                  },
+                  "setupProfile": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "type": "string"
+                  },
+                  "status": {
+                    "const": "published",
+                    "type": "string"
+                  },
+                  "summary": {
+                    "maxLength": 500,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "tags": {
+                    "items": {
+                      "maxLength": 32,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 12,
+                    "type": "array"
+                  },
+                  "version": {
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "name",
+                  "summary",
+                  "icon",
+                  "tags",
+                  "status",
+                  "runtime",
+                  "requiredSkills",
+                  "allowedOptionalCapabilities",
+                  "setupProfile",
+                  "resultRenderer",
+                  "modelPolicy",
+                  "retentionDays"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assistantId": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assistantVersion": {
+            "anyOf": [
+              {
+                "maximum": 2147483647,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conversationId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "lastEventSeq": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "lastTurnIndex": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "scenarioId": {
+            "enum": [
+              "daily",
+              "gis-standard",
+              "gis-demo",
+              "osint",
+              "marine",
+              "emergency",
+              "border",
+              "demo"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed",
+              "deleted"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conversationId",
+          "scenarioId",
+          "agentKey",
+          "title",
+          "status",
+          "archivedAt",
+          "version",
+          "lastEventSeq",
+          "lastTurnIndex",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "ConversationPublicEvent": {
         "oneOf": [
           {
@@ -3398,6 +5037,147 @@
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                             "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantConfig": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "allowedOptionalCapabilities": {
+                                "items": {
+                                  "enum": [
+                                    "knowledge_base",
+                                    "skill",
+                                    "mcp"
+                                  ],
+                                  "type": "string"
+                                },
+                                "maxItems": 3,
+                                "type": "array"
+                              },
+                              "icon": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "id": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "modelPolicy": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "name": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "requiredSkills": {
+                                "items": {
+                                  "maxLength": 80,
+                                  "minLength": 1,
+                                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                  "type": "string"
+                                },
+                                "maxItems": 20,
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "resultRenderer": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "retentionDays": {
+                                "maximum": 365,
+                                "minimum": 1,
+                                "type": "integer"
+                              },
+                              "runtime": {
+                                "const": "dsi-native",
+                                "type": "string"
+                              },
+                              "setupProfile": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "status": {
+                                "const": "published",
+                                "type": "string"
+                              },
+                              "summary": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "maxLength": 32,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "maxItems": 12,
+                                "type": "array"
+                              },
+                              "version": {
+                                "exclusiveMinimum": 0,
+                                "maximum": 2147483647,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version",
+                              "name",
+                              "summary",
+                              "icon",
+                              "tags",
+                              "status",
+                              "runtime",
+                              "requiredSkills",
+                              "allowedOptionalCapabilities",
+                              "setupProfile",
+                              "resultRenderer",
+                              "modelPolicy",
+                              "retentionDays"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantId": {
+                        "anyOf": [
+                          {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantVersion": {
+                        "anyOf": [
+                          {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
                           },
                           {
                             "type": "null"
@@ -3561,6 +5341,147 @@
                           }
                         ]
                       },
+                      "assistantConfig": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "allowedOptionalCapabilities": {
+                                "items": {
+                                  "enum": [
+                                    "knowledge_base",
+                                    "skill",
+                                    "mcp"
+                                  ],
+                                  "type": "string"
+                                },
+                                "maxItems": 3,
+                                "type": "array"
+                              },
+                              "icon": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "id": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "modelPolicy": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "name": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "requiredSkills": {
+                                "items": {
+                                  "maxLength": 80,
+                                  "minLength": 1,
+                                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                  "type": "string"
+                                },
+                                "maxItems": 20,
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "resultRenderer": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "retentionDays": {
+                                "maximum": 365,
+                                "minimum": 1,
+                                "type": "integer"
+                              },
+                              "runtime": {
+                                "const": "dsi-native",
+                                "type": "string"
+                              },
+                              "setupProfile": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "status": {
+                                "const": "published",
+                                "type": "string"
+                              },
+                              "summary": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "maxLength": 32,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "maxItems": 12,
+                                "type": "array"
+                              },
+                              "version": {
+                                "exclusiveMinimum": 0,
+                                "maximum": 2147483647,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version",
+                              "name",
+                              "summary",
+                              "icon",
+                              "tags",
+                              "status",
+                              "runtime",
+                              "requiredSkills",
+                              "allowedOptionalCapabilities",
+                              "setupProfile",
+                              "resultRenderer",
+                              "modelPolicy",
+                              "retentionDays"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantId": {
+                        "anyOf": [
+                          {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantVersion": {
+                        "anyOf": [
+                          {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "conversationId": {
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -3718,6 +5639,147 @@
                           }
                         ]
                       },
+                      "assistantConfig": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "allowedOptionalCapabilities": {
+                                "items": {
+                                  "enum": [
+                                    "knowledge_base",
+                                    "skill",
+                                    "mcp"
+                                  ],
+                                  "type": "string"
+                                },
+                                "maxItems": 3,
+                                "type": "array"
+                              },
+                              "icon": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "id": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "modelPolicy": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "name": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "requiredSkills": {
+                                "items": {
+                                  "maxLength": 80,
+                                  "minLength": 1,
+                                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                  "type": "string"
+                                },
+                                "maxItems": 20,
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "resultRenderer": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "retentionDays": {
+                                "maximum": 365,
+                                "minimum": 1,
+                                "type": "integer"
+                              },
+                              "runtime": {
+                                "const": "dsi-native",
+                                "type": "string"
+                              },
+                              "setupProfile": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "status": {
+                                "const": "published",
+                                "type": "string"
+                              },
+                              "summary": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "maxLength": 32,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "maxItems": 12,
+                                "type": "array"
+                              },
+                              "version": {
+                                "exclusiveMinimum": 0,
+                                "maximum": 2147483647,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version",
+                              "name",
+                              "summary",
+                              "icon",
+                              "tags",
+                              "status",
+                              "runtime",
+                              "requiredSkills",
+                              "allowedOptionalCapabilities",
+                              "setupProfile",
+                              "resultRenderer",
+                              "modelPolicy",
+                              "retentionDays"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantId": {
+                        "anyOf": [
+                          {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantVersion": {
+                        "anyOf": [
+                          {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "conversationId": {
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -3869,6 +5931,147 @@
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                             "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantConfig": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "allowedOptionalCapabilities": {
+                                "items": {
+                                  "enum": [
+                                    "knowledge_base",
+                                    "skill",
+                                    "mcp"
+                                  ],
+                                  "type": "string"
+                                },
+                                "maxItems": 3,
+                                "type": "array"
+                              },
+                              "icon": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "id": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "modelPolicy": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "name": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "requiredSkills": {
+                                "items": {
+                                  "maxLength": 80,
+                                  "minLength": 1,
+                                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                  "type": "string"
+                                },
+                                "maxItems": 20,
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "resultRenderer": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "retentionDays": {
+                                "maximum": 365,
+                                "minimum": 1,
+                                "type": "integer"
+                              },
+                              "runtime": {
+                                "const": "dsi-native",
+                                "type": "string"
+                              },
+                              "setupProfile": {
+                                "maxLength": 80,
+                                "minLength": 1,
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "status": {
+                                "const": "published",
+                                "type": "string"
+                              },
+                              "summary": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "maxLength": 32,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "maxItems": 12,
+                                "type": "array"
+                              },
+                              "version": {
+                                "exclusiveMinimum": 0,
+                                "maximum": 2147483647,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version",
+                              "name",
+                              "summary",
+                              "icon",
+                              "tags",
+                              "status",
+                              "runtime",
+                              "requiredSkills",
+                              "allowedOptionalCapabilities",
+                              "setupProfile",
+                              "resultRenderer",
+                              "modelPolicy",
+                              "retentionDays"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantId": {
+                        "anyOf": [
+                          {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "assistantVersion": {
+                        "anyOf": [
+                          {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
                           },
                           {
                             "type": "null"
@@ -4344,7 +6547,7 @@
                     "additionalProperties": false,
                     "properties": {
                       "artifactRefs": {
-                        "description": "Current executor emits ConversationTaskResultReference (kind=task_result, taskId); user messages have none. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
+                        "description": "Known refs: ConversationTaskResultReference and AssistantArtifactReference. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
                         "items": {},
                         "type": "array"
                       },
@@ -4395,7 +6598,7 @@
                       },
                       "content": {
                         "additionalProperties": {},
-                        "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
+                        "description": "Known bodies: ConversationKnownMessageContent. User: text, daily_report, or assistant_setup; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
                         "propertyNames": {
                           "type": "string"
                         },
@@ -5191,6 +7394,120 @@
               "payload": {
                 "additionalProperties": false,
                 "properties": {
+                  "batchId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "completedCount": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "failedCount": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "phase": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "pattern": "^[a-z][a-z0-9_-]*$",
+                    "type": "string"
+                  },
+                  "stepId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "toolCallId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "toolName": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "totalCount": {
+                    "exclusiveMinimum": 0,
+                    "maximum": 50,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "stepId",
+                  "toolCallId",
+                  "toolName",
+                  "batchId",
+                  "phase",
+                  "completedCount",
+                  "failedCount",
+                  "totalCount"
+                ],
+                "type": "object"
+              },
+              "schemaVersion": {
+                "const": 1,
+                "type": "number"
+              },
+              "taskId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "turnId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "type": {
+                "const": "tool.progress",
+                "type": "string"
+              }
+            },
+            "required": [
+              "eventId",
+              "eventSeq",
+              "conversationId",
+              "schemaVersion",
+              "type",
+              "occurredAt",
+              "turnId",
+              "taskId",
+              "payload"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "conversationId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "eventId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "eventSeq": {
+                "pattern": "^(0|[1-9][0-9]{0,18})$",
+                "type": "string"
+              },
+              "messageId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "occurredAt": {
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                "type": "string"
+              },
+              "payload": {
+                "additionalProperties": false,
+                "properties": {
                   "status": {
                     "enum": [
                       "completed",
@@ -5582,6 +7899,147 @@
                   }
                 ]
               },
+              "assistantConfig": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "allowedOptionalCapabilities": {
+                        "items": {
+                          "enum": [
+                            "knowledge_base",
+                            "skill",
+                            "mcp"
+                          ],
+                          "type": "string"
+                        },
+                        "maxItems": 3,
+                        "type": "array"
+                      },
+                      "icon": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "id": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "modelPolicy": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "name": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "requiredSkills": {
+                        "items": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "maxItems": 20,
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "resultRenderer": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "retentionDays": {
+                        "maximum": 365,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "runtime": {
+                        "const": "dsi-native",
+                        "type": "string"
+                      },
+                      "setupProfile": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "status": {
+                        "const": "published",
+                        "type": "string"
+                      },
+                      "summary": {
+                        "maxLength": 500,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "tags": {
+                        "items": {
+                          "maxLength": 32,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 12,
+                        "type": "array"
+                      },
+                      "version": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 2147483647,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "name",
+                      "summary",
+                      "icon",
+                      "tags",
+                      "status",
+                      "runtime",
+                      "requiredSkills",
+                      "allowedOptionalCapabilities",
+                      "setupProfile",
+                      "resultRenderer",
+                      "modelPolicy",
+                      "retentionDays"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantId": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantVersion": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "conversationId": {
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -5659,7 +8117,7 @@
               "additionalProperties": false,
               "properties": {
                 "artifactRefs": {
-                  "description": "Current executor emits ConversationTaskResultReference (kind=task_result, taskId); user messages have none. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
+                  "description": "Known refs: ConversationTaskResultReference and AssistantArtifactReference. References are not URLs or filesystem paths. Unknown future kinds must not be executed.",
                   "items": {},
                   "type": "array"
                 },
@@ -5710,7 +8168,7 @@
                 },
                 "content": {
                   "additionalProperties": {},
-                  "description": "Known bodies: ConversationKnownMessageContent. User: text or daily_report; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
+                  "description": "Known bodies: ConversationKnownMessageContent. User: text, daily_report, or assistant_setup; assistant: text. Kept extensible; validate known kinds and display unknown kinds safely.",
                   "propertyNames": {
                     "type": "string"
                   },
@@ -5949,6 +8407,147 @@
                     "format": "date-time",
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                     "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantConfig": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "allowedOptionalCapabilities": {
+                        "items": {
+                          "enum": [
+                            "knowledge_base",
+                            "skill",
+                            "mcp"
+                          ],
+                          "type": "string"
+                        },
+                        "maxItems": 3,
+                        "type": "array"
+                      },
+                      "icon": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "id": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "modelPolicy": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "name": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "requiredSkills": {
+                        "items": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "maxItems": 20,
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "resultRenderer": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "retentionDays": {
+                        "maximum": 365,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "runtime": {
+                        "const": "dsi-native",
+                        "type": "string"
+                      },
+                      "setupProfile": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "status": {
+                        "const": "published",
+                        "type": "string"
+                      },
+                      "summary": {
+                        "maxLength": 500,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "tags": {
+                        "items": {
+                          "maxLength": 32,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 12,
+                        "type": "array"
+                      },
+                      "version": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 2147483647,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "name",
+                      "summary",
+                      "icon",
+                      "tags",
+                      "status",
+                      "runtime",
+                      "requiredSkills",
+                      "allowedOptionalCapabilities",
+                      "setupProfile",
+                      "resultRenderer",
+                      "modelPolicy",
+                      "retentionDays"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantId": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantVersion": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
                   },
                   {
                     "type": "null"
@@ -6256,6 +8855,147 @@
                   }
                 ]
               },
+              "assistantConfig": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "allowedOptionalCapabilities": {
+                        "items": {
+                          "enum": [
+                            "knowledge_base",
+                            "skill",
+                            "mcp"
+                          ],
+                          "type": "string"
+                        },
+                        "maxItems": 3,
+                        "type": "array"
+                      },
+                      "icon": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "id": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "modelPolicy": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "name": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "requiredSkills": {
+                        "items": {
+                          "maxLength": 80,
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "maxItems": 20,
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "resultRenderer": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "retentionDays": {
+                        "maximum": 365,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "runtime": {
+                        "const": "dsi-native",
+                        "type": "string"
+                      },
+                      "setupProfile": {
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "status": {
+                        "const": "published",
+                        "type": "string"
+                      },
+                      "summary": {
+                        "maxLength": 500,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "tags": {
+                        "items": {
+                          "maxLength": 32,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 12,
+                        "type": "array"
+                      },
+                      "version": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 2147483647,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "name",
+                      "summary",
+                      "icon",
+                      "tags",
+                      "status",
+                      "runtime",
+                      "requiredSkills",
+                      "allowedOptionalCapabilities",
+                      "setupProfile",
+                      "resultRenderer",
+                      "modelPolicy",
+                      "retentionDays"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantId": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "assistantVersion": {
+                "anyOf": [
+                  {
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "conversationId": {
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -6443,9 +9183,9 @@
     }
   },
   "info": {
-    "description": "C01 backend proposal. Runtime Zod exported using the same pattern as Skill Market. Frontend TypeScript/Zod generation is a separate repository step, not implemented here.",
+    "description": "Canonical DSI conversation contract with assistant-aware metadata, safe attachments, artifacts, and durable progress. Frontend TypeScript/Zod generation is a separate repository step.",
     "title": "DSI Conversation API",
-    "version": "0.1.5"
+    "version": "0.2.0"
   },
   "openapi": "3.1.0",
   "paths": {

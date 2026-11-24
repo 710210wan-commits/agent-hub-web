@@ -15,11 +15,13 @@ type PresentableMessage = ChatMessage &
 export function MessageList({
   messages,
   run,
+  onOpenScreeningResult,
   followOutput = false,
   onRegenerate,
 }: {
   messages: PresentableMessage[];
   run?: ChatRunView;
+  onOpenScreeningResult?(batchId: string): void;
   followOutput?: boolean;
   onRegenerate?: () => void;
 }) {
@@ -91,6 +93,25 @@ export function MessageList({
           {message.content ? (
             <MessageContent content={message.content} streaming={message.streaming} />
           ) : null}
+          {message.attachments?.length ? (
+            <div aria-label="已上传文件" className="message-capabilities">
+              {message.attachments.map((attachment) => (
+                <span className="capability-history-chip" key={attachment.fileId}>
+                  {attachment.role === "job_description" ? "职位描述" : "简历"} · {attachment.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {message.artifactRefs?.map((artifact) => (
+            <button
+              className="secondary-button"
+              key={`${artifact.kind}:${artifact.batchId}`}
+              onClick={() => onOpenScreeningResult?.(artifact.batchId)}
+              type="button"
+            >
+              查看筛选结果
+            </button>
+          ))}
           {message.role === "user" && message.selection ? (
             <div aria-label="本轮能力" className="message-capabilities">
               {([

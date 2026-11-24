@@ -21,8 +21,8 @@ test("mock chat streams final text without fabricating selectable capabilities",
   await expect(page.getByTestId("activity-line")).toBeVisible();
   await page.screenshot({ path: "e2e/screenshots/chat-running.png" });
   await expect(page.getByText("综合现有资料，本周需重点关注三类风险。")).toBeVisible();
-  await expect(page.getByRole("button", { name: "查看执行过程" })).toBeVisible();
-  await page.getByRole("button", { name: "查看执行过程" }).click();
+  await expect(page.getByRole("button", { name: "已完成 3 个工具步骤" })).toBeVisible();
+  await page.getByRole("button", { name: "已完成 3 个工具步骤" }).click();
   await expect(page.getByText("已完成 3 个工具步骤")).toBeVisible();
   await expect(page.getByRole("button", { name: "知识库", exact: true })).toBeDisabled();
 });

@@ -34,7 +34,7 @@ export function Composer({
   onSelectionChange: (selection: ChatSelectionSnapshot) => void;
   onSend: () => void;
   onStop: () => void;
-  capabilityMode?: "selectable" | "preconfigured" | "unavailable";
+  capabilityMode?: "selectable" | "preconfigured" | "unavailable" | "locked";
   capabilityCatalog?: ConversationCapabilityCatalog;
   capabilityNotice?: string;
 }) {
@@ -63,16 +63,20 @@ export function Composer({
           value={input}
         />
         <div className="composer-tools">
-          <button
-            aria-label="附件（待接入）"
-            className="composer-tool"
-            disabled
-            title="待接入"
-            type="button"
-          >
-            <Paperclip aria-hidden="true" size={14} />
-            附件
-          </button>
+          {resolvedCapabilityMode !== "locked" ? (
+            <button
+              aria-label="附件（待接入）"
+              className="composer-tool"
+              disabled
+              title="待接入"
+              type="button"
+            >
+              <Paperclip aria-hidden="true" size={14} />
+              附件
+            </button>
+          ) : null}
+          {resolvedCapabilityMode !== "locked" ? (
+            <>
           <CapabilitySelector
             disabled={capabilitiesDisabled || capabilityCatalog?.knowledgeBases.status !== "available" || !capabilityCatalog.knowledgeBases.items.length}
             statusText={sectionHint(capabilityCatalog?.knowledgeBases)}
@@ -98,7 +102,14 @@ export function Composer({
             onChange={(mcpServerIds) => onSelectionChange({ ...selection, mcpServerIds })}
             options={capabilityCatalog?.mcpServers.items.map(item => ({ id: item.id, label: item.name })) ?? []}
             selectedIds={selection.mcpServerIds}
-          />
+            />
+            </>
+          ) : null}
+          {resolvedCapabilityMode === "locked" ? (
+            <span className="composer-capability-note">
+              简历筛选助手使用固定筛选能力
+            </span>
+          ) : null}
           {resolvedCapabilityMode === "preconfigured" ? (
             <span className="composer-capability-note">
               工作智能体已预配置知识库、Skill 与 MCP

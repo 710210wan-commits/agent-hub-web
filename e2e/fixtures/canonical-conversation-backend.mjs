@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
 import http from "node:http";
+import {
+  continueBatch,
+  handleHrRequest,
+  hrAssistant,
+  resetHrFixture,
+  startBatch,
+} from "./hr-screening-backend.mjs";
 
 const host = "127.0.0.1";
 const port = Number(process.env.CANONICAL_CONVERSATION_FIXTURE_PORT ?? 3203);
@@ -83,6 +90,21 @@ const server = http.createServer(async (request, response) => {
     handleKnowledge(response, userKey);
     return;
   }
+  if (await handleHrRequest({
+    request,
+    response,
+    url,
+    userKey,
+    conversations: state.conversations,
+    findConversation,
+    createConversationRecord,
+    createMessage,
+    appendEvent,
+    advance,
+    sendJson,
+    sendError,
+    readJson,
+  })) return;
   await handleConversation(request, response, url, userKey);
 });
 
@@ -91,6 +113,7 @@ server.listen(port, host, () => {
 });
 
 function resetState() {
+  resetHrFixture();
   closeAllStreams();
   state.calls.length = 0;
   state.sessions.clear();
@@ -367,6 +390,21 @@ async function submitTurn(item, body, response) {
     sendError(response, 503, "STORAGE_UNAVAILABLE");
     return;
   }
+  if (item.hr && body?.input?.text === "确认筛选标准并开始筛选") {
+    startBatch(item);
+    appendEvent(item, "tool.progress", hrProgress(item, "partial"), {
+      turnId,
+      taskId,
+    });
+    advance(item, "complete", "筛选批次已启动，请查看结果");
+  } else if (item.hr && body?.input?.text === "继续未完成的简历筛选批次") {
+    continueBatch(item);
+    appendEvent(item, "tool.progress", hrProgress(item, "running"), {
+      turnId,
+      taskId,
+    });
+    advance(item, "complete", "已继续未完成的筛选批次");
+  }
   sendJson(response, 202, receipt);
 }
 
@@ -442,6 +480,20 @@ async function handleControl(body, response) {
   sendJson(response, 400, { error: "invalid_control" });
 }
 
+function hrProgress(item, phase) {
+  const batch = item.hr.activeBatch ?? item.hr.latestCompletedBatch;
+  return {
+    stepId: randomUUID(),
+    toolCallId: randomUUID(),
+    toolName: phase === "partial" ? "HrStartScreening" : "HrContinueScreening",
+    batchId: batch.batchId,
+    phase,
+    completedCount: batch.completedCount,
+    failedCount: batch.failedCount,
+    totalCount: batch.totalCount,
+  };
+}
+
 function advance(item, phase, answer) {
   const turn = item.activeTurn;
   if (!turn || isTerminal(turn.status)) return;
@@ -472,6 +524,10 @@ function advance(item, phase, answer) {
       "assistant",
       typeof answer === "string" ? answer : "fixture 最终正文",
     );
+    if (item.hr) {
+      const batch = item.hr.activeBatch ?? item.hr.latestCompletedBatch;
+      if (batch) assistant.artifactRefs = [{ kind: "screening_result", batchId: batch.batchId }];
+    }
     item.messages.push(assistant);
     appendEvent(item, "message.created", { message: assistant }, {
       turnId: turn.turnId,
@@ -532,9 +588,9 @@ function writeEvent(response, event) {
   response.write(`: fixture heartbeat\nevent: ${event.type}\nid: ${event.conversationId}:${event.eventSeq}\ndata: ${JSON.stringify(event)}\n\n`);
 }
 
-function createConversationRecord(conversationId, title) {
+function createConversationRecord(conversationId, title, isAssistant = false) {
   const timestamp = now();
-  return {
+  const item = {
     metadata: {
       conversationId,
       scenarioId: "daily",
@@ -547,6 +603,11 @@ function createConversationRecord(conversationId, title) {
       lastTurnIndex: "0",
       createdAt: timestamp,
       updatedAt: timestamp,
+      ...(isAssistant ? {
+        assistantId: hrAssistant.id,
+        assistantVersion: hrAssistant.version,
+        assistantConfig: hrAssistant,
+      } : {}),
     },
     messages: [],
     events: [],
@@ -555,6 +616,8 @@ function createConversationRecord(conversationId, title) {
     turnRequests: new Map(),
     createRequestId: null,
   };
+  item.appendEvent = (type, payload, extra) => appendEvent(item, type, payload, extra);
+  return item;
 }
 
 function createMessage(item, turnId, role, text) {

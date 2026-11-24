@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  Bot,
   Clock3,
   DatabaseZap,
   LogOut,
@@ -28,6 +29,7 @@ import { useAppMode } from "@/providers/mode-provider";
 const icons: Record<NavigationIcon, LucideIcon> = {
   chat: MessageSquarePlus,
   history: Clock3,
+  assistants: Bot,
   gis: Map,
   knowledge: BookOpen,
   skill: Sparkles,

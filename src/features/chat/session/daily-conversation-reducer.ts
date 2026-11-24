@@ -66,6 +66,14 @@ export interface DailyConversationState {
   status: DailyConversationStatus;
   activity: string | null;
   completedStepCount: number;
+  toolProgress: {
+    batchId: string;
+    phase: string;
+    completedCount: number;
+    failedCount: number;
+    totalCount: number;
+  } | null;
+  hrRefreshToken: number;
   hasToolActivity: boolean;
   toolSteps: ChatToolStep[];
   notice: string | null;
@@ -133,6 +141,8 @@ export function createInitialDailyConversationState(
     status: "idle",
     activity: null,
     completedStepCount: 0,
+    toolProgress: null,
+    hrRefreshToken: 0,
     hasToolActivity: false,
     toolSteps: [],
     notice: null,
@@ -205,6 +215,7 @@ export function dailyConversationReducer(
       return {
         ...state,
         status: statusFromTurn(state.activeTurn?.status),
+        hrRefreshToken: state.hrRefreshToken + 1,
         notice: null,
       };
     case "recovery.stale":
@@ -275,6 +286,8 @@ function installSnapshot(
     status: statusFromTurn(snapshot.activeTurn?.status),
     activity: activityFromTurn(snapshot.activeTurn?.status),
     completedStepCount: 0,
+    toolProgress: null,
+    hrRefreshToken: state.hrRefreshToken + 1,
     hasToolActivity: false,
     toolSteps: [],
     notice: null,
@@ -458,6 +471,16 @@ function applyEvent(
           status: event.payload.status,
         }),
       };
+    case "tool.progress":
+      if (event.turnId !== next.activeTurn?.turnId) return next;
+      if (isTerminal(next.activeTurn.status)) return next;
+      return {
+        ...next,
+        status: "working",
+        activity: "正在筛选简历…",
+        toolProgress: { ...event.payload },
+        hrRefreshToken: next.hrRefreshToken + 1,
+      };
     case "output.started":
       if (isSnapshotReplay(next, event.eventSeq)) return next;
       return startOutput(next, event);
@@ -600,6 +623,11 @@ function applyTurn(
     status: statusFromTurn(turn.status),
     activity: activityFromTurn(turn.status),
     completedStepCount: isNewTurn ? 0 : state.completedStepCount,
+    toolProgress: isNewTurn ? null : state.toolProgress,
+    hrRefreshToken:
+      isTerminal(turn.status) && !isTerminal(state.activeTurn?.status ?? "queued")
+        ? state.hrRefreshToken + 1
+        : state.hrRefreshToken,
     hasToolActivity: isNewTurn ? false : state.hasToolActivity,
     toolSteps: isNewTurn ? [] : state.toolSteps,
     notice:

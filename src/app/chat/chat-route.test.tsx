@@ -263,6 +263,19 @@ describe("ChatRoute", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hydrates an assistant conversation through the canonical Daily client", async () => {
+    mocks.search =
+      "mode=1&assistant=resume-screening&conversation=10000000-0000-4000-8000-000000000001";
+    renderRoute();
+
+    expect(await screen.findByText("日常持久回答")).toBeInTheDocument();
+    expect(mocks.loadSnapshot).toHaveBeenCalledWith(
+      "10000000-0000-4000-8000-000000000001",
+      expect.any(AbortSignal),
+    );
+    expect(screen.getByText("简历筛选助手")).toBeInTheDocument();
+  });
+
   it("replaces the first daily URL without restarting its canonical controller", async () => {
     mocks.search = "mode=1&panel=open";
     const view = renderRoute();

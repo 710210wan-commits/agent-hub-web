@@ -28,6 +28,7 @@ export default function ChatRoute() {
     process.env.NODE_ENV !== "production" &&
     process.env.NEXT_PUBLIC_E2E_SCENARIOS === "1";
   const requestedConversation = searchParams.get("conversation") || undefined;
+  const assistantId = searchParams.get("assistant") || undefined;
   const workConversation = mode === "work" ? requestedConversation : undefined;
   const requestedScenario = e2eScenariosEnabled ? searchParams.get("scenario") : null;
   const requestedDelay = e2eScenariosEnabled ? Number(searchParams.get("delay")) : NaN;
@@ -88,7 +89,7 @@ export default function ChatRoute() {
 
   if (useCanonicalDaily && dailySessionClient) {
     return (
-      <AppShell title={dailyConversation ? "历史会话" : "新对话"}>
+      <AppShell title={assistantId === "resume-screening" ? "简历筛选助手" : dailyConversation ? "历史会话" : "新对话"}>
         <div className="chat-page">
           <div className="chat-scroll-region daily-session-scroll-region">
             <DailySessionView

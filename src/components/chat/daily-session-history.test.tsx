@@ -100,6 +100,42 @@ describe("DailySessionHistory", () => {
     push.mockReset();
   });
 
+  it("groups assistant conversations, keeps legacy DSI under 通用助手, and exposes Recents", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations).mockResolvedValue({
+      conversations: [
+        conversation(FIRST_ID, { title: "旧决策会话" }),
+        conversation(SECOND_ID, {
+          title: "后端工程师筛选",
+          assistantId: "resume-screening",
+          assistantVersion: 1,
+        } as Partial<ConversationMetadata>),
+      ],
+      nextCursor: null,
+    });
+
+    renderHistory(client);
+
+    const recents = await screen.findByRole("list", { name: "最近会话" });
+    expect(within(recents).getByRole("link", { name: /后端工程师筛选/ })).toHaveAttribute(
+      "href",
+      `/chat?mode=1&assistant=resume-screening&conversation=${SECOND_ID}`,
+    );
+    expect(within(recents).getByRole("link", { name: /旧决策会话/ })).toHaveAttribute(
+      "href",
+      `/chat?mode=1&conversation=${FIRST_ID}`,
+    );
+    const hrGroup = screen.getByRole("list", { name: "简历筛选助手会话" });
+    expect(within(hrGroup).getByRole("link", { name: /后端工程师筛选/ })).toBeInTheDocument();
+    expect(within(hrGroup).queryByRole("link", { name: /旧决策会话/ })).not.toBeInTheDocument();
+    const generalGroup = screen.getByRole("list", { name: "决策历史会话" });
+    expect(within(generalGroup).getByRole("link", { name: /旧决策会话/ })).toBeInTheDocument();
+    expect(within(generalGroup).queryByRole("link", { name: /后端工程师筛选/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "简历筛选助手" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "通用助手" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /旧决策会话/ })).not.toHaveLength(0);
+  });
+
   it("shows loading, an empty state, then paginated links with encoded ids", async () => {
     const client = createClient();
     const initial = deferred<{

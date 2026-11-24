@@ -1,5 +1,9 @@
 import type { ChatMessage } from "@/features/chat/contracts/chat";
 import type { ConversationMessage } from "@/features/chat/transports/daily-session-contract";
+import {
+  AssistantArtifactReferenceSchema,
+  ConversationAttachmentSchema,
+} from "@/features/chat/conversation/contracts/generated";
 import type { DailyActiveOutput, PendingDailySend } from "./daily-conversation-reducer";
 import { snapshotCapabilitySelection } from "../capabilities/contracts";
 
@@ -20,12 +24,19 @@ const reportTypeLabels = {
 export function adaptDailySessionMessage(
   message: ConversationMessage,
 ): DailySessionViewMessage {
+  const attachments = safeAttachments(message.content);
+  const artifactRefs = message.artifactRefs.flatMap((artifact) => {
+    const parsed = AssistantArtifactReferenceSchema.safeParse(artifact);
+    return parsed.success ? [parsed.data] : [];
+  });
   return {
     id: message.messageId,
     role: message.role,
     content: visibleContent(message),
     createdAt: Date.parse(message.createdAt),
     ordinal: message.ordinal,
+    ...(attachments.length ? { attachments } : {}),
+    ...(artifactRefs.length ? { artifactRefs } : {}),
     ...(message.role === "user" && message.capabilitySelection ? { selection: snapshotCapabilitySelection(message.capabilitySelection) } : {}),
   };
 }
@@ -125,6 +136,10 @@ function visibleContent(message: ConversationMessage): string {
   if (content.kind === "text" && typeof content.text === "string") {
     return content.text;
   }
+  if (content.kind === "assistant_setup") {
+    if (typeof content.text === "string" && content.text.trim()) return content.text;
+    if (typeof content.prompt === "string" && content.prompt.trim()) return content.prompt;
+  }
   if (
     message.role === "user" &&
     content.kind === "daily_report" &&
@@ -135,6 +150,14 @@ function visibleContent(message: ConversationMessage): string {
     return `生成 ${content.date} ${reportTypeLabels[content.reportType]}日报`;
   }
   return unsupportedMessage;
+}
+
+function safeAttachments(content: Record<string, unknown>) {
+  if (content.kind !== "assistant_setup" || !Array.isArray(content.attachments)) return [];
+  return content.attachments.flatMap((attachment) => {
+    const parsed = ConversationAttachmentSchema.safeParse(attachment);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 function isReportType(value: unknown): value is keyof typeof reportTypeLabels {

@@ -23,6 +23,8 @@ test("all shell routes render and preserve work mode", async ({ page }) => {
       if ((await link.textContent())?.trim() === "GIS 工作台") {
         await expect(link).toHaveAttribute("href", "http://localhost:5000");
         await expect(link).toHaveAttribute("target", "_blank");
+      } else if ((await link.textContent())?.trim() === "助手广场") {
+        await expect(link).toHaveAttribute("href", "/assistants");
       } else {
         await expect(link).toHaveAttribute("href", /mode=2/);
       }

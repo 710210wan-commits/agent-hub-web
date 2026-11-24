@@ -30,9 +30,9 @@ describe("verifyPinnedConversationSchema", () => {
       artifact: "conversation.v1.json",
       contractId: "conversation.v1",
       operationCount: 19,
-      schemaVersion: "0.1.5",
-      sha256: "3def34f81596519dab609cc272f4cd613a61a5dad7b6b5796369707d05cc9158",
-      sourceCommit: "1d80d77e956008f1c20051cd589a3f0b41bc9ba9",
+      schemaVersion: "0.2.0",
+      sha256: "e8b9954af2ccce0d41c821ca682dfd704fd3214b47175e2cbac1f6b4fa9808e4",
+      sourceCommit: "59bb1ac63173daaebdcfbeb50f8c85b8ca507139",
       sourcePath: "api/openapi/conversation.v1.json",
       sourceRepository: "DSI",
     });

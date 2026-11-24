@@ -151,6 +151,32 @@ function pendingState() {
 }
 
 describe("dailyConversationReducer", () => {
+  it("projects durable HR tool progress and requests an authoritative refresh", () => {
+    const running = dailyConversationReducer(
+      createInitialDailyConversationState("test"),
+      { type: "receipt.apply", receipt: receipt("running") },
+    );
+
+    const progressed = dailyConversationReducer(running, {
+      type: "event.apply",
+      event: event("1", "tool.progress", {
+        batchId: "30000000-0000-4000-8000-000000000003",
+        phase: "screening",
+        completedCount: 3,
+        failedCount: 1,
+        totalCount: 10,
+      }),
+    });
+
+    expect(progressed.toolProgress).toEqual({
+      batchId: "30000000-0000-4000-8000-000000000003",
+      phase: "screening",
+      completedCount: 3,
+      failedCount: 1,
+      totalCount: 10,
+    });
+    expect(progressed.hrRefreshToken).toBe(1);
+  });
   it("streams ordered output into one strict active draft and closes it with the canonical message", () => {
     const started = dailyConversationReducer(
       dailyConversationReducer(createInitialDailyConversationState(`${conversationId}:1`), {
