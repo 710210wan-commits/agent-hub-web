@@ -387,7 +387,16 @@ describe("DailySessionView", () => {
   });
 
   it("replaces waiting activity with streamed text and an on-demand tool disclosure", async () => {
+    const selectedUser = {
+      ...message("40000000-0000-4000-8000-000000000004", "1", "请查询", "user"),
+      capabilitySelection: {
+        knowledgeBaseIds: [],
+        skillIds: ["built-in:aircraft-region-query"],
+        mcpServerIds: [],
+      },
+    };
     const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot([selectedUser])),
       streamEvents: vi.fn(async function* () {
         yield publicEvent("1", "turn.started", { turn: activeTurn("running") });
         yield publicEvent("2", "tool.started", {
@@ -432,9 +441,14 @@ describe("DailySessionView", () => {
     expect(await screen.findByText("首批公开正文")).toBeInTheDocument();
     expect(screen.queryByText("正在处理…")).not.toBeInTheDocument();
     expect(screen.queryByText("private-tool-name")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
+    const processButton = screen.getByRole("button", { name: "已完成 1 个工具步骤" });
+    expect(processButton).toBeInTheDocument();
+    fireEvent.click(processButton);
+    expect(screen.getByText("真实查询 Skill")).toBeInTheDocument();
+    expect(screen.getByText("private tool name")).toBeInTheDocument();
+    expect(screen.getByText("已完成")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("button", { name: "重新生成" })).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "已完成 1 个工具步骤" })).toBeInTheDocument();
   });
 
   it("regenerates through a new canonical turn using the last user input", async () => {

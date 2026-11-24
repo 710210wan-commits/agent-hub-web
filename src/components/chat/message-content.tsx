@@ -42,7 +42,7 @@ export function MessageContent({
   return (
     <div className="message-markdown">
       <ReactMarkdown components={messageComponents} remarkPlugins={[remarkGfm]}>
-        {content}
+        {normalizeChinesePunctuation(content)}
       </ReactMarkdown>
       {streaming ? (
         <>
@@ -52,6 +52,23 @@ export function MessageContent({
       ) : null}
     </div>
   );
+}
+
+const protectedMarkdownPattern = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`|https?:\/\/[^\s)]+)/g;
+const hanPattern = /[\p{Script=Han}]/u;
+
+export function normalizeChinesePunctuation(content: string): string {
+  return content
+    .split(protectedMarkdownPattern)
+    .map((part, index) => {
+      if (index % 2 === 1 || !hanPattern.test(part)) return part;
+      return part.replaceAll(",", "，")
+        .replaceAll(";", "；")
+        .replaceAll(":", "：")
+        .replaceAll("?", "？")
+        .replaceAll("!", "！");
+    })
+    .join("");
 }
 
 function nodeText(node: ReactNode): string {

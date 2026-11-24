@@ -5,6 +5,7 @@ import type {
   ConversationPublicEvent,
   ConversationSnapshot,
 } from "@/features/chat/transports/daily-session-contract";
+import type { ChatToolStep } from "@/features/chat/reducer/chat-state";
 import { snapshotCapabilitySelection, type CapabilitySelection } from "../capabilities/contracts";
 
 export type DailyConversationStatus =
@@ -66,6 +67,7 @@ export interface DailyConversationState {
   activity: string | null;
   completedStepCount: number;
   hasToolActivity: boolean;
+  toolSteps: ChatToolStep[];
   notice: string | null;
 }
 
@@ -132,6 +134,7 @@ export function createInitialDailyConversationState(
     activity: null,
     completedStepCount: 0,
     hasToolActivity: false,
+    toolSteps: [],
     notice: null,
   };
 }
@@ -161,6 +164,7 @@ export function dailyConversationReducer(
         conversation: action.conversation,
         activeOutput: null,
         hasToolActivity: false,
+        toolSteps: [],
         status: "ready",
         appliedSeq: "0",
         snapshotWatermark: action.conversation.lastEventSeq,
@@ -272,6 +276,7 @@ function installSnapshot(
     activity: activityFromTurn(snapshot.activeTurn?.status),
     completedStepCount: 0,
     hasToolActivity: false,
+    toolSteps: [],
     notice: null,
   };
 }
@@ -317,6 +322,7 @@ function applyReceipt(
     activity: activityFromTurn(receipt.status),
     completedStepCount: isNewTurn ? 0 : state.completedStepCount,
     hasToolActivity: isNewTurn ? false : state.hasToolActivity,
+    toolSteps: isNewTurn ? [] : state.toolSteps,
   };
 }
 
@@ -431,6 +437,11 @@ function applyEvent(
         status: "working",
         activity: "正在使用工具…",
         hasToolActivity: true,
+        toolSteps: upsertToolStep(next.toolSteps, {
+          id: event.payload.stepId,
+          name: event.payload.toolName,
+          status: "running",
+        }),
       };
     case "tool.completed":
       if (event.turnId !== next.activeTurn?.turnId) return next;
@@ -441,6 +452,11 @@ function applyEvent(
         activity: "正在处理…",
         completedStepCount: next.completedStepCount + 1,
         hasToolActivity: true,
+        toolSteps: upsertToolStep(next.toolSteps, {
+          id: event.payload.stepId,
+          name: event.payload.toolName,
+          status: event.payload.status,
+        }),
       };
     case "output.started":
       if (isSnapshotReplay(next, event.eventSeq)) return next;
@@ -585,6 +601,7 @@ function applyTurn(
     activity: activityFromTurn(turn.status),
     completedStepCount: isNewTurn ? 0 : state.completedStepCount,
     hasToolActivity: isNewTurn ? false : state.hasToolActivity,
+    toolSteps: isNewTurn ? [] : state.toolSteps,
     notice:
       turn.status === "failed"
         ? "任务执行失败"
@@ -592,6 +609,15 @@ function applyTurn(
           ? "生成已停止"
           : null,
   };
+}
+
+function upsertToolStep(
+  steps: ChatToolStep[],
+  step: ChatToolStep,
+): ChatToolStep[] {
+  const index = steps.findIndex(item => item.id === step.id);
+  if (index < 0) return [...steps, step];
+  return steps.map((item, itemIndex) => itemIndex === index ? step : item);
 }
 
 function bindPending(

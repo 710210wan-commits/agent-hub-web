@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Copy, RotateCcw } from "lucide-react";
 import type { ChatMessage } from "@/features/chat/contracts/chat";
 import type { ChatRunView } from "@/features/chat/reducer/chat-state";
 import type { DailySessionViewMessage } from "@/features/chat/session/daily-session-adapter";
@@ -111,9 +112,18 @@ export function MessageList({
           ) : null}
           {message.role === "assistant" && message.content ? (
             <div className="message-actions">
-              <button onClick={() => void copyText(message.content)} type="button">复制回答</button>
+              <button
+                aria-label="复制回答"
+                onClick={() => void copyText(message.content)}
+                title="复制回答"
+                type="button"
+              >
+                <Copy aria-hidden="true" size={16} strokeWidth={1.8} />
+              </button>
               {onRegenerate && !message.streaming && message.id === latestAssistantId ? (
-                <button onClick={onRegenerate} type="button">重新生成</button>
+                <button aria-label="重新生成" onClick={onRegenerate} title="重新生成" type="button">
+                  <RotateCcw aria-hidden="true" size={16} strokeWidth={1.8} />
+                </button>
               ) : null}
             </div>
           ) : null}

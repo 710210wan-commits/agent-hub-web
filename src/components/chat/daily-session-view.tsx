@@ -14,6 +14,7 @@ import {
 import { useDailyConversation } from "@/features/chat/session/use-daily-conversation";
 import { useDailySessionAuthBridge } from "@/features/chat/session/use-daily-session-auth-bridge";
 import type { DailySessionClient } from "@/features/chat/transports/daily-session-client";
+import type { ConversationCapabilityCatalog } from "@/features/chat/capabilities/contracts";
 
 import { ActivityLine } from "./activity-line";
 import { ChatEmptyState } from "./chat-empty-state";
@@ -106,7 +107,7 @@ function AuthenticatedDailySessionView({
     setInput("");
     void controller.submit(content, selection);
   };
-  const run = presentRun(controller.state);
+  const run = presentRun(controller.state, capabilities.catalog);
   const showEmpty = controller.messages.length === 0 && !controller.state.conversation;
   const showWaitingActivity = Boolean(
     controller.state.activity && !controller.state.activeOutput?.content,
@@ -206,6 +207,7 @@ function presentRun(input: {
   activity: string | null;
   completedStepCount: number;
   hasToolActivity: boolean;
+  toolSteps: ChatRunView["toolSteps"];
   notice: string | null;
   activeTurn: { turnId: string } | null;
   activeOutput: { messageId: string } | null;
@@ -213,8 +215,11 @@ function presentRun(input: {
     messageId: string;
     role: "user" | "assistant";
     turnId: string;
+    capabilitySelection?: {
+      skillIds: string[];
+    } | null;
   }>;
-}): ChatRunView {
+}, capabilityCatalog?: ConversationCapabilityCatalog): ChatRunView {
   const canonicalAssistant = input.activeTurn
     ? Object.values(input.messagesById).find(
         message =>
@@ -222,6 +227,16 @@ function presentRun(input: {
           message.turnId === input.activeTurn?.turnId,
       )
     : undefined;
+  const turnUser = input.activeTurn
+    ? Object.values(input.messagesById).find(
+        message => message.role === "user" && message.turnId === input.activeTurn?.turnId,
+      )
+    : undefined;
+  const skillIds = turnUser?.capabilitySelection?.skillIds ?? [];
+  const selectedSkillNames = skillIds.map(id => {
+    const skill = capabilityCatalog?.skills.items.find(item => item.id === id);
+    return skill?.title || skill?.name || id;
+  });
   return {
     status:
       input.activity && !input.activeOutput
@@ -233,6 +248,8 @@ function presentRun(input: {
     activity: input.activity,
     completedStepCount: input.completedStepCount,
     hasToolActivity: input.hasToolActivity,
+    toolSteps: input.toolSteps,
+    selectedSkillNames,
     notice: input.notice,
   };
 }

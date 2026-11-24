@@ -90,13 +90,54 @@ describe("MessageList streaming presentation", () => {
       completedStepCount: 2,
       notice: null,
       hasToolActivity: true,
+      toolSteps: [
+        { id: "step-1", name: "caveman", status: "completed" },
+        { id: "step-2", name: "web_search", status: "failed" },
+      ],
+      selectedSkillNames: ["Caveman"],
     };
     render(<ActivityLine run={run} />);
 
-    expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
-    expect(screen.queryByText("已完成 2 个步骤")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "查看执行过程" }));
-    expect(screen.getByText("已完成 2 个工具步骤")).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: "已完成 2 个工具步骤" });
+    expect(screen.queryByText("Caveman")).not.toBeInTheDocument();
+    expect(screen.queryByText("web search")).not.toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(screen.getByText("Caveman")).toBeInTheDocument();
+    expect(screen.getByText("caveman")).toBeInTheDocument();
+    expect(screen.getByText("web search")).toBeInTheDocument();
+    expect(screen.getByText("执行失败")).toBeInTheDocument();
+  });
+
+  it("uses icon-only answer actions with accessible GPT-style labels", () => {
+    const onRegenerate = vi.fn();
+    const { container } = render(
+      <MessageList
+        messages={[{ ...streamingMessage, streaming: false, partialStatus: "completed" }]}
+        onRegenerate={onRegenerate}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "复制回答" })).toHaveAttribute("title", "复制回答");
+    expect(screen.getByRole("button", { name: "重新生成" })).toHaveAttribute("title", "重新生成");
+    expect(container.querySelector(".message-actions")?.textContent).toBe("");
+  });
+
+  it("renders Chinese punctuation without changing copied source text", () => {
+    render(
+      <MessageList
+        messages={[{
+          ...streamingMessage,
+          content: "开头 YAML:name, 然后执行; 完成!\n\n`const value = 'a,b';`",
+          streaming: false,
+          partialStatus: "completed",
+        }]}
+      />,
+    );
+
+    expect(screen.getByText("开头 YAML：name， 然后执行； 完成！")).toBeInTheDocument();
+    expect(screen.getByText("const value = 'a,b';")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "复制回答" }));
+    expect(writeText).toHaveBeenLastCalledWith("开头 YAML:name, 然后执行; 完成!\n\n`const value = 'a,b';`");
   });
 
   it("lets the user return to the bottom after taking over scrolling", () => {

@@ -407,3 +407,44 @@ Plan 文档：`docs/SSE/2026-11-17-daily-codex-style-sse-implementation.md`
 - `pnpm run typecheck`、`pnpm run lint`、`verify:conversation-schema`、`check:conversation-client` 和生产构建均通过；构建完成 14/14 静态页面。权威 Schema 仍为 `conversation.v1@0.1.5`、19 operations，生成客户端无 drift。
 - 默认 Playwright 为 32 passed、3 failed、1 skipped；Work history 1/1、Work Skills 4/4 通过。3 个失败均为 Task 6 已记录的既有 Skill Market lifecycle 漂移（Smoke 文案、Trigger review timeout、创建修订 URL），本 Task 未修改其产品代码。
 - 因最终门禁明确要求默认 Playwright 全部通过，Task 7 目前只能记为“实现完成、最终全绿门禁未完成”，不能声明整项已完成。
+
+## 2026-11-24
+
+### 11. 优化工具过程、回答操作、中文排版与能力选择器交互
+
+提交：未提交（当前工作区）
+
+Plan 文档：`docs/SSE/2026-11-17-daily-codex-style-sse-implementation.md`
+
+对应 Plan 模块：Task 6 后续交互优化
+
+#### 问题
+
+- 工具任务完成后只能看到步骤数，展开区没有本轮选中的 Skill 名称、具体工具名称和单步状态。
+- “复制回答”和“重新生成”使用文字按钮，与 GPT 网页端的紧凑操作区不一致。
+- 模型回答中的中文语句可能夹杂半角 `, ; : ? !`，但前端不应改写代码、URL 或用户复制的原文。
+- 知识库、Skill 和 MCP 选择框打开后，只有再次点击原按钮才会关闭；点击组件外部不会收起浮层。
+
+#### 修改方案
+
+- 保留折叠的执行过程入口，展开后只展示公开能力目录中的 Skill 标题、公共事件中的 `toolName` 和完成/失败/运行中状态；不展示 tool input/output、call ID 或其他原始 payload。
+- 回答操作改为 Lucide 图标按钮，用 `aria-label` 和 `title` 保留无障碍名称与悬浮提示。
+- 中文标点只在 Markdown 展示层规范化，跳过围栏代码、行内代码与 URL；复制功能继续使用服务端原文。
+- 能力选择器在打开时监听 document `pointerdown` 和 Escape：点击根节点外部立即关闭，组件内的复选操作保持打开，Escape 关闭后将焦点返回触发按钮。三类能力共用同一组件，因此行为一致。
+- 流式正文仍保持首批立即显示、后续默认约 60ms 合并刷新；前端不拆字伪造速度，真实出字上限继续由模型与 SSE 到达速度决定。
+
+#### 代码变更
+
+1. `daily-conversation-reducer.ts` 与 `chat-state.ts`：新增当前 Turn 的工具步骤投影，按 `stepId` 维护工具名称与运行状态，新 Turn 时清空。
+2. `daily-session-view.tsx` 与 `activity-line.tsx`：把本轮用户选择的 Skill ID 映射为目录标题，执行过程展开后显示 Skill、工具名与单步状态。
+3. `message-list.tsx`、`message-content.tsx` 与 `globals.css`：实现图标操作区、中文标点展示规范化、工具详情与展开动效样式。
+4. `capability-selector.tsx`：增加外部指针事件关闭、Escape 关闭与焦点恢复，卸载或关闭后移除 document 监听器。
+5. 新增 `capability-selector.test.tsx`，并扩展 message list、Daily view、reducer 和通用 chat 测试，覆盖外部点击、选项内点击、Escape、工具详情、Skill 名称、图标按钮和标点保护。
+
+#### 验证结果
+
+- TDD RED：外部 `pointerdown` 和 Escape 用例首次运行 2/2 失败，分别证明选择器缺少外部关闭和键盘关闭行为；最小实现后转绿。
+- 聊天 UI 聚焦回归 4 files、35/35 通过；`pnpm test` 全量 98 files、865/865 通过。
+- `pnpm run typecheck`、`pnpm run lint` 和 `git diff --check` 通过。
+- `pnpm run build` 成功编译、执行 TypeScript 检查并生成 14/14 个静态页面。
+- 工具详情是当前前端 Turn 状态；现有 snapshot 不包含历史工具步骤，因此刷新后不会伪造或恢复后端未提供的旧工具详情。

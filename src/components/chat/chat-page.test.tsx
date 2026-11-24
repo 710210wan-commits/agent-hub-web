@@ -112,9 +112,10 @@ describe("ChatPage", () => {
     submit();
 
     expect(await screen.findByText("主要风险")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "查看执行过程" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "查看执行过程" }));
-    expect(screen.getByText("已完成 3 个工具步骤")).toBeInTheDocument();
+    const processButton = screen.getByRole("button", { name: "已完成 3 个工具步骤" });
+    expect(processButton).toBeInTheDocument();
+    fireEvent.click(processButton);
+    expect(screen.getByText("工具执行已开始")).toBeInTheDocument();
     expect(screen.queryByText("正在读取项目资料")).not.toBeInTheDocument();
   });
 

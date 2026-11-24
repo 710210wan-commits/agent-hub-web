@@ -595,7 +595,17 @@ describe("dailyConversationReducer", () => {
 
     expect(started.activity).toBe("正在使用工具…");
     expect(started.activity).not.toContain("private-tool-name");
+    expect(started.toolSteps).toEqual([{
+      id: "80000000-0000-4000-8000-000000000008",
+      name: "private-tool-name",
+      status: "running",
+    }]);
     expect(completed.completedStepCount).toBe(1);
+    expect(completed.toolSteps).toEqual([{
+      id: "80000000-0000-4000-8000-000000000008",
+      name: "private-tool-name",
+      status: "completed",
+    }]);
     expect(completed.activeTurn?.status).toBe("running");
   });
 
@@ -650,6 +660,7 @@ describe("dailyConversationReducer", () => {
     expect(afterFirst.hasToolActivity).toBe(true);
     expect(afterSecond.completedStepCount).toBe(0);
     expect(afterSecond.hasToolActivity).toBe(false);
+    expect(afterSecond.toolSteps).toEqual([]);
     expect(afterLateOldTool.completedStepCount).toBe(0);
     expect(afterLateOldTool.activity).toBe("正在准备…");
   });
