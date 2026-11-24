@@ -117,6 +117,10 @@ describe("DailySessionHistory", () => {
     renderHistory(client);
 
     const recents = await screen.findByRole("list", { name: "最近会话" });
+    expect(within(recents).getAllByRole("link")).toHaveLength(2);
+    expect(within(recents).getByText("简历筛选助手")).toBeInTheDocument();
+    expect(within(recents).getByText("通用助手")).toBeInTheDocument();
+    expect(recents.querySelectorAll("time[datetime]")).toHaveLength(2);
     expect(within(recents).getByRole("link", { name: /后端工程师筛选/ })).toHaveAttribute(
       "href",
       `/chat?mode=1&assistant=resume-screening&conversation=${SECOND_ID}`,

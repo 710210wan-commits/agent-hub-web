@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AssistantClient } from "@/features/assistants/api/assistant-client";
@@ -251,6 +251,34 @@ describe("HrScreeningView", () => {
     await waitFor(() => expect(api.exportBatchCsv).toHaveBeenCalledWith(batchId));
     expect(anchorClick).toHaveBeenCalled();
     anchorClick.mockRestore();
+  });
+
+  it("reads confirmed criteria as text and labels candidate parsing in Chinese", async () => {
+    const api = client({
+      getState: vi.fn().mockResolvedValue(state({ activeCriteria: { ...state().activeCriteria, status: "confirmed" } })),
+    });
+    render(<HrScreeningView client={api} conversationId={conversationId} onCanonicalAction={vi.fn()} refreshToken={0} />);
+    const criteria = await screen.findByRole("region", { name: "筛选标准" });
+    expect(within(criteria).getByText("熟练使用 TypeScript")).toBeVisible();
+    expect(within(criteria).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "候选人文件" })).getByText("已解析")).toBeVisible();
+  });
+
+  it("shows the saved assessment rather than current criteria on an older batch", async () => {
+    const olderBatch = { ...batch("completed"), criteriaVersionId: "99999999-9999-4999-8999-999999999999" };
+    const api = client({
+      getState: vi.fn().mockResolvedValue(state({ latestCompletedBatch: olderBatch })),
+      getBatch: vi.fn().mockResolvedValue({ batch: olderBatch, items: [item("completed")] }),
+    });
+    render(<HrScreeningView client={api} conversationId={conversationId} onCanonicalAction={vi.fn()} refreshToken={0} />);
+    fireEvent.click(await screen.findByRole("button", { name: "查看完整结果" }));
+
+    const drawer = await screen.findByRole("dialog", { name: "筛选结果" });
+    expect(await within(drawer).findByRole("heading", { name: "历史评估项 1" })).toBeInTheDocument();
+    expect(within(drawer).getByText("满足")).toBeInTheDocument();
+    expect(within(drawer).getByText("合成项目证据")).toBeInTheDocument();
+    expect(within(drawer).queryByRole("heading", { name: "TypeScript" })).not.toBeInTheDocument();
+    expect(within(drawer).queryByText("证据不足")).not.toBeInTheDocument();
   });
 
   it("cancels through REST, continues through a canonical Turn and retries only the selected failed item", async () => {

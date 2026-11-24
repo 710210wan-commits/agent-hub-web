@@ -29,7 +29,7 @@ export function ScreeningProgress({
   if (!current) return null;
   const phase = "status" in current ? current.status : current.phase;
   return (
-    <section aria-label="筛选进度" className="state-card" role="status">
+    <section aria-label="筛选进度" className="hr-panel hr-panel-heading" role="status">
       <strong>{phaseLabels[phase] ?? "正在处理"}</strong>
       <span>{current.completedCount}/{current.totalCount}</span>
       <span>失败 {current.failedCount}</span>
