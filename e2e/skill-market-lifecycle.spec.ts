@@ -64,7 +64,7 @@ test("runs Creator from Requirement through Smoke and saves a Draft", async ({ p
   await expect(page.getByText("2 个文件，0 条 diagnostics。")).toBeVisible();
   await page.getByRole("button", { name: "建议 Smoke Cases" }).click();
   await page.getByRole("button", { name: "执行 Smoke" }).click();
-  await expect(page.getByLabel("Smoke Evidence")).toContainText("smoke-1：passed");
+  await expect(page.getByLabel("Smoke Evidence")).toContainText("smoke-1通过");
   await page.getByRole("button", { name: "保存草稿" }).click();
   await expect(page.getByText(/草稿 draft-k03 已保存/)).toBeVisible();
   await expect(page).toHaveURL(/\/skills\/creator\?mode=1&draftId=draft-k03$/);
@@ -76,9 +76,9 @@ test("runs Trigger Test, approves, and restores authoritative review state after
   await installSkillMarketFixture(page);
   await page.goto("/skills/review/submission-k03?mode=1");
 
-  await page.getByLabel("触发查询").fill("lifecycle");
-  await page.getByRole("button", { name: "运行 Trigger Test" }).click();
-  await expect(page.getByText("结果摘要：1/1 通过")).toBeVisible();
+  await page.getByRole("button", { name: "运行全部未通过 Case" }).click();
+  await page.getByText("额外测试（不影响审核）").click();
+  await expect(page.getByText("结果摘要：2/2 通过")).toBeVisible();
   await page.getByLabel("Definition 已核对").check();
   await page.getByLabel("Trigger 证据已核对").check();
   await page.getByLabel("Validator 已核对").check();
@@ -86,7 +86,8 @@ test("runs Trigger Test, approves, and restores authoritative review state after
   await expect(page.getByText(/状态：approved/)).toBeVisible();
   await page.reload();
   await expect(page.getByText(/状态：approved/)).toBeVisible();
-  await expect(page.getByText("结果摘要：1/1 通过")).toBeVisible();
+  await page.getByText("额外测试（不影响审核）").click();
+  await expect(page.getByText("结果摘要：2/2 通过")).toBeVisible();
 });
 
 test("rejects a Submission with a required reviewer comment", async ({ page }) => {
