@@ -68,6 +68,7 @@ function snapshot(overrides: Partial<ConversationSnapshot> = {}): ConversationSn
     messages: [],
     nextCursor: null,
     lastEventSeq: "0",
+    partialOutput: null,
     ...overrides,
   };
 }
@@ -88,6 +89,19 @@ function event(
     turnId,
     taskId,
     ...(type === "message.created" ? { messageId: userMessageId } : {}),
+  } as ConversationPublicEvent;
+}
+
+function outputEvent(
+  eventSeq: string,
+  type: "output.started" | "output.delta" | "output.completed",
+  payload: Record<string, unknown>,
+): ConversationPublicEvent {
+  return {
+    ...event(eventSeq, type, payload),
+    messageId: assistantMessageId,
+    turnId,
+    taskId,
   } as ConversationPublicEvent;
 }
 
@@ -163,6 +177,125 @@ function deferred<T>() {
 }
 
 describe("useDailyConversation", () => {
+  it("projects real output deltas from the stream without splitting or synthesizing text", async () => {
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      streamEvents: vi.fn((_id, _input, signal) => waitStream([
+        outputEvent("1", "output.started", { mode: "append" }),
+        outputEvent("2", "output.delta", { outputSeq: "1", delta: "第一批" }),
+        outputEvent("3", "output.delta", { outputSeq: "2", delta: "第二批" }),
+      ], signal)),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.appliedSeq).toBe("3"));
+    expect(result.current.state.activeOutput).toMatchObject({
+      lastOutputSeq: "2",
+      content: "第一批第二批",
+      status: "streaming",
+    });
+    await waitFor(() => expect(result.current.messages).toEqual([
+      expect.objectContaining({ id: assistantMessageId, content: "第一批第二批", streaming: true }),
+    ]));
+    unmount();
+  });
+
+  it("shows the first delta immediately and batches later deltas for about 60ms", async () => {
+    const releaseBurst = deferred<void>();
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      streamEvents: vi.fn(async function* (_id, _input, signal) {
+        yield outputEvent("1", "output.started", { mode: "append" });
+        yield outputEvent("2", "output.delta", { outputSeq: "1", delta: "首批" });
+        await releaseBurst.promise;
+        yield outputEvent("3", "output.delta", { outputSeq: "2", delta: "第二批" });
+        yield outputEvent("4", "output.delta", { outputSeq: "3", delta: "第三批" });
+        yield* waitStream([], signal);
+      }),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.appliedSeq).toBe("2"));
+    expect(result.current.messages.at(-1)?.content).toBe("首批");
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        releaseBurst.resolve();
+        await releaseBurst.promise;
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(result.current.state.appliedSeq).toBe("4");
+      expect(result.current.messages.at(-1)?.content).toBe("首批");
+
+      act(() => vi.advanceTimersByTime(59));
+      expect(result.current.messages.at(-1)?.content).toBe("首批");
+      act(() => vi.advanceTimersByTime(1));
+      expect(result.current.messages.at(-1)?.content).toBe("首批第二批第三批");
+    } finally {
+      vi.useRealTimers();
+    }
+    unmount();
+  });
+
+  it("flushes buffered text before output completion", async () => {
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      streamEvents: vi.fn((_id, _input, signal) => waitStream([
+        outputEvent("1", "output.started", { mode: "append" }),
+        outputEvent("2", "output.delta", { outputSeq: "1", delta: "首批" }),
+        outputEvent("3", "output.delta", { outputSeq: "2", delta: "尾批" }),
+        outputEvent("4", "output.completed", {
+          outputSeq: "2",
+          charCount: 4,
+          contentSha256: "a".repeat(64),
+        }),
+      ], signal)),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.appliedSeq).toBe("4"));
+    expect(result.current.messages.at(-1)).toMatchObject({
+      content: "首批尾批",
+      streaming: false,
+      partialStatus: "completed",
+    });
+    unmount();
+  });
+
+  it("flushes buffered text and preserves it when the stream disconnects", async () => {
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      streamEvents: vi.fn(async function* () {
+        yield outputEvent("1", "output.started", { mode: "append" });
+        yield outputEvent("2", "output.delta", { outputSeq: "1", delta: "已显示" });
+        yield outputEvent("3", "output.delta", { outputSeq: "2", delta: "的尾部" });
+        throw new DailySessionClientError({
+          code: "STREAM_DISCONNECTED",
+          message: "连接断开",
+        });
+      }),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.status).toBe("disconnected"));
+    expect(result.current.messages.at(-1)).toMatchObject({
+      content: "已显示的尾部",
+      streaming: false,
+      partialStatus: "disconnected",
+    });
+    unmount();
+  });
+
   it("recovers snapshot history through S, buffers future REST events, then streams from S", async () => {
     const historical = [
       event("1", "conversation.created", { version: 1 }),
@@ -261,11 +394,69 @@ describe("useDailyConversation", () => {
     unmount();
   });
 
+  it("repairs output.started from REST before applying an SSE output.delta", async () => {
+    const started = outputEvent("1", "output.started", { mode: "append" });
+    const delta = outputEvent("2", "output.delta", {
+      outputSeq: "1",
+      delta: "补洞后的正文",
+    });
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot({ activeTurn: turn("running") })),
+      listEvents: vi.fn(async (_id, input) =>
+        input.afterSeq === "0"
+          ? {
+              events: [started],
+              nextAfterSeq: "1",
+              lastEventSeq: "1",
+              hasMore: false,
+            }
+          : emptyPage(input.afterSeq),
+      ),
+      streamEvents: vi.fn((_id, _input, signal) =>
+        waitStream([delta], signal),
+      ),
+    });
+    const { result, unmount } = renderHook(() =>
+      useDailyConversation({ client, conversationId, identityGeneration: 1 }),
+    );
+
+    await waitFor(() => expect(result.current.state.appliedSeq).toBe("2"));
+    expect(result.current.state.activeOutput).toMatchObject({
+      lastOutputSeq: "1",
+      content: "补洞后的正文",
+      status: "streaming",
+    });
+    expect(result.current.messages).toEqual([
+      expect.objectContaining({
+        id: assistantMessageId,
+        content: "补洞后的正文",
+        streaming: true,
+      }),
+    ]);
+    expect(client.listEvents).toHaveBeenCalledWith(
+      conversationId,
+      { afterSeq: "0", limit: 200 },
+      expect.any(AbortSignal),
+    );
+    unmount();
+  });
+
   it("resnapshots once on RESYNC_REQUIRED, then stops with readable stale state", async () => {
     const started = event("2", "turn.started", { turn: turn("running") });
     const loadSnapshot = vi
       .fn<DailySessionClient["loadSnapshot"]>()
-      .mockResolvedValue(snapshot());
+      .mockResolvedValueOnce(snapshot())
+      .mockResolvedValueOnce(snapshot({
+        partialOutput: {
+          messageId: assistantMessageId,
+          turnId,
+          taskId,
+          lastOutputSeq: "1",
+          content: "重同步后仍可阅读",
+          status: "failed",
+          updatedAt: "2026-11-09T01:03:05.000Z",
+        },
+      }));
     const client = makeClient({
       loadSnapshot,
       listEvents: vi.fn(async () => {
@@ -286,7 +477,9 @@ describe("useDailyConversation", () => {
     await waitFor(() => expect(result.current.state.status).toBe("stale"));
     expect(loadSnapshot).toHaveBeenCalledTimes(2);
     expect(result.current.state.notice).toBe("历史执行状态待确认");
-    expect(result.current.messages).toEqual([]);
+    expect(result.current.messages).toEqual([
+      expect.objectContaining({ content: "重同步后仍可阅读", partialStatus: "failed" }),
+    ]);
     unmount();
   });
 

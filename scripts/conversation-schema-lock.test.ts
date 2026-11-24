@@ -31,8 +31,8 @@ describe("verifyPinnedConversationSchema", () => {
       contractId: "conversation.v1",
       operationCount: 19,
       schemaVersion: "0.2.0",
-      sha256: "929fdff2b0128bb653c0a7ed3afa75220d601b4b6d4101496084cf550ac41cd9",
-      sourceCommit: "659fe942fc095a1133a23ff76cbea3e19c047e39",
+      sha256: "e8b9954af2ccce0d41c821ca682dfd704fd3214b47175e2cbac1f6b4fa9808e4",
+      sourceCommit: "59bb1ac63173daaebdcfbeb50f8c85b8ca507139",
       sourcePath: "api/openapi/conversation.v1.json",
       sourceRepository: "DSI",
     });

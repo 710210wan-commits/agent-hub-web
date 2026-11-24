@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { snapshotCapabilitySelection, type CapabilitySelection } from "../capabilities/contracts";
 import { createEmptySelection } from "../reducer/chat-state";
+import { useBatchedDeltas } from "../use-batched-deltas";
 
 import {
   DailySessionClientError,
@@ -19,6 +20,7 @@ import {
   dailyConversationReducer,
   selectDailyConversationMessages,
   type DailyConversationAction,
+  type DailyActiveOutput,
   type DailyConversationState,
 } from "./daily-conversation-reducer";
 import {
@@ -44,6 +46,7 @@ export interface DailyConversationController {
   cancel(): Promise<void>;
   reconnect(): void;
   loadEarlier(): Promise<void>;
+  regenerate(): Promise<void>;
 }
 
 const disconnectedCode = "STREAM_DISCONNECTED";
@@ -60,7 +63,12 @@ export function useDailyConversation({
   const [state, setState] = useState<DailyConversationState>(() =>
     createInitialDailyConversationState(initialKey),
   );
+  const [displayedOutput, setDisplayedOutput] = useState<{
+    messageId: string;
+    content: string;
+  } | null>(null);
   const stateRef = useRef(state);
+  const displayedOutputRef = useRef(displayedOutput);
   const generationRef = useRef(identityGeneration);
   const epochRef = useRef(0);
   const activeConversationRef = useRef<string | undefined>(conversationId);
@@ -86,6 +94,37 @@ export function useDailyConversation({
     return next;
   }, []);
 
+  const updateDisplayedOutput = useCallback((value: {
+    messageId: string;
+    content: string;
+  } | null) => {
+    displayedOutputRef.current = value;
+    setDisplayedOutput(value);
+  }, []);
+
+  const appendDisplayedOutput = useCallback((delta: string) => {
+    const output = stateRef.current.activeOutput;
+    if (!output) return;
+    const current = displayedOutputRef.current;
+    const next = {
+      messageId: output.messageId,
+      content: current?.messageId === output.messageId
+        ? current.content + delta
+        : delta,
+    };
+    updateDisplayedOutput(next);
+  }, [updateDisplayedOutput]);
+
+  const batchedDeltas = useBatchedDeltas(appendDisplayedOutput, 60);
+
+  const installDisplayedOutput = useCallback((output: DailyActiveOutput | null) => {
+    batchedDeltas.reset();
+    updateDisplayedOutput(output ? {
+      messageId: output.messageId,
+      content: output.content,
+    } : null);
+  }, [batchedDeltas, updateDisplayedOutput]);
+
   const isCurrent = useCallback(
     (
       generation: number,
@@ -101,8 +140,38 @@ export function useDailyConversation({
   );
 
   const applyEvent = useCallback(
-    (event: ConversationPublicEvent) => commit({ type: "event.apply", event }),
-    [commit],
+    (event: ConversationPublicEvent) => {
+      const before = stateRef.current.activeOutput;
+      if (event.type !== "output.delta") batchedDeltas.flush();
+      const next = commit({ type: "event.apply", event });
+      const output = next.activeOutput;
+
+      if (event.type === "output.started" && before !== output) {
+        installDisplayedOutput(output);
+      } else if (event.type === "output.delta" && output !== before) {
+        const current = displayedOutputRef.current;
+        if (
+          before?.lastOutputSeq === "0" &&
+          current !== null &&
+          current.messageId === output?.messageId &&
+          current.content.length === 0
+        ) {
+          appendDisplayedOutput(event.payload.delta);
+        } else {
+          batchedDeltas.push(event.payload.delta);
+        }
+      } else if (before && !output) {
+        updateDisplayedOutput(null);
+      }
+      return next;
+    },
+    [
+      appendDisplayedOutput,
+      batchedDeltas,
+      commit,
+      installDisplayedOutput,
+      updateDisplayedOutput,
+    ],
   );
 
   const recoverRange = useCallback(
@@ -150,7 +219,8 @@ export function useDailyConversation({
       controller: AbortController,
       snapshot: ConversationSnapshot,
     ) => {
-      commit({ type: "snapshot.install", snapshot });
+      const installed = commit({ type: "snapshot.install", snapshot });
+      installDisplayedOutput(installed.activeOutput);
       const future = await recoverRange(
         id,
         snapshot.lastEventSeq,
@@ -161,7 +231,7 @@ export function useDailyConversation({
       for (const item of future) applyEvent(item);
       return snapshot.lastEventSeq;
     },
-    [applyEvent, commit, recoverRange],
+    [applyEvent, commit, installDisplayedOutput, recoverRange],
   );
 
   const repairGap = useCallback(
@@ -211,6 +281,7 @@ export function useDailyConversation({
               } catch (repairError) {
                 if (!isResyncRequired(repairError) || resnapshotUsed) {
                   if (isResyncRequired(repairError)) {
+                    batchedDeltas.flush();
                     commit({ type: "recovery.stale" });
                     return;
                   }
@@ -248,18 +319,22 @@ export function useDailyConversation({
           return;
         }
         if (isResyncRequired(error)) {
+          batchedDeltas.flush();
           commit({ type: "recovery.stale" });
           return;
         }
         if (isDisconnected(error)) {
+          batchedDeltas.flush();
           commit({ type: "stream.disconnected" });
           return;
         }
+        batchedDeltas.flush();
         commit({ type: "stream.disconnected" });
       }
     },
     [
       applyEvent,
+      batchedDeltas,
       client,
       commit,
       installSnapshotHistory,
@@ -310,6 +385,7 @@ export function useDailyConversation({
             continue;
           }
           if (isResyncRequired(error)) {
+            batchedDeltas.flush();
             commit({ type: "recovery.stale" });
             return;
           }
@@ -318,7 +394,7 @@ export function useDailyConversation({
         }
       }
     },
-    [client, commit, consumeStream, installSnapshotHistory, isCurrent],
+    [batchedDeltas, client, commit, consumeStream, installSnapshotHistory, isCurrent],
   );
 
   const startInitialization = useCallback(
@@ -353,6 +429,7 @@ export function useDailyConversation({
     const initial = createInitialDailyConversationState(
       identityKey(identityGeneration, conversationId),
     );
+    installDisplayedOutput(null);
     stateRef.current = initial;
     void Promise.resolve().then(() => {
       if (
@@ -377,6 +454,7 @@ export function useDailyConversation({
     conversationId,
     identityGeneration,
     startInitialization,
+    installDisplayedOutput,
   ]);
 
   const performSubmit = useCallback(
@@ -422,11 +500,12 @@ export function useDailyConversation({
           epochRef.current += 1;
           epoch = epochRef.current;
           createKeyRef.current = null;
-          commit({
+          const installed = commit({
             type: "conversation.install",
             conversation: created.conversation,
             key: identityKey(generation, id),
           });
+          installDisplayedOutput(installed.activeOutput);
           pendingRouteConversationRef.current = id;
         }
 
@@ -472,7 +551,7 @@ export function useDailyConversation({
         });
       }
     },
-    [client, commit, isCurrent, startInitialization],
+    [client, commit, installDisplayedOutput, isCurrent, startInitialization],
   );
 
   const submit = useCallback(
@@ -502,6 +581,7 @@ export function useDailyConversation({
     mutationControllerRef.current = controller;
     const generation = generationRef.current;
     const epoch = epochRef.current;
+    batchedDeltas.flush();
     commit({ type: "cancel.requested" });
     try {
       await client.cancelTurn(id, activeTurn.turnId, controller.signal);
@@ -514,7 +594,7 @@ export function useDailyConversation({
       }
       commit({ type: "notice.set", notice: safeMessage(error, "停止失败") });
     }
-  }, [client, commit, isCurrent]);
+  }, [batchedDeltas, client, commit, isCurrent]);
 
   const reconnect = useCallback(() => {
     const id = activeConversationRef.current;
@@ -575,14 +655,43 @@ export function useDailyConversation({
     state.key === expectedKey
       ? state
       : createInitialDailyConversationState(expectedKey);
-  const messages = useMemo(
-    () =>
-      projectDailySessionMessages(
+  const messages = useMemo(() => {
+      const activeOutput = visibleState.activeOutput
+        ? {
+            ...visibleState.activeOutput,
+            content:
+              displayedOutput?.messageId === visibleState.activeOutput.messageId
+                ? displayedOutput.content
+                : visibleState.activeOutput.content,
+          }
+        : null;
+      return projectDailySessionMessages(
         selectDailyConversationMessages(visibleState),
         visibleState.pendingSend,
-      ),
-    [visibleState],
-  );
+        activeOutput,
+      ).map(message =>
+        visibleState.status === "disconnected" && message.streaming
+          ? { ...message, streaming: false, partialStatus: "disconnected" as const }
+          : message,
+      );
+    }, [displayedOutput, visibleState]);
+
+  const regenerate = useCallback(async () => {
+    if (!["completed", "failed", "stopped"].includes(stateRef.current.status)) return;
+    const canonical = selectDailyConversationMessages(stateRef.current);
+    const lastUser = canonical.findLast(message => message.role === "user");
+    if (
+      !lastUser ||
+      lastUser.content.kind !== "text" ||
+      typeof lastUser.content.text !== "string"
+    ) return;
+    await submit(
+      lastUser.content.text,
+      lastUser.capabilitySelection
+        ? snapshotCapabilitySelection(lastUser.capabilitySelection)
+        : createEmptySelection(),
+    );
+  }, [submit]);
 
   return {
     state: visibleState,
@@ -594,6 +703,7 @@ export function useDailyConversation({
     cancel,
     reconnect,
     loadEarlier,
+    regenerate,
   };
 }
 

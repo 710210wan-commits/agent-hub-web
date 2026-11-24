@@ -10,6 +10,12 @@ export type ChatRunState =
   | "disconnected"
   | "failed";
 
+export interface ChatToolStep {
+  id: string;
+  name: string;
+  status: "running" | "completed" | "failed";
+}
+
 export interface ChatRunView {
   status: ChatRunState;
   runId: string | null;
@@ -17,6 +23,9 @@ export interface ChatRunView {
   activity: string | null;
   notice: string | null;
   completedStepCount: number;
+  hasToolActivity?: boolean;
+  toolSteps?: ChatToolStep[];
+  selectedSkillNames?: string[];
 }
 
 export interface ChatState {

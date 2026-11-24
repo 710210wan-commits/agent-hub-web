@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ConversationMessage } from "@/features/chat/transports/daily-session-contract";
+import type { DailyActiveOutput } from "./daily-conversation-reducer";
 
 import {
   adaptDailySessionMessage,
@@ -246,5 +247,32 @@ describe("daily Session message adapter", () => {
     });
 
     expect(projected).toEqual([]);
+  });
+
+  it("projects active output after canonical messages and preserves its partial status", () => {
+    const output: DailyActiveOutput = {
+      messageId: "50000000-0000-4000-8000-000000000005",
+      turnId,
+      taskId: "30000000-0000-4000-8000-000000000003",
+      lastOutputSeq: "2",
+      content: "逐步增长的正文",
+      status: "interrupted",
+    };
+    const projected = projectDailySessionMessages(
+      [message("40000000-0000-4000-8000-000000000004", { role: "user", ordinal: "1" })],
+      null,
+      output,
+    );
+
+    expect(projected.map(item => item.id)).toEqual([
+      "40000000-0000-4000-8000-000000000004",
+      output.messageId,
+    ]);
+    expect(projected[1]).toMatchObject({
+      role: "assistant",
+      content: "逐步增长的正文",
+      partialStatus: "interrupted",
+      streaming: false,
+    });
   });
 });

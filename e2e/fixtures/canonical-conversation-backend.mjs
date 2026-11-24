@@ -293,6 +293,7 @@ async function handleConversation(request, response, url, userKey) {
       messages: item.messages,
       nextCursor: null,
       lastEventSeq: item.metadata.lastEventSeq,
+      partialOutput: null,
     });
     return;
   }

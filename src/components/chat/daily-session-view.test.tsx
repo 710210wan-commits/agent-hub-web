@@ -106,6 +106,17 @@ function publicEvent(
   } as ConversationPublicEvent;
 }
 
+function outputEvent(
+  eventSeq: string,
+  type: "output.started" | "output.delta" | "output.completed",
+  payload: Record<string, unknown>,
+): ConversationPublicEvent {
+  return {
+    ...publicEvent(eventSeq, type, payload),
+    messageId: "50000000-0000-4000-8000-000000000005",
+  } as ConversationPublicEvent;
+}
+
 function activeTurn(status: "queued" | "running" | "completed") {
   return {
     turnId: "20000000-0000-4000-8000-000000000002",
@@ -128,6 +139,7 @@ function snapshot(
     messages,
     nextCursor,
     lastEventSeq: "0",
+    partialOutput: null,
   };
 }
 
@@ -423,6 +435,95 @@ describe("DailySessionView", () => {
     });
     expect(await screen.findByText("最终正文")).toBeInTheDocument();
     expect(screen.queryByTestId("activity-line")).not.toBeInTheDocument();
+  });
+
+  it("replaces waiting activity with streamed text and an on-demand tool disclosure", async () => {
+    const selectedUser = {
+      ...message("40000000-0000-4000-8000-000000000004", "1", "请查询", "user"),
+      capabilitySelection: {
+        knowledgeBaseIds: [],
+        skillIds: ["built-in:aircraft-region-query"],
+        mcpServerIds: [],
+      },
+    };
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () => snapshot([selectedUser])),
+      streamEvents: vi.fn(async function* () {
+        yield publicEvent("1", "turn.started", { turn: activeTurn("running") });
+        yield publicEvent("2", "tool.started", {
+          stepId: "private-step",
+          toolCallId: "private-call",
+          toolName: "private-tool-name",
+        });
+        yield publicEvent("3", "tool.completed", {
+          stepId: "private-step",
+          toolCallId: "private-call",
+          toolName: "private-tool-name",
+          status: "completed",
+          turn: 1,
+        });
+        yield outputEvent("4", "output.started", { mode: "append" });
+        yield outputEvent("5", "output.delta", {
+          outputSeq: "1",
+          delta: "首批公开正文",
+        });
+        yield outputEvent("6", "output.completed", {
+          outputSeq: "1",
+          charCount: 6,
+          contentSha256: "a".repeat(64),
+        });
+        const assistant = message(
+          "50000000-0000-4000-8000-000000000005",
+          "2",
+          "首批公开正文",
+        );
+        yield {
+          ...publicEvent("7", "message.created", { message: assistant }),
+          messageId: assistant.messageId,
+        } as ConversationPublicEvent;
+        yield publicEvent("8", "turn.completed", {
+          turn: activeTurn("completed"),
+          messageId: assistant.messageId,
+        });
+      }),
+    });
+    renderView(client);
+
+    expect(await screen.findByText("首批公开正文")).toBeInTheDocument();
+    expect(screen.queryByText("正在处理…")).not.toBeInTheDocument();
+    expect(screen.queryByText("private-tool-name")).not.toBeInTheDocument();
+    const processButton = screen.getByRole("button", { name: "已完成 1 个工具步骤" });
+    expect(processButton).toBeInTheDocument();
+    fireEvent.click(processButton);
+    expect(screen.getByText("真实查询 Skill")).toBeInTheDocument();
+    expect(screen.getByText("private tool name")).toBeInTheDocument();
+    expect(screen.getByText("已完成")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "重新生成" })).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "已完成 1 个工具步骤" })).toBeInTheDocument();
+  });
+
+  it("regenerates through a new canonical turn using the last user input", async () => {
+    const submitTurn = vi.fn<DailySessionClient["submitTurn"]>(async () => accepted());
+    const client = makeClient({
+      loadSnapshot: vi.fn(async () =>
+        snapshot(
+          [
+            message("40000000-0000-4000-8000-000000000004", "1", "请重新分析", "user"),
+            message("50000000-0000-4000-8000-000000000005", "2", "原回答"),
+          ],
+          null,
+          activeTurn("completed"),
+        ),
+      ),
+      submitTurn,
+    });
+    renderView(client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "重新生成" }));
+    await waitFor(() => expect(submitTurn).toHaveBeenCalledOnce());
+    expect(submitTurn.mock.calls[0]?.[1]).toMatchObject({
+      input: { kind: "text", text: "请重新分析" },
+    });
   });
 
   it("uses canonical cancel for an active turn", async () => {

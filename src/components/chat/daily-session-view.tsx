@@ -19,6 +19,7 @@ import {
 import { useDailyConversation } from "@/features/chat/session/use-daily-conversation";
 import { useDailySessionAuthBridge } from "@/features/chat/session/use-daily-session-auth-bridge";
 import type { DailySessionClient } from "@/features/chat/transports/daily-session-client";
+import type { ConversationCapabilityCatalog } from "@/features/chat/capabilities/contracts";
 
 import { ActivityLine } from "./activity-line";
 import { ChatEmptyState } from "./chat-empty-state";
@@ -135,8 +136,14 @@ function AuthenticatedDailySessionView({
     setInput("");
     void controller.submit(content, selection);
   };
-  const run = presentRun(controller.state);
+  const run = presentRun(controller.state, capabilities.catalog);
   const showEmpty = controller.messages.length === 0 && !controller.state.conversation;
+  const showWaitingActivity = Boolean(
+    controller.state.activity && !controller.state.activeOutput?.content,
+  );
+  const canRegenerate = ["completed", "failed", "stopped"].includes(
+    controller.state.status,
+  );
 
   return (
     <section aria-label="决策持久会话" className="daily-session-view">
@@ -183,12 +190,15 @@ function AuthenticatedDailySessionView({
         </section>
       ) : (
         <MessageList
+          followOutput
           messages={controller.messages}
+          onRegenerate={canRegenerate ? () => void controller.regenerate() : undefined}
           onOpenScreeningResult={isHrConversation ? batchId => selectScreeningResult({ batchId }) : undefined}
+          run={run}
         />
       )}
 
-      {controller.state.activity ? <ActivityLine run={run} /> : null}
+      {showWaitingActivity ? <ActivityLine run={run} /> : null}
       {controller.state.notice ? (
         <div className="run-actions">
           <InlineError message={controller.state.notice} />
@@ -225,22 +235,66 @@ function AuthenticatedDailySessionView({
 function composerStatus(status: string): ChatRunState {
   if (status === "submitting") return "submitting";
   if (status === "working" || status === "cancelling") return "working";
+  if (status === "streaming") return "streaming";
   return "idle";
+}
+
+function presentedRunStatus(status: string): ChatRunState {
+  if (status === "completed") return "completed";
+  if (status === "stopped") return "stopped";
+  if (status === "failed") return "failed";
+  if (status === "disconnected" || status === "stale") return "disconnected";
+  return composerStatus(status);
 }
 
 function presentRun(input: {
   status: string;
   activity: string | null;
   completedStepCount: number;
+  hasToolActivity: boolean;
+  toolSteps: ChatRunView["toolSteps"];
   notice: string | null;
   activeTurn: { turnId: string } | null;
-}): ChatRunView {
+  activeOutput: { messageId: string } | null;
+  messagesById: Record<string, {
+    messageId: string;
+    role: "user" | "assistant";
+    turnId: string;
+    capabilitySelection?: {
+      skillIds: string[];
+    } | null;
+  }>;
+}, capabilityCatalog?: ConversationCapabilityCatalog): ChatRunView {
+  const canonicalAssistant = input.activeTurn
+    ? Object.values(input.messagesById).find(
+        message =>
+          message.role === "assistant" &&
+          message.turnId === input.activeTurn?.turnId,
+      )
+    : undefined;
+  const turnUser = input.activeTurn
+    ? Object.values(input.messagesById).find(
+        message => message.role === "user" && message.turnId === input.activeTurn?.turnId,
+      )
+    : undefined;
+  const skillIds = turnUser?.capabilitySelection?.skillIds ?? [];
+  const selectedSkillNames = skillIds.map(id => {
+    const skill = capabilityCatalog?.skills.items.find(item => item.id === id);
+    return skill?.title || skill?.name || id;
+  });
   return {
-    status: input.activity ? "working" : composerStatus(input.status),
+    status:
+      input.activity && !input.activeOutput
+        ? "working"
+        : presentedRunStatus(input.status),
     runId: input.activeTurn?.turnId ?? null,
-    assistantMessageId: null,
+    assistantMessageId:
+      input.activeOutput?.messageId ?? canonicalAssistant?.messageId ?? null,
     activity: input.activity,
     completedStepCount: input.completedStepCount,
+    hasToolActivity: input.hasToolActivity,
+    toolSteps: input.toolSteps,
+    selectedSkillNames,
     notice: input.notice,
   };
 }

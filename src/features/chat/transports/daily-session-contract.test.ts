@@ -82,6 +82,7 @@ describe("generated conversation.v1 contract", () => {
         messages: [message],
         nextCursor: "older",
         lastEventSeq: "2",
+        partialOutput: null,
       }),
     ).toMatchObject({ messages: [message], nextCursor: "older" });
     expect(
@@ -186,6 +187,46 @@ describe("generated conversation.v1 contract", () => {
         payload: { version: 1 },
       }),
     ).toMatchObject({ type: "conversation.created", eventSeq: "1" });
+  });
+
+  it("accepts strict public output events and snapshot partial output", () => {
+    const common = {
+      eventId: "50000000-0000-4000-8000-000000000005",
+      conversationId,
+      schemaVersion: 1,
+      occurredAt: "2026-11-09T01:03:04.000Z",
+      turnId,
+      taskId,
+      messageId,
+    } as const;
+    expect(ConversationPublicEventSchema.parse({
+      ...common,
+      eventSeq: "3",
+      type: "output.delta",
+      payload: { outputSeq: "1", delta: "正文" },
+    })).toMatchObject({ type: "output.delta", payload: { outputSeq: "1" } });
+    expect(ConversationPublicEventSchema.safeParse({
+      ...common,
+      eventSeq: "3",
+      type: "output.delta",
+      payload: { outputSeq: "1", delta: "正文", reasoning: "private" },
+    }).success).toBe(false);
+    expect(ConversationSnapshotSchema.parse({
+      conversation: metadata,
+      activeTurn: null,
+      messages: [],
+      nextCursor: null,
+      lastEventSeq: "3",
+      partialOutput: {
+        messageId,
+        turnId,
+        taskId,
+        lastOutputSeq: "1",
+        content: "半截正文",
+        status: "interrupted",
+        updatedAt: "2026-11-09T01:03:04.000Z",
+      },
+    }).partialOutput).toMatchObject({ content: "半截正文", status: "interrupted" });
   });
 });
 

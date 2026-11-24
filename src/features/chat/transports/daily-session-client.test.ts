@@ -151,6 +151,7 @@ describe("daily Session client", () => {
           messages: [message],
           nextCursor: "older /+? cursor",
           lastEventSeq: "2",
+          partialOutput: null,
         }),
       )
       .mockResolvedValueOnce(
