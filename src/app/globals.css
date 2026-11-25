@@ -3420,6 +3420,57 @@ a {
   min-width: 0;
 }
 
+.composer-tools.hr-composer-toolbar {
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.hr-composer-tools,
+.hr-composer-counts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hr-composer-tools {
+  flex: 1;
+  min-width: 0;
+}
+
+.hr-composer-tools .composer-tool {
+  display: inline-flex;
+  height: auto;
+  min-height: 29px;
+  max-width: 100%;
+  text-align: left;
+}
+
+.hr-composer-counts {
+  color: #66666c;
+  font-size: 11px;
+}
+
+.hr-composer-counts > span {
+  white-space: nowrap;
+}
+
+.hr-composer-submit {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 8px;
+}
+
+.hr-composer-submit .composer-send {
+  margin-inline-start: 0;
+}
+
+.hr-composer-submit .hr-button {
+  white-space: nowrap;
+}
+
 .hr-composer-jd {
   width: 100%;
   box-sizing: border-box;

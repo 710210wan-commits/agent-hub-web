@@ -1,7 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { createAssistantClient, type AssistantClient, type UploadRole } from "@/features/assistants/api/assistant-client";
 import type { HrConversationState } from "@/features/assistants/contracts/generated";
@@ -13,13 +12,14 @@ type UploadProgress = { requestId: string; draftId?: string; uploaded: number };
 type JobDescription = { text: string; file?: File };
 
 export function HrComposerActions({
-  client, uploadClient, conversationId, state, busy, refresh, onScreen, onAuthRequired,
+  client, uploadClient, conversationId, state, busy, refresh, onScreen, onAuthRequired, sendButton,
 }: {
   client: HrScreeningClient;
   uploadClient?: AssistantClient;
   conversationId: string;
   state: HrConversationState | null;
   busy: boolean;
+  sendButton: ReactNode;
   refresh(): void;
   onScreen(input: ScreeningAction): Promise<void>;
   onAuthRequired?(): void;
@@ -28,7 +28,6 @@ export function HrComposerActions({
   const active = useRef<AbortController | null>(null);
   const resumeUpload = useRef<UploadProgress | null>(null);
   const jdUpload = useRef<UploadProgress | null>(null);
-  const [menu, setMenu] = useState(false);
   const [showJd, setShowJd] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [jd, setJd] = useState<JobDescription>({ text: "" });
@@ -38,8 +37,9 @@ export function HrComposerActions({
   useEffect(() => () => active.current?.abort(), []);
 
   const disabled = busy || working || Boolean(state?.activeBatch);
-  const canScreen = Boolean(state?.activeJobDescription) &&
-    (files.length > 0 || Boolean(state?.candidates.some(candidate => candidate.status === "active")));
+  const activeResumes = state?.candidates.filter(candidate => candidate.status === "active").length ?? 0;
+  const currentJd = state?.activeJobDescription;
+  const canScreen = Boolean(currentJd) && (files.length > 0 || activeResumes > 0);
 
   async function perform(action: (signal: AbortSignal) => Promise<void>, message: string) {
     if (active.current || disabled) return;
@@ -91,7 +91,6 @@ export function HrComposerActions({
       refresh();
     }
     if (!current?.activeJobDescription) return;
-    setMenu(false);
     await onScreen({ scope, jobDescriptionVersionId: current.activeJobDescription.jobDescriptionVersionId });
   }, "上传或提交失败，请重试");
 
@@ -118,34 +117,6 @@ export function HrComposerActions({
 
   return (
     <div className="hr-composer-actions" aria-label="简历筛选操作">
-      <div className="hr-actions">
-        <button aria-expanded={menu} aria-label="简历筛选操作" className="composer-tool" disabled={disabled}
-          onClick={() => setMenu(value => !value)} type="button"><Plus aria-hidden="true" size={16} /></button>
-        {menu ? <>
-          <button className="composer-tool" disabled={disabled} onClick={() => fileInput.current?.click()} type="button">添加简历</button>
-          <button className="composer-tool" disabled={disabled} onClick={() => setShowJd(value => !value)} type="button">更改 JD</button>
-          {state?.activeJobDescription && state.candidates.some(candidate => candidate.status === "active") ? (
-            <button className="composer-tool" disabled={disabled || files.length > 0 || showJd}
-              onClick={() => action("rescreen_active")} type="button">用当前 JD 重筛已有简历</button>
-          ) : null}
-        </> : null}
-        <input ref={fileInput} hidden multiple disabled={disabled} aria-label="添加简历" accept=".pdf,.docx" type="file" onChange={event => {
-          const selected = Array.from(event.currentTarget.files ?? []);
-          event.currentTarget.value = "";
-          if (!selected.length) return;
-          if (files.length + selected.length > 20) {
-            setError("每次最多添加 20 份简历");
-            return;
-          }
-          resumeUpload.current = null;
-          setError(null);
-          setFiles(previous => [...previous, ...selected]);
-        }} />
-        {state?.activeJobDescription ? <small>JD 版本 {state.activeJobDescription.version}</small> : null}
-        {canScreen ? <button className="hr-button hr-button-primary" disabled={disabled || showJd}
-          onClick={() => action("incremental")} type="button">筛选新简历</button> : null}
-        {working ? <small role="status">正在提交…</small> : null}
-      </div>
       {showJd ? <div className="hr-panel hr-composer-jd">
         <label>新岗位描述<textarea value={jd.text} disabled={disabled || Boolean(jd.file)}
           onChange={event => { jdUpload.current = null; setJd({ text: event.target.value }); }} /></label>
@@ -169,6 +140,39 @@ export function HrComposerActions({
           onClick={() => { resumeUpload.current = null; setFiles(previous => previous.filter((_, i) => i !== index)); }}>移除</button>
       </span>)}
       {error ? <p role="alert">{error}</p> : null}
+      {working ? <small role="status">正在提交…</small> : null}
+      <div className="composer-tools hr-composer-toolbar">
+        <div className="hr-composer-tools">
+          <button className="composer-tool" disabled={disabled} onClick={() => fileInput.current?.click()} type="button">添加简历</button>
+          <input ref={fileInput} hidden multiple disabled={disabled} aria-label="添加简历" accept=".pdf,.docx" type="file" onChange={event => {
+            const selected = Array.from(event.currentTarget.files ?? []);
+            event.currentTarget.value = "";
+            if (!selected.length) return;
+            if (files.length + selected.length > 20) {
+              setError("每次最多添加 20 份简历");
+              return;
+            }
+            resumeUpload.current = null;
+            setError(null);
+            setFiles(previous => [...previous, ...selected]);
+          }} />
+          <button aria-expanded={showJd} className="composer-tool" disabled={disabled}
+            onClick={() => setShowJd(value => !value)} type="button">更改 JD</button>
+          <button className="composer-tool" disabled={disabled || !currentJd || activeResumes === 0 || files.length > 0 || showJd}
+            onClick={() => action("rescreen_active")} type="button">用当前 JD 重筛已有简历</button>
+          <small className="hr-composer-counts">
+            <span>{state ? `活跃简历 ${activeResumes} 份` : "活跃简历 —"}</span>
+            <span title={currentJd ? `JD 版本 ${currentJd.version}` : undefined}>
+              {state ? `JD ${currentJd ? 1 : 0} 份` : "JD —"}
+            </span>
+          </small>
+        </div>
+        <div className="hr-composer-submit">
+          <button className="hr-button hr-button-primary" disabled={disabled || showJd || !canScreen}
+            onClick={() => action("incremental")} type="button">筛选新简历</button>
+          {sendButton}
+        </div>
+      </div>
     </div>
   );
 }

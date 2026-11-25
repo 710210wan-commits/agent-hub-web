@@ -229,7 +229,8 @@ function AuthenticatedDailySessionView({
       ) : null}
 
       <Composer
-        accessory={hrConversationId ? <HrComposerActions key={hrConversationId} client={hrClient}
+        renderTools={hrConversationId ? sendButton => <HrComposerActions key={hrConversationId} client={hrClient}
+          sendButton={sendButton}
           conversationId={hrConversationId} state={hrState.state} refresh={hrState.refresh}
           onScreen={submitScreening} onAuthRequired={onAuthRequired}
           busy={["submitting", "working", "streaming", "cancelling"].includes(controller.state.status)
