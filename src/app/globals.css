@@ -3414,6 +3414,23 @@ a {
   overflow-wrap: anywhere;
 }
 
+.hr-composer-actions {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.hr-composer-jd {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hr-batch-heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .hr-panel h2, .hr-panel h3, .hr-panel h4 {
   font-weight: 650;
 }

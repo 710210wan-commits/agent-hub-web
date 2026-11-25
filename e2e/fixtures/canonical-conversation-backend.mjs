@@ -6,6 +6,7 @@ import {
   hrAssistant,
   resetHrFixture,
   startBatch,
+  summarize,
 } from "./hr-screening-backend.mjs";
 
 const host = "127.0.0.1";
@@ -390,13 +391,16 @@ async function submitTurn(item, body, response) {
     sendError(response, 503, "STORAGE_UNAVAILABLE");
     return;
   }
-  if (item.hr && body?.input?.text === "确认筛选标准并开始筛选") {
-    startBatch(item);
-    appendEvent(item, "tool.progress", hrProgress(item, "partial"), {
+  if (item.hr && (body?.input?.screening || body?.input?.text === "确认筛选标准并开始筛选")) {
+    startBatch(item, body.input.screening?.scope);
+    appendEvent(item, "tool.progress", hrProgress(item, item.hr.activeBatch ? "partial" : "completed"), {
       turnId,
       taskId,
     });
     advance(item, "complete", "筛选批次已启动，请查看结果");
+  } else if (item.hr && body?.input?.text === "汇总全部 18 人") {
+    const { counts } = summarize(item);
+    advance(item, "complete", `共筛选 ${counts.total} 人，推荐 ${counts.recommended} 人。`);
   } else if (item.hr && body?.input?.text === "继续未完成的简历筛选批次") {
     continueBatch(item);
     appendEvent(item, "tool.progress", hrProgress(item, "running"), {

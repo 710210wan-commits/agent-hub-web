@@ -1,5 +1,6 @@
 "use client";
 
+import type { PendingDailySend } from "./daily-conversation-reducer";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { snapshotCapabilitySelection, type CapabilitySelection } from "../capabilities/contracts";
 import { createEmptySelection } from "../reducer/chat-state";
@@ -41,7 +42,7 @@ export interface DailyConversationController {
   state: DailyConversationState;
   messages: DailySessionViewMessage[];
   conversationId?: string;
-  submit(content: string, selection?: CapabilitySelection): Promise<void>;
+  submit(content: string, selection?: CapabilitySelection, screening?: PendingDailySend["screening"]): Promise<void>;
   retrySubmit(): Promise<void>;
   cancel(): Promise<void>;
   reconnect(): void;
@@ -458,7 +459,8 @@ export function useDailyConversation({
   ]);
 
   const performSubmit = useCallback(
-    async (content: string, turnRequestId: string, capabilitySelection: CapabilitySelection) => {
+    async (content: string, turnRequestId: string, capabilitySelection: CapabilitySelection,
+      screening?: PendingDailySend["screening"]) => {
       mutationControllerRef.current?.abort();
       const controller = new AbortController();
       mutationControllerRef.current = controller;
@@ -472,6 +474,7 @@ export function useDailyConversation({
           clientRequestId: turnRequestId,
           content,
           capabilitySelection,
+          ...(screening ? { screening } : {}),
           status: "submitting",
           createdAt: Date.now(),
         },
@@ -513,7 +516,7 @@ export function useDailyConversation({
           id,
           {
             clientRequestId: turnRequestId,
-            input: { kind: "text", text: content },
+            input: { kind: "text", text: content, ...(screening ? { screening } : {}) },
             capabilitySelection,
           },
           controller.signal,
@@ -555,13 +558,13 @@ export function useDailyConversation({
   );
 
   const submit = useCallback(
-    async (content: string, selection: CapabilitySelection = createEmptySelection()) => {
+    async (content: string, selection: CapabilitySelection = createEmptySelection(), screening?: PendingDailySend["screening"]) => {
       const normalized = content.trim();
       if (!normalized) return;
       if (!activeConversationRef.current && !createKeyRef.current) {
         createKeyRef.current = idFactoryRef.current();
       }
-      await performSubmit(normalized, idFactoryRef.current(), snapshotCapabilitySelection(selection));
+      await performSubmit(normalized, idFactoryRef.current(), snapshotCapabilitySelection(selection), screening);
     },
     [performSubmit],
   );
@@ -569,7 +572,7 @@ export function useDailyConversation({
   const retrySubmit = useCallback(async () => {
     const pending = stateRef.current.pendingSend;
     if (!pending) return;
-    await performSubmit(pending.content, pending.clientRequestId, snapshotCapabilitySelection(pending.capabilitySelection));
+    await performSubmit(pending.content, pending.clientRequestId, snapshotCapabilitySelection(pending.capabilitySelection), pending.screening);
   }, [performSubmit]);
 
   const cancel = useCallback(async () => {

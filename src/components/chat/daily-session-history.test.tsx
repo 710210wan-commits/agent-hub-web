@@ -140,6 +140,36 @@ describe("DailySessionHistory", () => {
     expect(screen.getAllByRole("link", { name: /旧决策会话/ })).not.toHaveLength(0);
   });
 
+  it("keeps regular Recents after deleting the last resume-screening conversation", async () => {
+    const client = createClient();
+    vi.mocked(client.listConversations).mockResolvedValue({
+      conversations: [
+        conversation(SECOND_ID, { title: "后端工程师筛选", assistantId: "resume-screening", assistantVersion: 1 }),
+        conversation(FIRST_ID, { title: "保留的决策会话" }),
+      ],
+      nextCursor: null,
+    });
+    vi.mocked(client.deleteConversation).mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    try {
+      renderHistory(client);
+      fireEvent.click(await screen.findByRole("button", { name: "删除 后端工程师筛选" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("list", { name: "简历筛选助手会话" })).not.toBeInTheDocument();
+      });
+
+      const recents = screen.getByRole("list", { name: "最近会话" });
+      expect(within(recents).getAllByRole("link")).toHaveLength(1);
+      expect(within(recents).getByRole("link", { name: /保留的决策会话/ })).toHaveAttribute(
+        "href",
+        `/chat?mode=1&conversation=${FIRST_ID}`,
+      );
+      expect(client.deleteConversation).toHaveBeenCalledExactlyOnceWith(SECOND_ID, expect.any(AbortSignal));
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
   it("shows loading, an empty state, then paginated links with encoded ids", async () => {
     const client = createClient();
     const initial = deferred<{
@@ -207,7 +237,7 @@ describe("DailySessionHistory", () => {
     fireEvent.change(input, { target: { value: "本地新标题" } });
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
-    expect(await screen.findByText("服务端新标题")).toBeInTheDocument();
+    expect(await within(screen.getByRole("list", { name: "决策历史会话" })).findByText("服务端新标题")).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("已刷新最新内容");
     expect(screen.getByRole("alert")).not.toHaveTextContent("secret");
   });
@@ -241,15 +271,15 @@ describe("DailySessionHistory", () => {
       });
     renderHistory(client);
 
-    await screen.findByRole("link", { name: /边境态势分析/ });
+    const list = await screen.findByRole("list", { name: "决策历史会话" });
     fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "决策历史加载失败，请稍后重试",
     );
-    expect(screen.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
+    expect(within(list).getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
-    expect(await screen.findByRole("link", { name: /第二页/ })).toBeInTheDocument();
+    expect(await within(list).findByRole("link", { name: /第二页/ })).toBeInTheDocument();
   });
 
   it("invalidates the global identity when history pagination expires", async () => {
@@ -268,7 +298,7 @@ describe("DailySessionHistory", () => {
       );
     renderHistory(client);
 
-    await screen.findByRole("link", { name: /边境态势分析/ });
+    await screen.findByRole("button", { name: "删除 边境态势分析" });
     fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
 
     await waitFor(() =>
@@ -295,13 +325,14 @@ describe("DailySessionHistory", () => {
     try {
       renderHistory(client);
       const button = await screen.findByRole("button", { name: "删除 边境态势分析" });
+      const list = within(screen.getByRole("list", { name: "决策历史会话" }));
       fireEvent.click(button);
-      expect(screen.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
+      expect(list.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
       expect(client.deleteConversation).not.toHaveBeenCalled();
       confirm.mockReturnValue(true);
       fireEvent.click(button);
-      await waitFor(() => expect(screen.queryByRole("link", { name: /边境态势分析/ })).not.toBeInTheDocument());
-      expect(screen.getByRole("link", { name: /保留会话/ })).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryAllByRole("link", { name: /边境态势分析/ })).toHaveLength(0));
+      expect(list.getByRole("link", { name: /保留会话/ })).toBeInTheDocument();
       expect(client.deleteConversation).toHaveBeenCalledWith(FIRST_ID, expect.any(AbortSignal));
     } finally { confirm.mockRestore(); }
   });
@@ -315,7 +346,7 @@ describe("DailySessionHistory", () => {
       renderHistory(client);
       fireEvent.click(await screen.findByRole("button", { name: "删除 边境态势分析" }));
       expect(await screen.findByRole("alert")).toHaveTextContent("会话删除失败，请稍后重试");
-      expect(screen.getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
+      expect(within(screen.getByRole("list", { name: "决策历史会话" })).getByRole("link", { name: /边境态势分析/ })).toBeInTheDocument();
       expect(screen.queryByText("private upstream detail")).not.toBeInTheDocument();
     } finally { confirm.mockRestore(); }
   });

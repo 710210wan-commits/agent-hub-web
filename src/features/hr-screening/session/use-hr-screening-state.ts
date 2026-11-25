@@ -12,7 +12,7 @@ export function useHrScreeningState({
   onAuthRequired,
 }: {
   client: HrScreeningClient;
-  conversationId: string;
+  conversationId?: string;
   refreshToken: number;
   onAuthRequired?(): void;
 }) {
@@ -22,6 +22,7 @@ export function useHrScreeningState({
   const sequence = useRef(0);
 
   useEffect(() => {
+    if (!conversationId) return;
     const abort = new AbortController();
     const current = ++sequence.current;
     void client.getState(conversationId, abort.signal).then(next => {
@@ -48,5 +49,12 @@ export function useHrScreeningState({
   }, [client, conversationId, manualRefresh, onAuthRequired, refreshToken]);
 
   const refresh = useCallback(() => setManualRefresh(value => value + 1), []);
-  return { state, status, refresh };
+  const activeBatchId = state?.conversationId === conversationId ? state?.activeBatch?.batchId : undefined;
+  useEffect(() => {
+    if (!activeBatchId) return;
+    const timer = window.setInterval(refresh, 3000);
+    return () => window.clearInterval(timer);
+  }, [activeBatchId, refresh]);
+  return { state: state?.conversationId === conversationId ? state : null,
+    status: state && state.conversationId !== conversationId ? "loading" as const : status, refresh, manualRefresh };
 }

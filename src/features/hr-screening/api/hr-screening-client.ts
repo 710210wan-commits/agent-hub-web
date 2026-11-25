@@ -6,6 +6,8 @@ import {
   HrCriterionSchema,
   HrScreeningBatchItemSchema,
   HrScreeningBatchSchema,
+  HrScreeningSummarySchema,
+  type HrScreeningSummary,
   type HrConversationState,
   type HrCriterion,
   type HrScreeningBatch,
@@ -39,7 +41,10 @@ export function isHrScreeningClientError(error: unknown): error is HrScreeningCl
 
 export interface HrScreeningClient {
   getState(conversationId: string, signal?: AbortSignal): Promise<HrConversationState>;
-  attachResumes(conversationId: string, draftId: string, clientRequestId: string, signal?: AbortSignal): Promise<HrConversationState>;
+  getSummary(conversationId: string, input: { scope: HrScreeningSummary["scope"]; groupId?: string; offset: number; limit: number },
+    signal?: AbortSignal): Promise<HrScreeningSummary>;
+  attachResumes(conversationId: string, draftId: string, clientRequestId: string, signal?: AbortSignal,
+    options?: { deduplicate: boolean }): Promise<HrConversationState>;
   replaceJobDescription(
     conversationId: string,
     input: { kind: "text"; text: string; clientRequestId: string } | { kind: "file"; draftId: string; clientRequestId: string },
@@ -106,9 +111,15 @@ export function createHrScreeningClient(options: {
         { method: "GET" }, stateResponse, signal);
       return body.state;
     },
-    async attachResumes(conversationId, draftId, clientRequestId, signal) {
+    getSummary(conversationId, input, signal) {
+      const params = new URLSearchParams({ scope: input.scope, offset: String(input.offset), limit: String(input.limit) });
+      if (input.groupId) params.set("groupId", input.groupId);
+      return json(`/api/hr/conversations/${encodeURIComponent(conversationId)}/screening-summary?${params}`,
+        { method: "GET" }, HrScreeningSummarySchema, signal);
+    },
+    async attachResumes(conversationId, draftId, clientRequestId, signal, options) {
       const body = await json(`/api/hr/conversations/${encodeURIComponent(conversationId)}/attachments`,
-        post({ draftId, clientRequestId }, signal), stateResponse, signal);
+        post({ draftId, clientRequestId, ...options }, signal), stateResponse, signal);
       return body.state;
     },
     async replaceJobDescription(conversationId, input, signal) {

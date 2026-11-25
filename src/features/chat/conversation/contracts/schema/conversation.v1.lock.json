@@ -3,8 +3,8 @@
   "contractId": "conversation.v1",
   "operationCount": 19,
   "schemaVersion": "0.2.0",
-  "sha256": "e8b9954af2ccce0d41c821ca682dfd704fd3214b47175e2cbac1f6b4fa9808e4",
-  "sourceCommit": "59bb1ac63173daaebdcfbeb50f8c85b8ca507139",
+  "sha256": "b441a1f9504e1abed8896d72b6f9a28d10d200717bb7dd97ea910d1af0eef9e7",
+  "sourceCommit": "6a7024258452005b3d111cd259c437af8c3e4ed4",
   "sourcePath": "api/openapi/conversation.v1.json",
   "sourceRepository": "DSI"
 }

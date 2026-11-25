@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ArrowUp, Paperclip, Square } from "lucide-react";
 
 import type { ChatSelectionSnapshot } from "@/features/chat/contracts/chat";
@@ -25,6 +26,7 @@ export function Composer({
   capabilityMode,
   capabilityCatalog,
   capabilityNotice,
+  accessory,
 }: {
   input: string;
   mode: AppMode;
@@ -37,6 +39,7 @@ export function Composer({
   capabilityMode?: "selectable" | "preconfigured" | "unavailable" | "locked";
   capabilityCatalog?: ConversationCapabilityCatalog;
   capabilityNotice?: string;
+  accessory?: ReactNode;
 }) {
   const running = isRunning(status);
   const resolvedCapabilityMode =
@@ -62,6 +65,7 @@ export function Composer({
           rows={2}
           value={input}
         />
+        {accessory}
         <div className="composer-tools">
           {resolvedCapabilityMode !== "locked" ? (
             <button
