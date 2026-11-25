@@ -232,6 +232,7 @@ function AuthenticatedDailySessionView({
       ) : null}
 
       {hrConversationId ? <ScreeningSummary client={hrClient} conversationId={hrConversationId}
+        activeCandidateCount={hrState.state?.candidates.filter(candidate => candidate.status === "active").length ?? 0}
         open={summaryRequested && !resultSelection.batchId}
         onClose={() => setSummaryRequested(false)}
         refreshToken={`${controller.state.hrRefreshToken}:${hrState.manualRefresh}`}

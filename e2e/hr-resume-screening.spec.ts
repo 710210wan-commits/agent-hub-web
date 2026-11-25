@@ -32,6 +32,11 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await expect(page).toHaveURL(/assistant=resume-screening&conversation=/);
 
   await expect(page.getByRole("textbox", { name: "标准标题" })).toBeVisible();
+  await page.getByRole("button", { name: "查看累计结果" }).click();
+  const earlySummary = page.getByRole("dialog", { name: "累计筛选结果" });
+  await expect(earlySummary.getByText("当前版本暂无已筛结果 · 当前名单 20 人")).toBeVisible();
+  await expect(earlySummary.getByRole("button", { name: "下载简历 ZIP" })).toBeDisabled();
+  await page.keyboard.press("Escape");
   await page.getByRole("textbox", { name: "标准标题" }).fill("高级 TypeScript");
   await page.getByRole("button", { name: "保存标准" }).click();
   await expect(page.getByText("保存失败，请稍后重试")).toHaveCount(0);
@@ -109,19 +114,23 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await expect(recents.getByRole("link", { name: /Alice 历史会话/ })).toBeVisible();
 });
 
-test("adds only the 18th resume from the composer and keeps the cumulative 18 after reload", async ({ page }) => {
+test("pastes a JD, adds only the 18th resume, downloads results and restores history", async ({ page }) => {
   await page.goto("/assistants");
   await login(page);
   await page.getByRole("link", { name: /简历筛选助手/ }).click();
-  await page.getByLabel("上传岗位描述").setInputFiles({ name: "jd.pdf", mimeType: "application/pdf",
-    buffer: Buffer.from("%PDF-1.7\nSynthetic JD\n") });
+  const jdText = "合成岗位职责，使用 TypeScript（私有岗位文本）";
+  await page.getByRole("button", { name: "粘贴文本" }).click();
+  await page.getByRole("textbox", { name: "岗位描述文本" }).fill(jdText);
   await page.getByLabel("上传候选人简历").setInputFiles(Array.from({ length: 17 }, (_, index) => ({
     name: `resume-${index + 1}.pdf`, mimeType: "application/pdf",
     buffer: Buffer.from(`%PDF-1.7\nSynthetic resume ${index + 1}\n`),
   })));
-  await expect(page.getByText("已就绪 18/18")).toBeVisible();
+  await expect(page.getByText("已就绪 17/17")).toBeVisible();
+  const initialSetup = page.waitForRequest(req => req.method() === "POST" && req.url().includes("/api/assistants/resume-screening/conversations"));
   await page.getByRole("button", { name: "开始筛选", exact: true }).click();
-  await page.getByRole("button", { name: "确认并开始筛选" }).click();
+  expect((await initialSetup).postDataJSON().jobDescriptionText).toBe(jdText);
+  await expect(page.getByText("岗位描述 · 粘贴文本")).toBeVisible();
+  await expect(page.getByText(jdText, { exact: true })).toHaveCount(0);
   const composer = page.locator(".composer");
   const openSummary = composer.getByRole("button", { name: "查看累计结果" });
   const total = page.getByRole("dialog", { name: "累计筛选结果" });
@@ -169,6 +178,8 @@ test("adds only the 18th resume from the composer and keeps the cumulative 18 af
   await composer.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("共筛选 18 人，推荐 18 人。")).toBeVisible();
   await page.reload();
+  await expect(page.getByText("岗位描述 · 粘贴文本")).toBeVisible();
+  await expect(page.getByText(jdText, { exact: true })).toHaveCount(0);
   await openSummary.click();
   await expect(total).toContainText("共 18 人 · 已评分 18");
   await total.getByRole("button", { name: "查看 resume-1 的筛选结果", exact: true }).click();

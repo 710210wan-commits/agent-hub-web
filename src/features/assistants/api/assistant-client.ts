@@ -4,8 +4,10 @@ import { readPublicRuntimeConfig } from "@/config/env";
 import {
   AssistantDefinitionSchema,
   ConversationAttachmentSchema,
+  CreateAssistantConversationRequestSchema,
   type AssistantDefinition,
   type ConversationAttachment,
+  type CreateAssistantConversationRequest,
 } from "../contracts/generated";
 
 const errorSchema = z.looseObject({
@@ -44,7 +46,7 @@ export interface AssistantClient {
   removeDraftFile(draftId: string, fileId: string, signal?: AbortSignal): Promise<void>;
   createAssistantConversation(
     assistantId: string,
-    input: { draftId: string; clientRequestId: string; title?: string },
+    input: CreateAssistantConversationRequest,
     signal?: AbortSignal,
   ): Promise<{ conversationId: string; reused: boolean }>;
 }
@@ -147,7 +149,7 @@ export function createAssistantClient(options: {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(input),
+          body: JSON.stringify(CreateAssistantConversationRequestSchema.parse(input)),
         },
         createConversationResponseSchema,
         signal,

@@ -93,9 +93,10 @@ export function MessageList({
           {message.content ? (
             <MessageContent content={message.content} streaming={message.streaming} />
           ) : null}
-          {message.attachments?.length ? (
-            <div aria-label="已上传文件" className="message-capabilities">
-              {message.attachments.map((attachment) => (
+          {message.attachments?.length || message.jobDescriptionSource === "text" ? (
+            <div aria-label={message.jobDescriptionSource === "text" ? "筛选输入" : "已上传文件"} className="message-capabilities">
+              {message.jobDescriptionSource === "text" ? <span className="capability-history-chip">岗位描述 · 粘贴文本</span> : null}
+              {message.attachments?.map((attachment) => (
                 <span className="capability-history-chip" key={attachment.fileId}>
                   {attachment.role === "job_description" ? "职位描述" : "简历"} · {attachment.name}
                 </span>

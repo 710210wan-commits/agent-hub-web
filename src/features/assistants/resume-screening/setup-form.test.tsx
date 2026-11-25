@@ -1,7 +1,8 @@
+import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AuthProvider } from "@/providers/auth-provider";
+import { AuthProvider, useAuth } from "@/providers/auth-provider";
 
 import { AssistantClientError, type AssistantClient } from "../api/assistant-client";
 import { ResumeScreeningSetupForm } from "./setup-form";
@@ -64,6 +65,10 @@ const authClient = {
   logout: vi.fn(),
 };
 
+function AuthenticatedForm({ children }: { children: ReactNode }) {
+  return useAuth().status === "authenticated" ? children : null;
+}
+
 function renderForm(client: AssistantClient, onCreated = vi.fn(), onCancel = vi.fn()) {
   let index = 0;
   return {
@@ -71,13 +76,15 @@ function renderForm(client: AssistantClient, onCreated = vi.fn(), onCancel = vi.
     onCancel,
     ...render(
       <AuthProvider client={authClient}>
-        <ResumeScreeningSetupForm
-          assistant={assistant}
-          client={client}
-          createRequestId={() => ids[index++] ?? crypto.randomUUID()}
-          onCancel={onCancel}
-          onCreated={onCreated}
-        />
+        <AuthenticatedForm>
+          <ResumeScreeningSetupForm
+            assistant={assistant}
+            client={client}
+            createRequestId={() => ids[index++] ?? crypto.randomUUID()}
+            onCancel={onCancel}
+            onCreated={onCreated}
+          />
+        </AuthenticatedForm>
       </AuthProvider>,
     ),
   };
@@ -116,6 +123,37 @@ describe("ResumeScreeningSetupForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "开始筛选" }));
     await waitFor(() => expect(client.createAssistantConversation).toHaveBeenCalledOnce());
     expect(onCreated).toHaveBeenCalledWith(ids[1]);
+  });
+
+  it("screens from a pasted JD and locks the submitted text and files for a safe retry", async () => {
+    const submit = vi.fn()
+      .mockRejectedValueOnce(new Error("unknown result"))
+      .mockResolvedValue({ conversationId: ids[1], reused: true });
+    const client = makeClient({ createAssistantConversation: submit });
+    const { onCreated } = renderForm(client);
+    await waitFor(() => expect(screen.getByLabelText("上传候选人简历")).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "粘贴文本" }));
+    const jd = screen.getByRole("textbox", { name: "岗位描述文本" });
+    fireEvent.change(jd, { target: { value: "   " } });
+    fireEvent.change(screen.getByLabelText("上传候选人简历"), {
+      target: { files: [file("a.pdf", "application/pdf")] },
+    });
+    await screen.findByText("已就绪 1/1");
+    const start = screen.getByRole("button", { name: "开始筛选" });
+    expect(start).toBeDisabled();
+    fireEvent.change(jd, { target: { value: "  岗位职责\n使用 TypeScript  " } });
+    fireEvent.click(start);
+    await screen.findByText("结果未知，可安全重试");
+    expect(jd).toBeDisabled();
+    expect(screen.getByLabelText("上传候选人简历")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "移除 a.pdf" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "重试创建会话" }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(ids[1]));
+    expect(submit.mock.calls[0]?.[1]).toEqual({
+      draftId: ids[0], clientRequestId: expect.any(String), jobDescriptionText: "岗位职责\n使用 TypeScript",
+    });
+    expect(submit.mock.calls[1]?.[1]).toEqual(submit.mock.calls[0]?.[1]);
+    expect(client.uploadDraftFile).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an oversized batch before upload", async () => {

@@ -12,6 +12,7 @@ export interface ChatMessage {
   content: string;
   createdAt: number;
   selection?: ChatSelectionSnapshot;
+  jobDescriptionSource?: "text";
   attachments?: Array<{
     fileId: string;
     role: "job_description" | "resume";

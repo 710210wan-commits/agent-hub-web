@@ -584,8 +584,12 @@
               "type": "object"
             },
             "maxItems": 51,
-            "minItems": 2,
+            "minItems": 1,
             "type": "array"
+          },
+          "jobDescriptionSource": {
+            "const": "text",
+            "type": "string"
           },
           "kind": {
             "const": "assistant_setup",
@@ -4219,8 +4223,12 @@
                   "type": "object"
                 },
                 "maxItems": 51,
-                "minItems": 2,
+                "minItems": 1,
                 "type": "array"
+              },
+              "jobDescriptionSource": {
+                "const": "text",
+                "type": "string"
               },
               "kind": {
                 "const": "assistant_setup",
