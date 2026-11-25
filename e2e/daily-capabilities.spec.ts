@@ -51,7 +51,7 @@ test("catalog → selection → activity → final → history; edits only affec
   await page.reload();
   await expect(page.getByText("知识库 · kb-alice", { exact: true })).toBeVisible();
   await page.goto("/history?mode=1");
-  await page.getByRole("link", { name: /能力验收问题/ }).click();
+  await page.getByRole("list", { name: "决策历史会话" }).getByRole("link", { name: /能力验收问题/ }).click();
   await expect(page.getByText("能力验收最终正文")).toBeVisible();
   expect(await page.getByLabel("本轮能力").first().locator("input,button").count()).toBe(0);
 });
@@ -150,7 +150,7 @@ test("MCP IDs-only selection → activity → final → persisted history withou
   }, id);
   expect(exposed).not.toMatch(/RAW_MCP|PRIVATE_UPSTREAM|credentialRef|inputSchema|access_token|\bat fixture\b/);
   await page.goto("/history?mode=1");
-  await page.getByRole("link", { name: /MCP 只读验收/ }).click();
+  await page.getByRole("list", { name: "决策历史会话" }).getByRole("link", { name: /MCP 只读验收/ }).click();
   await expect(page.getByText("MCP 查询最终正文")).toBeVisible();
 });
 

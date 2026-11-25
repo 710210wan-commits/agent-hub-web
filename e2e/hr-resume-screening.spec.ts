@@ -100,6 +100,13 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await expect(candidates.getByText("已解析").first()).toBeVisible();
   await expect.poll(() => candidates.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await expect(page.getByText("PRIVATE_RESUME_BODY")).toHaveCount(0);
+
+  await page.goto("/history?mode=1");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "删除 合成岗位筛选" }).click();
+  await expect(page.getByRole("list", { name: "简历筛选助手会话" })).toHaveCount(0);
+  await expect(recents.getByRole("link", { name: /合成岗位筛选/ })).toHaveCount(0);
+  await expect(recents.getByRole("link", { name: /Alice 历史会话/ })).toBeVisible();
 });
 
 async function login(page: Page) {

@@ -25,7 +25,7 @@ test('real login → management BFF → MCP container → selected Daily Loop �
  const data=await page.evaluate(async conversation=>JSON.stringify(await Promise.all([`/agent-api/conversations/${conversation}/snapshot`,`/agent-api/conversations/${conversation}/events?afterSeq=0`].map(async p=>(await fetch(p)).json()))),conversation);
  expect(data).toContain(id);expect(data).not.toMatch(/credentialRef|inputSchema|access_token|test-only-identity|mcp_admin_token|mcp_runtime_token|\bat fixture\b/);
  await page.reload();await expect(page.getByText('已通过真实 MCP 容器获取东海模拟船舶数据。',{exact:true})).toBeVisible();
- await page.goto('/history?mode=1');await page.getByRole('link',{name:new RegExp(query)}).click();await expect(page.getByText('已通过真实 MCP 容器获取东海模拟船舶数据。',{exact:true})).toBeVisible();
+ await page.goto('/history?mode=1');await page.getByRole('list',{name:'决策历史会话'}).getByRole('link',{name:new RegExp(query)}).click();await expect(page.getByText('已通过真实 MCP 容器获取东海模拟船舶数据。',{exact:true})).toBeVisible();
  await page.goto('/chat?mode=1');await send(page,'中断验收');await page.getByRole('button',{name:'停止',exact:true}).click();await expect(page.getByText('生成已停止',{exact:true})).toBeVisible();
  compose('stop','mcp-api');try{
   await page.goto('/mcp?mode=1');await expect(page.getByRole('alert').filter({hasText:'MCP服务暂不可用'})).toBeVisible({timeout:25000});await expect(page.locator('.sidebar-user')).toContainText('alice');

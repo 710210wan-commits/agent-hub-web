@@ -144,27 +144,25 @@ function renderHistoryContent(input: {
         />
       ) : (
         <>
-        {store.conversations.some((conversation) => conversation.assistantId === "resume-screening") ? (
-          <section aria-labelledby="recent-conversations-title" className="daily-history-group">
-            <h2 id="recent-conversations-title">最近会话</h2>
-            <ul aria-label="最近会话" className="history-list">
-              {store.conversations.slice(0, 5).map((conversation) => (
-                <li key={`recent:${conversation.conversationId}`}>
-                  <Link className="history-item daily-history-recent-link" href={conversationHref(conversation)}>
-                    <Clock3 aria-hidden="true" size={16} />
-                    <span className="history-item-copy">
-                      <strong>{conversation.title || "未命名会话"}</strong>
-                      <span className="daily-history-recent-kind">
-                        {conversation.assistantId === "resume-screening" ? "简历筛选助手" : "通用助手"}
-                      </span>
+        <section aria-labelledby="recent-conversations-title" className="daily-history-group">
+          <h2 id="recent-conversations-title">最近会话</h2>
+          <ul aria-label="最近会话" className="history-list">
+            {store.conversations.slice(0, 5).map((conversation) => (
+              <li key={`recent:${conversation.conversationId}`}>
+                <Link className="history-item daily-history-recent-link" href={conversationHref(conversation)}>
+                  <Clock3 aria-hidden="true" size={16} />
+                  <span className="history-item-copy">
+                    <strong>{conversation.title || "未命名会话"}</strong>
+                    <span className="daily-history-recent-kind">
+                      {conversation.assistantId === "resume-screening" ? "简历筛选助手" : "通用助手"}
                     </span>
-                    <time dateTime={conversation.updatedAt}>{dateFormatter.format(new Date(conversation.updatedAt))}</time>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+                  </span>
+                  <time dateTime={conversation.updatedAt}>{dateFormatter.format(new Date(conversation.updatedAt))}</time>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
         {store.conversations.some((conversation) => conversation.assistantId === "resume-screening") ? (
           <section className="daily-history-group">
             <h2>简历筛选助手</h2>
