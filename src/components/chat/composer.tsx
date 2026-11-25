@@ -26,7 +26,7 @@ export function Composer({
   capabilityMode,
   capabilityCatalog,
   capabilityNotice,
-  accessory,
+  renderTools,
 }: {
   input: string;
   mode: AppMode;
@@ -39,7 +39,7 @@ export function Composer({
   capabilityMode?: "selectable" | "preconfigured" | "unavailable" | "locked";
   capabilityCatalog?: ConversationCapabilityCatalog;
   capabilityNotice?: string;
-  accessory?: ReactNode;
+  renderTools?: (sendButton: ReactNode) => ReactNode;
 }) {
   const running = isRunning(status);
   const resolvedCapabilityMode =
@@ -48,6 +48,17 @@ export function Composer({
   const sectionHint = (section?: { status: string; items: unknown[] }) => capabilitiesDisabled ? undefined
     : capabilityNotice ?? (!section ? "加载中…" : section.status === "disabled" ? "已禁用"
       : section.status !== "available" ? "暂不可用" : section.items.length === 0 ? "暂无可用项" : undefined);
+  const sendButton = (
+    <button
+      aria-label={running ? "停止" : "发送"}
+      className="composer-send"
+      disabled={!running && input.trim().length === 0}
+      onClick={running ? onStop : onSend}
+      type="button"
+    >
+      {running ? <Square aria-hidden="true" size={11} /> : <ArrowUp aria-hidden="true" size={16} />}
+    </button>
+  );
   return (
     <div className="composer-dock">
       <div className="composer">
@@ -65,74 +76,62 @@ export function Composer({
           rows={2}
           value={input}
         />
-        {accessory}
-        <div className="composer-tools">
-          {resolvedCapabilityMode !== "locked" ? (
-            <button
-              aria-label="附件（待接入）"
-              className="composer-tool"
-              disabled
-              title="待接入"
-              type="button"
-            >
-              <Paperclip aria-hidden="true" size={14} />
-              附件
-            </button>
-          ) : null}
-          {resolvedCapabilityMode !== "locked" ? (
-            <>
-          <CapabilitySelector
-            disabled={capabilitiesDisabled || capabilityCatalog?.knowledgeBases.status !== "available" || !capabilityCatalog.knowledgeBases.items.length}
-            statusText={sectionHint(capabilityCatalog?.knowledgeBases)}
-            label="知识库"
-            onChange={(knowledgeBaseIds) =>
-              onSelectionChange({ ...selection, knowledgeBaseIds })
-            }
-            options={capabilityCatalog?.knowledgeBases.items.map(item => ({ id: item.id, label: item.name })) ?? []}
-            selectedIds={selection.knowledgeBaseIds}
-          />
-          <CapabilitySelector
-            disabled={capabilitiesDisabled || capabilityCatalog?.skills.status !== "available" || !capabilityCatalog.skills.items.length}
-            statusText={sectionHint(capabilityCatalog?.skills)}
-            label="Skill"
-            onChange={(skillIds) => onSelectionChange({ ...selection, skillIds })}
-            options={capabilityCatalog?.skills.items.map(item => ({ id: item.id, label: item.title })) ?? []}
-            selectedIds={selection.skillIds}
-          />
-          <CapabilitySelector
-            disabled={capabilitiesDisabled || capabilityCatalog?.mcpServers.status !== "available" || !capabilityCatalog.mcpServers.items.length}
-            statusText={sectionHint(capabilityCatalog?.mcpServers)}
-            label="MCP"
-            onChange={(mcpServerIds) => onSelectionChange({ ...selection, mcpServerIds })}
-            options={capabilityCatalog?.mcpServers.items.map(item => ({ id: item.id, label: item.name })) ?? []}
-            selectedIds={selection.mcpServerIds}
+        {renderTools ? renderTools(sendButton) : (
+          <div className="composer-tools">
+            {resolvedCapabilityMode !== "locked" ? (
+              <button
+                aria-label="附件（待接入）"
+                className="composer-tool"
+                disabled
+                title="待接入"
+                type="button"
+              >
+                <Paperclip aria-hidden="true" size={14} />
+                附件
+              </button>
+            ) : null}
+            {resolvedCapabilityMode !== "locked" ? (
+              <>
+            <CapabilitySelector
+              disabled={capabilitiesDisabled || capabilityCatalog?.knowledgeBases.status !== "available" || !capabilityCatalog.knowledgeBases.items.length}
+              statusText={sectionHint(capabilityCatalog?.knowledgeBases)}
+              label="知识库"
+              onChange={(knowledgeBaseIds) =>
+                onSelectionChange({ ...selection, knowledgeBaseIds })
+              }
+              options={capabilityCatalog?.knowledgeBases.items.map(item => ({ id: item.id, label: item.name })) ?? []}
+              selectedIds={selection.knowledgeBaseIds}
             />
-            </>
-          ) : null}
-          {resolvedCapabilityMode === "locked" ? (
-            <span className="composer-capability-note">
-              简历筛选助手使用固定筛选能力
-            </span>
-          ) : null}
-          {resolvedCapabilityMode === "preconfigured" ? (
-            <span className="composer-capability-note">
-              工作智能体已预配置知识库、Skill 与 MCP
-            </span>
-          ) : resolvedCapabilityMode === "unavailable" ? (
-            <span className="composer-capability-note">
-              当前持久会话暂未支持能力组合
-            </span>
-          ) : null}
-          <button
-            aria-label={running ? "停止" : "发送"}
-            className="composer-send"
-            disabled={!running && input.trim().length === 0}
-            onClick={running ? onStop : onSend}
-            type="button"
-          >
-            {running ? <Square aria-hidden="true" size={11} /> : <ArrowUp aria-hidden="true" size={16} />}
-          </button>
-        </div>
+            <CapabilitySelector
+              disabled={capabilitiesDisabled || capabilityCatalog?.skills.status !== "available" || !capabilityCatalog.skills.items.length}
+              statusText={sectionHint(capabilityCatalog?.skills)}
+              label="Skill"
+              onChange={(skillIds) => onSelectionChange({ ...selection, skillIds })}
+              options={capabilityCatalog?.skills.items.map(item => ({ id: item.id, label: item.title })) ?? []}
+              selectedIds={selection.skillIds}
+            />
+            <CapabilitySelector
+              disabled={capabilitiesDisabled || capabilityCatalog?.mcpServers.status !== "available" || !capabilityCatalog.mcpServers.items.length}
+              statusText={sectionHint(capabilityCatalog?.mcpServers)}
+              label="MCP"
+              onChange={(mcpServerIds) => onSelectionChange({ ...selection, mcpServerIds })}
+              options={capabilityCatalog?.mcpServers.items.map(item => ({ id: item.id, label: item.name })) ?? []}
+              selectedIds={selection.mcpServerIds}
+              />
+              </>
+            ) : null}
+            {resolvedCapabilityMode === "preconfigured" ? (
+              <span className="composer-capability-note">
+                工作智能体已预配置知识库、Skill 与 MCP
+              </span>
+            ) : resolvedCapabilityMode === "unavailable" ? (
+              <span className="composer-capability-note">
+                当前持久会话暂未支持能力组合
+              </span>
+            ) : null}
+            {sendButton}
+          </div>
+        )}
       </div>
     </div>
   );

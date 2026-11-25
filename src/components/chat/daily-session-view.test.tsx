@@ -246,8 +246,13 @@ describe("DailySessionView", () => {
       },
       activeBatch: null,
       latestCompletedBatch: null,
-      candidates: [{ candidateId: "40000000-0000-4000-8000-000000000004", displayName: "合成候选人",
-        status: "active", parseStatus: "parsed", errorCode: null, retiredAt: null, createdAt: "2026-11-19T00:00:00.000Z" }],
+      candidates: [
+        { candidateId: "40000000-0000-4000-8000-000000000004", displayName: "合成候选人",
+          status: "active", parseStatus: "parsed", errorCode: null, retiredAt: null, createdAt: "2026-11-19T00:00:00.000Z" },
+        { candidateId: "40000000-0000-4000-8000-000000000005", displayName: "已移出候选人",
+          status: "retired", parseStatus: "parsed", errorCode: null, retiredAt: "2026-11-20T00:00:00.000Z",
+          createdAt: "2026-11-19T00:00:00.000Z" },
+      ],
     };
     const hrClient = {
       getState: vi.fn().mockResolvedValue(hrState),
@@ -256,11 +261,18 @@ describe("DailySessionView", () => {
     } as unknown as HrScreeningClient;
     renderView(client, undefined, makeAuthClient(), conversationId, undefined, hrClient);
 
-    expect(await screen.findByRole("button", { name: "筛选新简历" })).toBeInTheDocument();
+    const screenNew = await screen.findByRole("button", { name: "筛选新简历" });
+    expect(await screen.findByText("活跃简历 1 份")).toBeVisible();
+    expect(screen.getByText("JD 1 份")).toBeVisible();
+    expect(screenNew.nextElementSibling).toBe(screen.getByRole("button", { name: "发送" }));
+    expect(screen.getByRole("button", { name: "添加简历" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "更改 JD" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "用当前 JD 重筛已有简历" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "简历筛选操作" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^知识库/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Skill/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^MCP/ })).not.toBeInTheDocument();
-    expect(screen.getByText("简历筛选助手使用固定筛选能力")).toBeInTheDocument();
+    expect(screen.queryByText("简历筛选助手使用固定筛选能力")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "筛选新简历" }));
     await waitFor(() => expect(client.submitTurn).toHaveBeenCalledWith(conversationId, expect.objectContaining({
       input: { kind: "text", text: "筛选新简历",

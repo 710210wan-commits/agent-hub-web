@@ -24,9 +24,8 @@ it("uploads from the composer and retries a lost attach receipt without re-uploa
   render(<HrComposerActions
     client={{ attachResumes } as unknown as HrScreeningClient}
     uploadClient={{ createUploadDraft, uploadDraftFile } as unknown as AssistantClient}
-    state={state} busy={false} conversationId={conversationId} refresh={vi.fn()} onScreen={onScreen}
+    state={state} busy={false} sendButton={null} conversationId={conversationId} refresh={vi.fn()} onScreen={onScreen}
   />);
-  fireEvent.click(screen.getByRole("button", { name: "简历筛选操作" }));
   fireEvent.change(screen.getByLabelText("添加简历"), {
     target: { files: [new File(["synthetic"], "候选人.pdf", { type: "application/pdf" })] },
   });
@@ -44,8 +43,7 @@ it("saves a new JD from the composer without silently starting a rescreen", asyn
   const replaceJobDescription = vi.fn().mockResolvedValue(state);
   const onScreen = vi.fn();
   render(<HrComposerActions client={{ replaceJobDescription } as unknown as HrScreeningClient}
-    state={state} busy={false} conversationId={conversationId} refresh={vi.fn()} onScreen={onScreen} />);
-  fireEvent.click(screen.getByRole("button", { name: "简历筛选操作" }));
+    state={state} busy={false} sendButton={null} conversationId={conversationId} refresh={vi.fn()} onScreen={onScreen} />);
   fireEvent.click(screen.getByRole("button", { name: "更改 JD" }));
   fireEvent.change(screen.getByRole("textbox", { name: "新岗位描述" }), { target: { value: "合成 JD" } });
   fireEvent.click(screen.getByRole("button", { name: "保存岗位描述" }));
@@ -60,8 +58,7 @@ it("uses the same file and draft when retrying replacement of a JD", async () =>
   const uploadDraftFile = vi.fn().mockResolvedValue({});
   render(<HrComposerActions client={{ replaceJobDescription } as unknown as HrScreeningClient}
     uploadClient={{ createUploadDraft, uploadDraftFile } as unknown as AssistantClient}
-    state={state} busy={false} conversationId={conversationId} refresh={vi.fn()} onScreen={vi.fn()} />);
-  fireEvent.click(screen.getByRole("button", { name: "简历筛选操作" }));
+    state={state} busy={false} sendButton={null} conversationId={conversationId} refresh={vi.fn()} onScreen={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: "更改 JD" }));
   const file = new File(["synthetic JD"], "jd.pdf", { type: "application/pdf" });
   const input = screen.getByLabelText("上传新岗位描述");
@@ -74,4 +71,16 @@ it("uses the same file and draft when retrying replacement of a JD", async () =>
   expect(replaceJobDescription.mock.calls[0][1]).toEqual(replaceJobDescription.mock.calls[1][1]);
   expect(replaceJobDescription.mock.calls[0][1]).toMatchObject({ kind: "file", draftId: "jd-draft" });
   expect(uploadDraftFile).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the screening button in place while the roster or JD is empty", () => {
+  const client = {} as HrScreeningClient;
+  const onScreen = vi.fn();
+  render(<HrComposerActions client={client} state={{ ...state, activeJobDescription: null }}
+    busy={false} sendButton={null} conversationId={conversationId} refresh={vi.fn()} onScreen={onScreen} />);
+  expect(screen.getByText("活跃简历 0 份")).toBeVisible();
+  expect(screen.getByText("JD 0 份")).toBeVisible();
+  const screenNew = screen.getByRole("button", { name: "筛选新简历" });
+  expect(screenNew).toBeVisible();
+  expect(screenNew).toBeDisabled();
 });

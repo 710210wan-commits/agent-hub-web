@@ -125,13 +125,24 @@ test("adds only the 18th resume from the composer and keeps the cumulative 18 af
   const total = page.getByRole("region", { name: "累计筛选结果" });
   await expect(total).toContainText("共 17 人");
   const composer = page.locator(".composer");
-  await composer.getByRole("button", { name: "简历筛选操作" }).click();
+  const addResumes = composer.getByRole("button", { name: "添加简历", exact: true });
+  const screenNew = composer.getByRole("button", { name: "筛选新简历" });
+  const send = composer.getByRole("button", { name: "发送" });
+  await expect(addResumes).toBeVisible();
+  await expect(composer.getByRole("button", { name: "更改 JD", exact: true })).toBeVisible();
+  await expect(composer.getByText("活跃简历 17 份")).toBeVisible();
+  await expect(composer.getByText("JD 1 份")).toBeVisible();
+  const [addBounds, screenBounds, sendBounds] = await Promise.all([addResumes.boundingBox(), screenNew.boundingBox(), send.boundingBox()]);
+  expect(addBounds!.x).toBeLessThan(screenBounds!.x);
+  expect(sendBounds!.x - (screenBounds!.x + screenBounds!.width)).toBeGreaterThanOrEqual(0);
+  expect(sendBounds!.x - (screenBounds!.x + screenBounds!.width)).toBeLessThanOrEqual(12);
   await composer.getByLabel("添加简历").setInputFiles({ name: "resume-18.pdf", mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.7\nSynthetic resume 18\n") });
   await expect(composer.getByText("resume-18.pdf")).toBeVisible();
   await composer.getByRole("button", { name: "筛选新简历" }).click();
   await expect(page.getByRole("region", { name: "筛选结果摘要" })).toContainText("共 1 人 · 完成 1");
   await expect(total).toContainText("共 18 人 · 已评分 18");
+  await expect(composer.getByText("活跃简历 18 份")).toBeVisible();
   await expect(total).toContainText("推荐 18");
   await composer.getByRole("textbox", { name: "消息" }).fill("汇总全部 18 人");
   await composer.getByRole("button", { name: "发送" }).click();
