@@ -95,6 +95,7 @@ export function HrScreeningView({
   if (status === "error") return <p role="alert">筛选资料加载失败，请稍后重试</p>;
   if (!state) return null;
 
+  const currentBatch = state.activeBatch ?? state.latestCompletedBatch;
   const openResult = (batchId: string, candidateId?: string) => {
     if (onSelectionChange) onSelectionChange({ batchId, candidateId });
     else setInternalSelection({ batchId, candidateId });
@@ -185,9 +186,10 @@ export function HrScreeningView({
 
       {sharedState ? <ScreeningSummary client={client} conversationId={conversationId}
         refreshToken={String(refreshToken) + ":" + String(manualRefresh)} onAuthRequired={onAuthRequired} onOpen={openResult} /> : null}
-      {state.activeBatch || state.latestCompletedBatch ? <h2 className="hr-batch-heading">本轮筛选</h2> : null}
-      {state.activeBatch ? <ScreeningResultCard batch={state.activeBatch} onOpen={openResult} /> : null}
-      {state.latestCompletedBatch ? <ScreeningResultCard batch={state.latestCompletedBatch} onOpen={openResult} /> : null}
+      {currentBatch ? <>
+        <h2 className="hr-batch-heading">本轮筛选</h2>
+        <ScreeningResultCard batch={currentBatch} onOpen={openResult} />
+      </> : null}
       {selection.batchId || invalidResult ? (
         <ScreeningResultDrawer
           candidates={state.candidates}

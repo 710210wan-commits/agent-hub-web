@@ -49,6 +49,12 @@ export function useHrScreeningState({
   }, [client, conversationId, manualRefresh, onAuthRequired, refreshToken]);
 
   const refresh = useCallback(() => setManualRefresh(value => value + 1), []);
+  const activeBatchId = state?.conversationId === conversationId ? state?.activeBatch?.batchId : undefined;
+  useEffect(() => {
+    if (!activeBatchId) return;
+    const timer = window.setInterval(refresh, 3000);
+    return () => window.clearInterval(timer);
+  }, [activeBatchId, refresh]);
   return { state: state?.conversationId === conversationId ? state : null,
     status: state && state.conversationId !== conversationId ? "loading" as const : status, refresh, manualRefresh };
 }

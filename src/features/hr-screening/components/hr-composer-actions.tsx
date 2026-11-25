@@ -129,7 +129,7 @@ export function HrComposerActions({
               onClick={() => action("rescreen_active")} type="button">用当前 JD 重筛已有简历</button>
           ) : null}
         </> : null}
-        <input ref={fileInput} hidden multiple aria-label="添加简历" accept=".pdf,.docx" type="file" onChange={event => {
+        <input ref={fileInput} hidden multiple disabled={disabled} aria-label="添加简历" accept=".pdf,.docx" type="file" onChange={event => {
           const selected = Array.from(event.currentTarget.files ?? []);
           event.currentTarget.value = "";
           if (!selected.length) return;
@@ -152,10 +152,14 @@ export function HrComposerActions({
         <label>上传新岗位描述<input accept=".pdf,.docx" type="file" disabled={disabled} onChange={event => {
           jdUpload.current = null;
           const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = "";
           setJd(previous => ({ ...previous, file }));
         }} /></label>
-        {jd.file ? <button className="hr-button" type="button" disabled={disabled}
-          onClick={() => { jdUpload.current = null; setJd(previous => ({ text: previous.text })); }}>移除 JD 文件</button> : null}
+        {jd.file ? <span className="hr-file-row">
+          <span>{jd.file.name}</span>
+          <button className="hr-button" type="button" disabled={disabled}
+            onClick={() => { jdUpload.current = null; setJd(previous => ({ text: previous.text })); }}>移除 JD 文件</button>
+        </span> : null}
         <button className="hr-button" type="button" disabled={disabled || (!jd.file && !jd.text.trim())}
           onClick={saveJd}>保存岗位描述</button>
       </div> : null}
