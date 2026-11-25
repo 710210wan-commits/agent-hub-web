@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 
 const FIXTURE_ORIGIN = "http://127.0.0.1:3203";
@@ -38,8 +39,30 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await page.getByRole("button", { name: "确认并开始筛选" }).click();
 
   await expect(page.getByText("部分完成")).toBeVisible();
+  const messageResult = page.getByRole("button", { name: "查看筛选结果", exact: true }).first();
+  await messageResult.click();
+  const drawer = page.getByRole("dialog", { name: "筛选结果" });
+  const closeResult = drawer.getByRole("button", { name: "关闭结果" });
+  await expect(closeResult).toBeInViewport();
+  await expect(closeResult).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(drawer).toHaveCount(0);
+  await expect(messageResult).toBeFocused();
+
   await page.getByRole("button", { name: "查看完整结果" }).click();
   await expect(page.getByText("失败 1", { exact: true })).toBeVisible();
+  const results = drawer.getByRole("navigation", { name: "候选人结果列表" });
+  const recommended = results.getByRole("button", { name: "candidate-02 推荐 100 分" });
+  const failed = results.getByRole("button", { name: "candidate-20 评估失败" });
+  await expect(recommended).toBeVisible();
+  await expect(failed).toBeVisible();
+  const tierFilter = drawer.getByRole("button", { name: "推荐 19 人" });
+  const recommendedBadge = recommended.getByText("推荐", { exact: true });
+  await expect(recommendedBadge).toHaveCSS("background-color", "rgb(234, 247, 239)");
+  await tierFilter.click();
+  await expect(results.getByRole("button")).toHaveCount(19);
+  await drawer.getByRole("button", { name: "全部候选人" }).click();
+  await expect(results.getByRole("button")).toHaveCount(20);
   await page.getByRole("button", { name: "取消筛选批次" }).click();
   await page.getByRole("button", { name: "继续未完成筛选" }).click();
   await page.getByRole("button", { name: "candidate-20" }).click();
@@ -51,6 +74,11 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await page.getByRole("button", { name: "导出 CSV" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.csv$/);
+  const csv = await readFile(await download.path());
+  expect(csv.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+  expect(new TextDecoder("utf-8", { fatal: true }).decode(csv)).toBe(
+    "candidateId,advisoryTier,decision,evidenceExcerpts\r\ncandidate,recommended,meets,合成项目证据\r\n",
+  );
   await page.getByRole("button", { name: "关闭结果" }).click();
   await expect(page.getByText("PRIVATE_RESUME_BODY")).toHaveCount(0);
 

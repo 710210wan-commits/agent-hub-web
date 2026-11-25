@@ -276,7 +276,7 @@ async function handleHr(input) {
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "no-store",
     });
-    response.end("candidateId,advisoryTier,decision,evidenceExcerpts\ncandidate,recommended,meets,synthetic evidence\n");
+    response.end("candidateId,advisoryTier,decision,evidenceExcerpts\r\ncandidate,recommended,meets,合成项目证据\r\n");
     return;
   }
   if (action === "cancel" && request.method === "POST") {

@@ -1,11 +1,24 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { AssistantClient } from "@/features/assistants/api/assistant-client";
 import type { HrScreeningClient } from "../api/hr-screening-client";
 import type { HrScreeningBatch, HrScreeningBatchItem } from "@/features/assistants/contracts/generated";
 import { HrScreeningView } from "./hr-screening-view";
 
+const needsDialogShim = typeof HTMLDialogElement.prototype.showModal !== "function";
+beforeAll(() => {
+  if (!needsDialogShim) return;
+  Object.defineProperties(HTMLDialogElement.prototype, {
+    showModal: { configurable: true, value(this: HTMLDialogElement) { this.open = true; } },
+    close: { configurable: true, value(this: HTMLDialogElement) { this.open = false; } },
+  });
+});
+afterAll(() => {
+  if (!needsDialogShim) return;
+  Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+});
 const conversationId = "10000000-0000-4000-8000-000000000001";
 const batchId = "20000000-0000-4000-8000-000000000002";
 const candidateId = "30000000-0000-4000-8000-000000000003";
@@ -251,6 +264,72 @@ describe("HrScreeningView", () => {
     await waitFor(() => expect(api.exportBatchCsv).toHaveBeenCalledWith(batchId));
     expect(anchorClick).toHaveBeenCalled();
     anchorClick.mockRestore();
+  });
+
+  it("counts completed candidates by advisory tier and keeps evaluation failures separate", async () => {
+    const partialBatch = { ...batch("partial"), totalCount: 5, completedCount: 4, failedCount: 1 };
+    const tiers = ["recommended", "recommended", "manual_review", "not_matched", null] as const;
+    const items = tiers.map((tier, index) => ({
+      ...item(tier ? "completed" : "failed"),
+      itemId: `${itemId.slice(0, -1)}${index}`,
+      candidateId: `${candidateId.slice(0, -1)}${index}`,
+      advisoryTier: tier,
+    }));
+    const api = client({
+      getState: vi.fn().mockResolvedValue(state({ activeBatch: partialBatch })),
+      getBatch: vi.fn().mockResolvedValue({ batch: partialBatch, items }),
+    });
+    render(<HrScreeningView client={api} conversationId={conversationId} onCanonicalAction={vi.fn()} refreshToken={0} />);
+    fireEvent.click(await screen.findByRole("button", { name: "查看完整结果" }));
+
+    const summary = await screen.findByRole("list", { name: "筛选分档统计" });
+    const counts = within(summary).getAllByRole("listitem");
+    expect(counts).toHaveLength(3);
+    expect(counts[0]).toHaveTextContent(/推荐\s*2 人/);
+    expect(counts[1]).toHaveTextContent(/待人工复核\s*1 人/);
+    expect(counts[2]).toHaveTextContent(/暂不匹配\s*1 人/);
+    expect(within(screen.getByRole("dialog", { name: "筛选结果" })).getByText("共 5 人 · 完成 4 · 失败 1")).toBeVisible();
+  });
+
+  it("shows evidence-based scores, sorts within a tier and filters by tier", async () => {
+    const partialBatch = { ...batch("partial"), totalCount: 4, completedCount: 3, failedCount: 1 };
+    const names = ["候选人甲", "候选人乙", "候选人丙", "候选人丁"];
+    const candidates = names.map((displayName, index) => ({
+      ...state().candidates[0], displayName, candidateId: `${candidateId.slice(0, -1)}${index}`,
+    }));
+    const tiers = ["recommended", "recommended", "manual_review", null] as const;
+    const evidence = item("completed").assessments[0];
+    const items = candidates.map((candidate, index) => ({
+      ...item(tiers[index] ? "completed" : "failed"),
+      itemId: `${itemId.slice(0, -1)}${index}`,
+      candidateId: candidate.candidateId,
+      advisoryTier: tiers[index],
+      assessments: tiers[index] ? Array.from({ length: 3 }, (_, criterionIndex) => ({
+        ...evidence,
+        criterionId: `${criterionId.slice(0, -1)}${criterionIndex}`,
+        ...(criterionIndex >= [2, 3, 1][index] ? { decision: "insufficient_evidence" as const, evidence: [] } : {}),
+      })) : [],
+    }));
+    const api = client({
+      getState: vi.fn().mockResolvedValue(state({ activeBatch: partialBatch, candidates })),
+      getBatch: vi.fn().mockResolvedValue({ batch: partialBatch, items }),
+    });
+    render(<HrScreeningView client={api} conversationId={conversationId} onCanonicalAction={vi.fn()} refreshToken={0} />);
+    fireEvent.click(await screen.findByRole("button", { name: "查看完整结果" }));
+
+    const list = await screen.findByRole("navigation", { name: "候选人结果列表" });
+    const rows = within(list).getAllByRole("button");
+    expect(rows[0]).toHaveTextContent(/候选人乙.*推荐.*100 分/);
+    expect(rows[1]).toHaveTextContent(/候选人甲.*推荐.*67 分/);
+    expect(rows[2]).toHaveTextContent(/候选人丙.*待人工复核.*33 分/);
+    expect(rows[3]).toHaveTextContent(/候选人丁.*评估失败/);
+    expect(rows[3]).not.toHaveTextContent(/\d+ 分/);
+
+    fireEvent.click(screen.getByRole("button", { name: /待人工复核.*1 人/ }));
+    expect(within(list).getAllByRole("button")).toHaveLength(1);
+    expect(within(list).getByRole("button", { name: /候选人丙/ })).toHaveAttribute("aria-current", "true");
+    fireEvent.click(screen.getByRole("button", { name: "全部候选人" }));
+    expect(within(list).getAllByRole("button")).toHaveLength(4);
   });
 
   it("reads confirmed criteria as text and labels candidate parsing in Chinese", async () => {
