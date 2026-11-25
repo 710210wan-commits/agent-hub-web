@@ -43,6 +43,8 @@ export interface HrScreeningClient {
   getState(conversationId: string, signal?: AbortSignal): Promise<HrConversationState>;
   getSummary(conversationId: string, input: { scope: HrScreeningSummary["scope"]; groupId?: string; tier?: NonNullable<HrScreeningSummary["rows"][number]["advisoryTier"]>; offset: number; limit: number },
     signal?: AbortSignal): Promise<HrScreeningSummary>;
+  prepareSummaryZip(conversationId: string, input: { scope: HrScreeningSummary["scope"]; groupId: string },
+    signal?: AbortSignal): Promise<string>;
   attachResumes(conversationId: string, draftId: string, clientRequestId: string, signal?: AbortSignal,
     options?: { deduplicate: boolean }): Promise<HrConversationState>;
   replaceJobDescription(
@@ -117,6 +119,15 @@ export function createHrScreeningClient(options: {
       if (input.tier) params.set("tier", input.tier);
       return json(`/api/hr/conversations/${encodeURIComponent(conversationId)}/screening-summary?${params}`,
         { method: "GET" }, HrScreeningSummarySchema, signal);
+    },
+    async prepareSummaryZip(conversationId, input, signal) {
+      const params = new URLSearchParams(input);
+      const path = `/api/hr/conversations/${encodeURIComponent(conversationId)}/screening-summary/export.zip?${params}`;
+      const response = await request(path, { method: "HEAD", cache: "no-store" }, signal);
+      if (response.headers.get("Content-Type") !== "application/zip") {
+        throw new HrScreeningClientError(503, "HR_EXPORT_UNAVAILABLE", "简历下载暂不可用");
+      }
+      return `${baseUrl}${path}`;
     },
     async attachResumes(conversationId, draftId, clientRequestId, signal, options) {
       const body = await json(`/api/hr/conversations/${encodeURIComponent(conversationId)}/attachments`,

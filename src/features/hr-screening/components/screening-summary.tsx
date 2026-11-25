@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { HrScreeningSummary } from "@/features/assistants/contracts/generated";
-import type { HrScreeningClient } from "../api/hr-screening-client";
+import { isHrScreeningClientError, type HrScreeningClient } from "../api/hr-screening-client";
 
 const tierLabels = { recommended: "推荐", manual_review: "待人工复核", not_matched: "暂不匹配" };
 const pageSize = 25;
@@ -19,12 +19,16 @@ export function ScreeningSummary({ client, conversationId, open, onClose, refres
   onOpen(batchId: string, candidateId: string): void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const download = useRef<AbortController | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string>();
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!open || !dialog) return;
     const trigger = document.activeElement;
     dialog.showModal();
     return () => {
+      download.current?.abort();
       if (dialog.open) dialog.close();
       if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus({ preventScroll: true });
     };
@@ -54,6 +58,36 @@ export function ScreeningSummary({ client, conversationId, open, onClose, refres
   const current = outcome?.key === key ? outcome : null;
   const result = current?.value;
   const setViewScope = (next: HrScreeningSummary["scope"]) => { setScope(next); setOffset(0); };
+  const exportGroup = result?.group?.groupId;
+  const startDownload = async () => {
+    if (!exportGroup || !result?.counts.scored || download.current) return;
+    const controller = new AbortController();
+    download.current = controller;
+    setDownloading(true);
+    setDownloadError(undefined);
+    try {
+      const path = await client.prepareSummaryZip(conversationId, { scope, groupId: exportGroup }, controller.signal);
+      controller.signal.throwIfAborted();
+      const url = new URL(path, window.location.href);
+      if (url.origin !== window.location.origin) throw new Error("Cross-origin ZIP download");
+      const anchor = document.createElement("a");
+      anchor.href = url.href;
+      anchor.download = "";
+      anchor.hidden = true;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const status = isHrScreeningClientError(error) ? error.status : undefined;
+      if (status === 401) onAuthRequired?.();
+      else setDownloadError(status === 403 ? "权限不足，无法下载简历"
+        : status === 410 ? "有简历原件已过期或不可用" : "简历下载失败，请重试");
+    } finally {
+      download.current = null;
+      setDownloading(false);
+    }
+  };
   return (
     <dialog ref={dialogRef} aria-label="累计筛选结果" className="hr-panel hr-result-dialog"
       onCancel={event => { event.preventDefault(); onClose(); }}>
@@ -73,7 +107,10 @@ export function ScreeningSummary({ client, conversationId, open, onClose, refres
             </option>)}
           </select></label>
         ) : null}
+        <button className="hr-button hr-button-primary" disabled={!exportGroup || !result?.counts.scored || downloading}
+          onClick={() => void startDownload()} type="button">{downloading ? "准备下载…" : "下载简历 ZIP"}</button>
       </div>
+      {downloadError ? <p role="alert">{downloadError}</p> : null}
       {!current ? <p>正在加载累计结果…</p> : !result ? (
         <div role="alert">累计结果暂不可用 <button className="hr-button" type="button" onClick={() => setAttempt(value => value + 1)}>重试</button></div>
       ) : (

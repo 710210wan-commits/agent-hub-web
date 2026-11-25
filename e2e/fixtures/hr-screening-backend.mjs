@@ -17,6 +17,8 @@ const assistant = {
   retentionDays: 30,
 };
 const drafts = new Map();
+// One uncompressed synthetic sample. The backend ZIP suite verifies real archive contents.
+const zipFixture = Buffer.from("UEsDBBQAAAgAAABAIVxXAsRBCQAAAAkAAAAKAAAAc2FtcGxlLnBkZnN5bnRoZXRpY1BLAQI/AxQAAAgAAABAIVxXAsRBCQAAAAkAAAAKAAkAAAAAAAAAAAC0gQAAAABzYW1wbGUucGRmVVQFAAMAuVVpUEsFBgAAAAABAAEAQQAAADEAAAAAAA==", "base64");
 export const hrAssistant = assistant;
 
 export function resetHrFixture() {
@@ -228,6 +230,20 @@ async function handleHr(input) {
     const item = input.findConversation(decodeURIComponent(stateMatch[1]));
     if (!item?.hr) return input.sendError(response, 404, "HR_CONVERSATION_NOT_FOUND");
     input.sendJson(response, 200, { state: item.hr });
+    return;
+  }
+  const zipMatch = url.pathname.match(/^\/api\/hr\/conversations\/([^/]+)\/screening-summary\/export\.zip$/);
+  if (zipMatch && ["HEAD", "GET"].includes(request.method)) {
+    const item = input.findConversation(decodeURIComponent(zipMatch[1]));
+    if (!item?.hr) return input.sendError(response, 404, "HR_CONVERSATION_NOT_FOUND");
+    const scope = url.searchParams.get("scope");
+    if (!["all", "active"].includes(scope)) return input.sendError(response, 400, "INVALID_SCOPE");
+    const summary = summarize(item, scope);
+    if (summary.group?.groupId !== url.searchParams.get("groupId") || !summary.counts.scored) {
+      return input.sendError(response, 404, "NO_SCREENED_RESUMES");
+    }
+    response.writeHead(200, { "content-type": "application/zip", "content-disposition": 'attachment; filename="synthetic-resumes.zip"' });
+    response.end(request.method === "GET" ? zipFixture : undefined);
     return;
   }
   const workspaceMatch = url.pathname.match(/^\/api\/hr\/conversations\/([^/]+)\/(attachments|screening-summary)$/);
