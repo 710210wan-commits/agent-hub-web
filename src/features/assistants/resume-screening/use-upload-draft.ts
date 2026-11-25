@@ -35,10 +35,12 @@ export function useUploadDraft({
   assistantId,
   client,
   createRequestId,
+  jobDescriptionText,
 }: {
   assistantId: string;
   client: AssistantClient;
   createRequestId: () => string;
+  jobDescriptionText?: string;
 }) {
   const { identityGeneration, invalidate } = useAuth();
   const [draftAttempt, setDraftAttempt] = useState(0);
@@ -177,7 +179,9 @@ export function useUploadDraft({
     counts,
     validationError,
     canSubmit: draft.kind === "ready"
-      && counts.jobDescriptions === 1
+      && (jobDescriptionText !== undefined
+        ? jobDescriptionText.length > 0 && counts.jobDescriptions === 0
+        : counts.jobDescriptions === 1)
       && counts.resumes >= 1
       && counts.resumes <= MAX_RESUMES
       && counts.ready === counts.total,

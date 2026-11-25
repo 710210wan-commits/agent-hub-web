@@ -17,6 +17,8 @@ const assistant = {
   retentionDays: 30,
 };
 const drafts = new Map();
+// One uncompressed synthetic sample. The backend ZIP suite verifies real archive contents.
+const zipFixture = Buffer.from("UEsDBBQAAAgAAABAIVxXAsRBCQAAAAkAAAAKAAAAc2FtcGxlLnBkZnN5bnRoZXRpY1BLAQI/AxQAAAgAAABAIVxXAsRBCQAAAAkAAAAKAAkAAAAAAAAAAAC0gQAAAABzYW1wbGUucGRmVVQFAAMAuVVpUEsFBgAAAAABAAEAQQAAADEAAAAAAA==", "base64");
 export const hrAssistant = assistant;
 
 export function resetHrFixture() {
@@ -111,7 +113,9 @@ async function createAssistantConversation(input) {
   const { request, response, userKey } = input;
   const body = await input.readJson(request);
   const draft = drafts.get(body.draftId);
-  if (!draft || !draft.files.some(file => file.role === "job_description") || !draft.files.some(file => file.role === "resume")) {
+  const textSource = Boolean(body.jobDescriptionText?.trim());
+  const hasJdFile = draft?.files.some(file => file.role === "job_description");
+  if (!draft || textSource === hasJdFile || !draft.files.some(file => file.role === "resume")) {
     input.sendError(response, 409, "DRAFT_CONTENT_INVALID");
     return;
   }
@@ -125,15 +129,16 @@ async function createAssistantConversation(input) {
   item.createRequestId = body.clientRequestId;
   item.hr = createHrState(item, draft.files);
   conversations.set(item.metadata.conversationId, item);
-  createSetupTurn(item, draft.files);
+  createSetupTurn(item, draft.files, textSource);
   input.sendJson(response, 201, setupResponse(item, false));
 }
 
-function createSetupTurn(item, files) {
+function createSetupTurn(item, files, textSource) {
   const turnId = randomUUID();
   const taskId = randomUUID();
   const user = inputSafeMessage(item, turnId, "user", "请生成可确认的筛选标准");
-  user.content = { kind: "assistant_setup", text: "请生成可确认的筛选标准", attachments: files };
+  user.content = { kind: "assistant_setup", text: "请生成筛选标准", attachments: files,
+    ...(textSource ? { jobDescriptionSource: "text" } : {}) };
   item.messages.push(user);
   inputAppend(item, "message.created", { message: user }, { turnId, taskId, messageId: user.messageId });
   const turn = {
@@ -147,7 +152,15 @@ function createSetupTurn(item, files) {
   item.turns.push(turn);
   item.metadata.lastTurnIndex = "1";
   inputAppend(item, "turn.queued", { turn, userMessageId: user.messageId }, { turnId, taskId });
-  const answer = inputSafeMessage(item, turnId, "assistant", "已生成可编辑的筛选标准");
+  if (textSource) {
+    item.hr.activeCriteria.status = "confirmed";
+    item.hr.activeCriteria.confirmedAt = new Date().toISOString();
+    startBatch(item, "incremental");
+  }
+  const batch = item.hr.latestCompletedBatch;
+  const answer = inputSafeMessage(item, turnId, "assistant",
+    batch ? `筛选完成，共 ${batch.completedCount} 人` : "已生成可编辑的筛选标准");
+  if (batch) answer.artifactRefs = [{ kind: "screening_result", batchId: batch.batchId }];
   item.messages.push(answer);
   inputAppend(item, "message.created", { message: answer }, { turnId, taskId, messageId: answer.messageId });
   turn.status = "completed";
@@ -230,6 +243,20 @@ async function handleHr(input) {
     input.sendJson(response, 200, { state: item.hr });
     return;
   }
+  const zipMatch = url.pathname.match(/^\/api\/hr\/conversations\/([^/]+)\/screening-summary\/export\.zip$/);
+  if (zipMatch && ["HEAD", "GET"].includes(request.method)) {
+    const item = input.findConversation(decodeURIComponent(zipMatch[1]));
+    if (!item?.hr) return input.sendError(response, 404, "HR_CONVERSATION_NOT_FOUND");
+    const scope = url.searchParams.get("scope");
+    if (!["all", "active"].includes(scope)) return input.sendError(response, 400, "INVALID_SCOPE");
+    const summary = summarize(item, scope);
+    if (summary.group?.groupId !== url.searchParams.get("groupId") || !summary.counts.scored) {
+      return input.sendError(response, 404, "NO_SCREENED_RESUMES");
+    }
+    response.writeHead(200, { "content-type": "application/zip", "content-disposition": 'attachment; filename="synthetic-resumes.zip"' });
+    response.end(request.method === "GET" ? zipFixture : undefined);
+    return;
+  }
   const workspaceMatch = url.pathname.match(/^\/api\/hr\/conversations\/([^/]+)\/(attachments|screening-summary)$/);
   if (workspaceMatch) {
     const item = input.findConversation(decodeURIComponent(workspaceMatch[1]));
@@ -252,7 +279,10 @@ async function handleHr(input) {
     }
     if (workspaceMatch[2] === "screening-summary" && request.method === "GET") {
       const scope = url.searchParams.get("scope") ?? "active";
-      input.sendJson(response, 200, summarize(item, scope));
+      const summary = summarize(item, scope);
+      const tier = url.searchParams.get("tier");
+      if (tier) summary.rows = summary.rows.filter(row => row.advisoryTier === tier);
+      input.sendJson(response, 200, summary);
       return;
     }
   }

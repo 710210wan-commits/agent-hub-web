@@ -262,6 +262,8 @@ describe("DailySessionView", () => {
     renderView(client, undefined, makeAuthClient(), conversationId, undefined, hrClient);
 
     const screenNew = await screen.findByRole("button", { name: "筛选新简历" });
+    expect(screen.getByRole("button", { name: "查看累计结果" })).toBeEnabled();
+    expect(hrClient.getSummary).not.toHaveBeenCalled();
     expect(await screen.findByText("活跃简历 1 份")).toBeVisible();
     expect(screen.getByText("JD 1 份")).toBeVisible();
     expect(screenNew.nextElementSibling).toBe(screen.getByRole("button", { name: "发送" }));

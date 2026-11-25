@@ -114,6 +114,7 @@ function client(overrides: Partial<HrScreeningClient> = {}): HrScreeningClient {
   return {
     getState: vi.fn().mockImplementation(async () => state()),
     getSummary: vi.fn(),
+    prepareSummaryZip: vi.fn(),
     attachResumes: vi.fn().mockImplementation(async () => state()),
     replaceJobDescription: vi.fn().mockImplementation(async () => state()),
     updateCandidate: vi.fn().mockImplementation(async () => state()),

@@ -39,6 +39,7 @@ export function ScreeningResultDrawer({
   selectedCandidateId,
   onSelectCandidate,
   onClose,
+  returnToSummary,
   onCancel,
   onContinue,
   onRetry,
@@ -52,6 +53,7 @@ export function ScreeningResultDrawer({
   selectedCandidateId?: string;
   onSelectCandidate(candidateId: string): void;
   onClose(): void;
+  returnToSummary?: boolean;
   onCancel(): void;
   onContinue(): void;
   onRetry(item: HrScreeningBatchItem): void;
@@ -94,7 +96,8 @@ export function ScreeningResultDrawer({
     >
       <header className="hr-panel-heading">
         <h2>筛选结果</h2>
-        <button className="hr-button" aria-label="关闭结果" onClick={onClose} type="button">关闭</button>
+        <button className="hr-button" aria-label={returnToSummary ? "返回累计结果" : "关闭结果"}
+          onClick={onClose} type="button">{returnToSummary ? "返回累计结果" : "关闭"}</button>
       </header>
       {invalid ? <p>筛选结果链接无效</p> : loading || !result ? <p>正在加载筛选结果…</p> : (
         <>

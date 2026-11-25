@@ -25,6 +25,8 @@ export function adaptDailySessionMessage(
   message: ConversationMessage,
 ): DailySessionViewMessage {
   const attachments = safeAttachments(message.content);
+  const hasTextJobDescription = message.role === "user" && message.content.kind === "assistant_setup"
+    && message.content.jobDescriptionSource === "text";
   const artifactRefs = message.artifactRefs.flatMap((artifact) => {
     const parsed = AssistantArtifactReferenceSchema.safeParse(artifact);
     return parsed.success ? [parsed.data] : [];
@@ -36,6 +38,7 @@ export function adaptDailySessionMessage(
     createdAt: Date.parse(message.createdAt),
     ordinal: message.ordinal,
     ...(attachments.length ? { attachments } : {}),
+    ...(hasTextJobDescription ? { jobDescriptionSource: "text" as const } : {}),
     ...(artifactRefs.length ? { artifactRefs } : {}),
     ...(message.role === "user" && message.capabilitySelection ? { selection: snapshotCapabilitySelection(message.capabilitySelection) } : {}),
   };

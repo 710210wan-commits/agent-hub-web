@@ -284,6 +284,37 @@
         ],
         "type": "object"
       },
+      "CreateAssistantConversationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "clientRequestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "draftId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "jobDescriptionText": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "pattern": "^[^\\u0000]*$",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "draftId",
+          "clientRequestId"
+        ],
+        "type": "object"
+      },
       "HrCandidate": {
         "additionalProperties": false,
         "properties": {
@@ -1060,6 +1091,12 @@
           "followUpQuestions"
         ],
         "type": "object"
+      },
+      "HrJobDescriptionText": {
+        "maxLength": 100000,
+        "minLength": 1,
+        "pattern": "^[^\\u0000]*$",
+        "type": "string"
       },
       "HrScreeningBatch": {
         "additionalProperties": false,
