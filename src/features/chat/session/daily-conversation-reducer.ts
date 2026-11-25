@@ -47,6 +47,7 @@ export interface PendingDailySend {
   capabilitySelection: CapabilitySelection;
   clientRequestId: string;
   content: string;
+  screening?: { scope: "incremental" | "rescreen_active"; jobDescriptionVersionId: string };
   status: "submitting" | "unknown" | "accepted" | "blocked" | "failed";
   userMessageId?: string;
   turnId?: string;

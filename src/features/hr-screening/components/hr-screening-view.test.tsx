@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { AssistantClient } from "@/features/assistants/api/assistant-client";
 import type { HrScreeningClient } from "../api/hr-screening-client";
 import type { HrScreeningBatch, HrScreeningBatchItem } from "@/features/assistants/contracts/generated";
 import { HrScreeningView } from "./hr-screening-view";
@@ -114,6 +113,7 @@ function item(status: HrScreeningBatchItem["status"]): HrScreeningBatchItem {
 function client(overrides: Partial<HrScreeningClient> = {}): HrScreeningClient {
   return {
     getState: vi.fn().mockImplementation(async () => state()),
+    getSummary: vi.fn(),
     attachResumes: vi.fn().mockImplementation(async () => state()),
     replaceJobDescription: vi.fn().mockImplementation(async () => state()),
     updateCandidate: vi.fn().mockImplementation(async () => state()),
@@ -127,17 +127,6 @@ function client(overrides: Partial<HrScreeningClient> = {}): HrScreeningClient {
     retryItem: vi.fn().mockResolvedValue({ batch: batch("running"), items: [item("running")] }),
     exportBatchCsv: vi.fn().mockResolvedValue({ fileName: "screening.csv", content: "candidateId\nsynthetic\n" }),
     ...overrides,
-  };
-}
-
-function uploadClient(): AssistantClient {
-  return {
-    listAssistants: vi.fn(),
-    getAssistant: vi.fn(),
-    createUploadDraft: vi.fn().mockResolvedValue({ reused: false, draft: { draftId: "80000000-0000-4000-8000-000000000008" } }),
-    uploadDraftFile: vi.fn().mockResolvedValue({ fileId: "90000000-0000-4000-8000-000000000009" }),
-    removeDraftFile: vi.fn(),
-    createAssistantConversation: vi.fn(),
   };
 }
 
@@ -188,25 +177,17 @@ describe("HrScreeningView", () => {
     expect(api.startBatch).not.toHaveBeenCalled();
   });
 
-  it("replaces JD and manages candidates through deterministic actions without starting a batch", async () => {
+  it("manages candidates without starting a batch", async () => {
     const api = client();
-    const uploads = uploadClient();
     render(
       <HrScreeningView
         client={api}
-        uploadClient={uploads}
         conversationId={conversationId}
         onCanonicalAction={vi.fn()}
         refreshToken={0}
       />,
     );
-    const jd = await screen.findByRole("textbox", { name: "岗位描述" });
-    fireEvent.change(jd, { target: { value: "新的合成岗位描述" } });
-    fireEvent.click(screen.getByRole("button", { name: "替换岗位描述" }));
-    await waitFor(() => expect(api.replaceJobDescription).toHaveBeenCalled());
-    expect(api.replaceJobDescription).toHaveBeenCalledWith(conversationId, expect.objectContaining({ kind: "text", text: "新的合成岗位描述", clientRequestId: expect.any(String) }));
-
-    fireEvent.click(screen.getByRole("button", { name: "重命名候选人" }));
+    fireEvent.click(await screen.findByRole("button", { name: "重命名候选人" }));
     const name = screen.getByRole("textbox", { name: "候选人显示名称" });
     fireEvent.change(name, { target: { value: "新显示名称" } });
     fireEvent.click(screen.getByRole("button", { name: "保存候选人名称" }));
@@ -214,18 +195,6 @@ describe("HrScreeningView", () => {
     fireEvent.click(screen.getByRole("button", { name: "退役候选人" }));
     await waitFor(() => expect(api.updateCandidate).toHaveBeenCalledWith(conversationId, candidateId, expect.objectContaining({ action: "retire" })));
 
-    fireEvent.change(screen.getByLabelText("添加简历"), {
-      target: { files: [new File(["synthetic"], "candidate-b.pdf", { type: "application/pdf" })] },
-    });
-    expect(screen.getByText("candidate-b.pdf")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "上传并绑定 1 份简历" }));
-    await waitFor(() => expect(api.attachResumes).toHaveBeenCalledWith(conversationId, "80000000-0000-4000-8000-000000000008", expect.any(String)));
-    expect(uploads.createUploadDraft).toHaveBeenCalledWith("resume-screening", expect.any(String));
-    expect(uploads.uploadDraftFile).toHaveBeenCalledWith(
-      "80000000-0000-4000-8000-000000000008",
-      "resume",
-      expect.any(File),
-    );
     expect(api.startBatch).not.toHaveBeenCalled();
   });
 

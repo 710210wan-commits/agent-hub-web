@@ -232,7 +232,8 @@ describe("DailySessionView", () => {
       assistantId: "resume-screening",
       assistantVersion: 1,
       retentionUntil: "2026-12-19T00:00:00.000Z",
-      activeJobDescription: null,
+      activeJobDescription: { jobDescriptionVersionId: "60000000-0000-4000-8000-000000000006", version: 1,
+        parseStatus: "parsed", createdAt: "2026-11-19T00:00:00.000Z" },
       activeCriteria: {
         criteriaVersionId: "70000000-0000-4000-8000-000000000007",
         conversationId,
@@ -245,22 +246,25 @@ describe("DailySessionView", () => {
       },
       activeBatch: null,
       latestCompletedBatch: null,
-      candidates: [],
+      candidates: [{ candidateId: "40000000-0000-4000-8000-000000000004", displayName: "合成候选人",
+        status: "active", parseStatus: "parsed", errorCode: null, retiredAt: null, createdAt: "2026-11-19T00:00:00.000Z" }],
     };
     const hrClient = {
       getState: vi.fn().mockResolvedValue(hrState),
       startBatch: vi.fn(),
+      getSummary: vi.fn().mockResolvedValue({ counts: { total: 0 }, groups: [], rows: [], nextOffset: null }),
     } as unknown as HrScreeningClient;
     renderView(client, undefined, makeAuthClient(), conversationId, undefined, hrClient);
 
-    expect(await screen.findByRole("button", { name: "开始筛选" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "筛选新简历" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^知识库/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Skill/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^MCP/ })).not.toBeInTheDocument();
     expect(screen.getByText("简历筛选助手使用固定筛选能力")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "开始筛选" }));
+    fireEvent.click(screen.getByRole("button", { name: "筛选新简历" }));
     await waitFor(() => expect(client.submitTurn).toHaveBeenCalledWith(conversationId, expect.objectContaining({
-      input: { kind: "text", text: "确认筛选标准并开始筛选" },
+      input: { kind: "text", text: "筛选新简历",
+        screening: { scope: "incremental", jobDescriptionVersionId: "60000000-0000-4000-8000-000000000006" } },
       capabilitySelection: { knowledgeBaseIds: [], skillIds: [], mcpServerIds: [] },
     }), expect.any(AbortSignal)));
     expect(hrClient.startBatch).not.toHaveBeenCalled();

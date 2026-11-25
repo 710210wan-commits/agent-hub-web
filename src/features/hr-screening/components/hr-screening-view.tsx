@@ -1,11 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  createAssistantClient,
-  type AssistantClient,
-} from "@/features/assistants/api/assistant-client";
 import type {
   HrScreeningBatch,
   HrScreeningBatchItem,
@@ -16,6 +12,7 @@ import { CriteriaCard } from "./criteria-card";
 import { ScreeningProgress, type ScreeningProgressValue } from "./screening-progress";
 import { ScreeningResultCard } from "./screening-result-card";
 import { ScreeningResultDrawer } from "./screening-result-drawer";
+import { ScreeningSummary } from "./screening-summary";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const requestId = () => crypto.randomUUID();
@@ -29,7 +26,7 @@ const parseLabels = {
 
 export function HrScreeningView({
   client,
-  uploadClient,
+  sharedState,
   conversationId,
   onCanonicalAction,
   onAuthRequired,
@@ -40,7 +37,7 @@ export function HrScreeningView({
   onSelectionChange,
 }: {
   client: HrScreeningClient;
-  uploadClient?: AssistantClient;
+  sharedState?: ReturnType<typeof useHrScreeningState>;
   conversationId: string;
   onCanonicalAction(text: string): Promise<void>;
   onAuthRequired?(): void;
@@ -50,11 +47,10 @@ export function HrScreeningView({
   selectedCandidateId?: string;
   onSelectionChange?(selection: { batchId?: string; candidateId?: string }): void;
 }) {
-  const uploads = useMemo(() => uploadClient ?? createAssistantClient(), [uploadClient]);
-  const { state, status, refresh } = useHrScreeningState({ client, conversationId, refreshToken, onAuthRequired });
+  const localState = useHrScreeningState({ client, conversationId: sharedState ? undefined : conversationId,
+    refreshToken, onAuthRequired });
+  const { state, status, refresh, manualRefresh } = sharedState ?? localState;
   const [actionError, setActionError] = useState<string | null>(null);
-  const [jdText, setJdText] = useState("");
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState("");
   const [internalSelection, setInternalSelection] = useState<{ batchId?: string; candidateId?: string }>({});
@@ -149,79 +145,8 @@ export function HrScreeningView({
           生成筛选标准
         </button>
       )}
-      {state.activeCriteria?.status === "confirmed" && !state.activeBatch ? (
-        <button className="hr-button hr-button-primary" onClick={() => void onCanonicalAction("确认筛选标准并开始筛选")} type="button">开始筛选</button>
-      ) : null}
-
-      <section aria-label="岗位描述" className="hr-panel">
-        <h2>岗位描述</h2>
-        <label>
-          岗位描述
-          <textarea aria-label="岗位描述" onChange={event => setJdText(event.target.value)} value={jdText} />
-        </label>
-        <button
-          className="hr-button"
-          disabled={!jdText.trim()}
-          onClick={() => void mutate(async () => {
-            await client.replaceJobDescription(conversationId, { kind: "text", text: jdText.trim(), clientRequestId: requestId() });
-            setJdText("");
-          }, "岗位描述替换失败，请稍后重试")}
-          type="button"
-        >
-          替换岗位描述
-        </button>
-        <label>
-          上传岗位描述文件
-          <input
-            accept=".pdf,.docx"
-            aria-label="上传岗位描述文件"
-            onChange={event => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (!file) return;
-              void mutate(async () => {
-                const { draft } = await uploads.createUploadDraft("resume-screening", requestId());
-                await uploads.uploadDraftFile(draft.draftId, "job_description", file);
-                await client.replaceJobDescription(conversationId, { kind: "file", draftId: draft.draftId, clientRequestId: requestId() });
-              }, "岗位描述上传失败，请稍后重试");
-            }}
-            type="file"
-          />
-        </label>
-      </section>
-
       <section aria-label="候选人文件" className="hr-panel">
         <h2>候选人简历</h2>
-        <input
-          accept=".pdf,.docx"
-          aria-label="添加简历"
-          multiple
-          onChange={event => {
-            setPendingFiles(Array.from(event.target.files ?? []).slice(0, 20));
-            event.target.value = "";
-          }}
-          type="file"
-        />
-        {pendingFiles.map((file, index) => (
-          <span className="hr-file-row" key={`${file.name}:${file.size}:${index}`}>
-            <span>{file.name}</span>
-            <button className="hr-button" aria-label={`移除 ${file.name}`} onClick={() => setPendingFiles(current => current.filter((_, i) => i !== index))} type="button">移除</button>
-          </span>
-        ))}
-        {pendingFiles.length ? (
-          <button
-            className="hr-button hr-button-primary"
-            onClick={() => void mutate(async () => {
-              const { draft } = await uploads.createUploadDraft("resume-screening", requestId());
-              for (const file of pendingFiles) await uploads.uploadDraftFile(draft.draftId, "resume", file);
-              await client.attachResumes(conversationId, draft.draftId, requestId());
-              setPendingFiles([]);
-            }, "简历上传失败，请稍后重试")}
-            type="button"
-          >
-            上传并绑定 {pendingFiles.length} 份简历
-          </button>
-        ) : null}
         <ul className="hr-candidate-list">
           {state.candidates.map(candidate => (
             <li className="hr-candidate-row" key={candidate.candidateId}>
@@ -258,6 +183,9 @@ export function HrScreeningView({
         </ul>
       </section>
 
+      {sharedState ? <ScreeningSummary client={client} conversationId={conversationId}
+        refreshToken={String(refreshToken) + ":" + String(manualRefresh)} onAuthRequired={onAuthRequired} onOpen={openResult} /> : null}
+      {state.activeBatch || state.latestCompletedBatch ? <h2 className="hr-batch-heading">本轮筛选</h2> : null}
       {state.activeBatch ? <ScreeningResultCard batch={state.activeBatch} onOpen={openResult} /> : null}
       {state.latestCompletedBatch ? <ScreeningResultCard batch={state.latestCompletedBatch} onOpen={openResult} /> : null}
       {selection.batchId || invalidResult ? (

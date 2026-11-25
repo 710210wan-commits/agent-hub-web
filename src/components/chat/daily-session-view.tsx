@@ -7,6 +7,8 @@ import {
   type HrScreeningClient,
 } from "@/features/hr-screening/api/hr-screening-client";
 import { HrScreeningView } from "@/features/hr-screening/components/hr-screening-view";
+import { HrComposerActions } from "@/features/hr-screening/components/hr-composer-actions";
+import { useHrScreeningState } from "@/features/hr-screening/session/use-hr-screening-state";
 
 import { ErrorState } from "@/components/states/error-state";
 import { InlineError } from "@/components/states/inline-error";
@@ -85,7 +87,14 @@ function AuthenticatedDailySessionView({
   const [selection, setSelection] = useState(createEmptySelection);
   const capabilities = useDailyCapabilities(capabilityClient, identityGeneration, onAuthRequired);
   const hrClient = useMemo(() => hrClientOverride ?? createHrScreeningClient(), [hrClientOverride]);
-  const isHrConversation = controller.state.conversation?.assistantId === "resume-screening";
+  const hrConversationId = controller.state.conversation?.assistantId === "resume-screening"
+    ? controller.state.conversation.conversationId : undefined;
+  const isHrConversation = Boolean(hrConversationId);
+  const hrState = useHrScreeningState({ client: hrClient, conversationId: hrConversationId,
+    refreshToken: controller.state.hrRefreshToken, onAuthRequired });
+  const submitScreening = (screening: { scope: "incremental" | "rescreen_active"; jobDescriptionVersionId: string }) =>
+    controller.submit(screening.scope === "incremental" ? "筛选新简历" : "用当前 JD 重筛已有简历",
+      createEmptySelection(), screening);
   const [resultSelection, setResultSelection] = useState<{ batchId?: string; candidateId?: string }>(() => {
     if (typeof window === "undefined") return {};
     const params = new URLSearchParams(window.location.search);
@@ -172,7 +181,11 @@ function AuthenticatedDailySessionView({
           client={hrClient}
           conversationId={controller.state.conversation!.conversationId}
           onAuthRequired={onAuthRequired}
-          onCanonicalAction={async text => { await controller.submit(text, createEmptySelection()); }}
+          sharedState={hrState}
+          onCanonicalAction={async () => {
+            const jd = hrState.state?.activeJobDescription;
+            if (jd) await submitScreening({ scope: "rescreen_active", jobDescriptionVersionId: jd.jobDescriptionVersionId });
+          }}
           onSelectionChange={selectScreeningResult}
           progress={controller.state.toolProgress}
           refreshToken={controller.state.hrRefreshToken}
@@ -216,6 +229,11 @@ function AuthenticatedDailySessionView({
       ) : null}
 
       <Composer
+        accessory={hrConversationId ? <HrComposerActions key={hrConversationId} client={hrClient}
+          conversationId={hrConversationId} state={hrState.state} refresh={hrState.refresh}
+          onScreen={submitScreening} onAuthRequired={onAuthRequired}
+          busy={["submitting", "working", "streaming", "cancelling"].includes(controller.state.status)
+            || ["unknown", "failed"].includes(controller.state.pendingSend?.status ?? "")} /> : undefined}
         capabilityMode={isHrConversation ? "locked" : "selectable"}
         capabilityCatalog={capabilities.catalog}
         capabilityNotice={capabilities.notice}
