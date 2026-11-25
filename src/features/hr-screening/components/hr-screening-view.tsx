@@ -295,7 +295,9 @@ function statusCode(error: unknown): number | undefined {
 async function exportCsv(client: HrScreeningClient, batchId: string) {
   const result = await client.exportBatchCsv(batchId);
   if (typeof URL.createObjectURL !== "function") return;
-  const url = URL.createObjectURL(new Blob([result.content], { type: "text/csv;charset=utf-8" }));
+  // Excel uses the BOM to identify UTF-8 when opening a local CSV.
+  const content = result.content.replace(/^\uFEFF/, "");
+  const url = URL.createObjectURL(new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" }));
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = result.fileName;
