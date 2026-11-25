@@ -7,6 +7,7 @@ import {
   type HrScreeningClient,
 } from "@/features/hr-screening/api/hr-screening-client";
 import { HrScreeningView } from "@/features/hr-screening/components/hr-screening-view";
+import { ScreeningSummary } from "@/features/hr-screening/components/screening-summary";
 import { HrComposerActions } from "@/features/hr-screening/components/hr-composer-actions";
 import { useHrScreeningState } from "@/features/hr-screening/session/use-hr-screening-state";
 
@@ -95,6 +96,7 @@ function AuthenticatedDailySessionView({
   const submitScreening = (screening: { scope: "incremental" | "rescreen_active"; jobDescriptionVersionId: string }) =>
     controller.submit(screening.scope === "incremental" ? "筛选新简历" : "用当前 JD 重筛已有简历",
       createEmptySelection(), screening);
+  const [summaryRequested, setSummaryRequested] = useState(false);
   const [resultSelection, setResultSelection] = useState<{ batchId?: string; candidateId?: string }>(() => {
     if (typeof window === "undefined") return {};
     const params = new URLSearchParams(window.location.search);
@@ -187,6 +189,7 @@ function AuthenticatedDailySessionView({
             if (jd) await submitScreening({ scope: "rescreen_active", jobDescriptionVersionId: jd.jobDescriptionVersionId });
           }}
           onSelectionChange={selectScreeningResult}
+          returnToSummary={summaryRequested}
           progress={controller.state.toolProgress}
           refreshToken={controller.state.hrRefreshToken}
           selectedBatchId={resultSelection.batchId}
@@ -228,9 +231,16 @@ function AuthenticatedDailySessionView({
         </div>
       ) : null}
 
+      {hrConversationId ? <ScreeningSummary client={hrClient} conversationId={hrConversationId}
+        open={summaryRequested && !resultSelection.batchId}
+        onClose={() => setSummaryRequested(false)}
+        refreshToken={`${controller.state.hrRefreshToken}:${hrState.manualRefresh}`}
+        onAuthRequired={onAuthRequired}
+        onOpen={(batchId, candidateId) => selectScreeningResult({ batchId, candidateId })} /> : null}
+
       <Composer
         renderTools={hrConversationId ? sendButton => <HrComposerActions key={hrConversationId} client={hrClient}
-          sendButton={sendButton}
+          sendButton={sendButton} onOpenSummary={() => setSummaryRequested(true)}
           conversationId={hrConversationId} state={hrState.state} refresh={hrState.refresh}
           onScreen={submitScreening} onAuthRequired={onAuthRequired}
           busy={["submitting", "working", "streaming", "cancelling"].includes(controller.state.status)

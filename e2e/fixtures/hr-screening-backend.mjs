@@ -252,7 +252,10 @@ async function handleHr(input) {
     }
     if (workspaceMatch[2] === "screening-summary" && request.method === "GET") {
       const scope = url.searchParams.get("scope") ?? "active";
-      input.sendJson(response, 200, summarize(item, scope));
+      const summary = summarize(item, scope);
+      const tier = url.searchParams.get("tier");
+      if (tier) summary.rows = summary.rows.filter(row => row.advisoryTier === tier);
+      input.sendJson(response, 200, summary);
       return;
     }
   }

@@ -12,7 +12,6 @@ import { CriteriaCard } from "./criteria-card";
 import { ScreeningProgress, type ScreeningProgressValue } from "./screening-progress";
 import { ScreeningResultCard } from "./screening-result-card";
 import { ScreeningResultDrawer } from "./screening-result-drawer";
-import { ScreeningSummary } from "./screening-summary";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const requestId = () => crypto.randomUUID();
@@ -34,6 +33,7 @@ export function HrScreeningView({
   progress,
   selectedBatchId,
   selectedCandidateId,
+  returnToSummary,
   onSelectionChange,
 }: {
   client: HrScreeningClient;
@@ -45,11 +45,12 @@ export function HrScreeningView({
   progress?: ScreeningProgressValue | null;
   selectedBatchId?: string;
   selectedCandidateId?: string;
+  returnToSummary?: boolean;
   onSelectionChange?(selection: { batchId?: string; candidateId?: string }): void;
 }) {
   const localState = useHrScreeningState({ client, conversationId: sharedState ? undefined : conversationId,
     refreshToken, onAuthRequired });
-  const { state, status, refresh, manualRefresh } = sharedState ?? localState;
+  const { state, status, refresh } = sharedState ?? localState;
   const [actionError, setActionError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState("");
@@ -184,8 +185,6 @@ export function HrScreeningView({
         </ul>
       </section>
 
-      {sharedState ? <ScreeningSummary client={client} conversationId={conversationId}
-        refreshToken={String(refreshToken) + ":" + String(manualRefresh)} onAuthRequired={onAuthRequired} onOpen={openResult} /> : null}
       {currentBatch ? <>
         <h2 className="hr-batch-heading">本轮筛选</h2>
         <ScreeningResultCard batch={currentBatch} onOpen={openResult} />
@@ -201,6 +200,7 @@ export function HrScreeningView({
             setOutcome({ key: requestKey, result: next, invalid: false });
           })}
           onClose={closeResult}
+          returnToSummary={returnToSummary}
           onContinue={() => void onCanonicalAction("继续未完成的简历筛选批次")}
           onExport={() => void mutate(() => exportCsv(client, selection.batchId!), "导出失败，请稍后重试")}
           onRetry={item => void mutate(async () => {

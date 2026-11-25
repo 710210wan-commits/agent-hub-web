@@ -41,7 +41,7 @@ export function isHrScreeningClientError(error: unknown): error is HrScreeningCl
 
 export interface HrScreeningClient {
   getState(conversationId: string, signal?: AbortSignal): Promise<HrConversationState>;
-  getSummary(conversationId: string, input: { scope: HrScreeningSummary["scope"]; groupId?: string; offset: number; limit: number },
+  getSummary(conversationId: string, input: { scope: HrScreeningSummary["scope"]; groupId?: string; tier?: NonNullable<HrScreeningSummary["rows"][number]["advisoryTier"]>; offset: number; limit: number },
     signal?: AbortSignal): Promise<HrScreeningSummary>;
   attachResumes(conversationId: string, draftId: string, clientRequestId: string, signal?: AbortSignal,
     options?: { deduplicate: boolean }): Promise<HrConversationState>;
@@ -114,6 +114,7 @@ export function createHrScreeningClient(options: {
     getSummary(conversationId, input, signal) {
       const params = new URLSearchParams({ scope: input.scope, offset: String(input.offset), limit: String(input.limit) });
       if (input.groupId) params.set("groupId", input.groupId);
+      if (input.tier) params.set("tier", input.tier);
       return json(`/api/hr/conversations/${encodeURIComponent(conversationId)}/screening-summary?${params}`,
         { method: "GET" }, HrScreeningSummarySchema, signal);
     },

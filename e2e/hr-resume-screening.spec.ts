@@ -122,9 +122,14 @@ test("adds only the 18th resume from the composer and keeps the cumulative 18 af
   await expect(page.getByText("已就绪 18/18")).toBeVisible();
   await page.getByRole("button", { name: "开始筛选", exact: true }).click();
   await page.getByRole("button", { name: "确认并开始筛选" }).click();
-  const total = page.getByRole("region", { name: "累计筛选结果" });
-  await expect(total).toContainText("共 17 人");
   const composer = page.locator(".composer");
+  const openSummary = composer.getByRole("button", { name: "查看累计结果" });
+  const total = page.getByRole("dialog", { name: "累计筛选结果" });
+  await expect(total).toHaveCount(0);
+  await openSummary.click();
+  await expect(total).toContainText("共 17 人");
+  await page.keyboard.press("Escape");
+  await expect(openSummary).toBeFocused();
   const addResumes = composer.getByRole("button", { name: "添加简历", exact: true });
   const screenNew = composer.getByRole("button", { name: "筛选新简历" });
   const send = composer.getByRole("button", { name: "发送" });
@@ -141,16 +146,25 @@ test("adds only the 18th resume from the composer and keeps the cumulative 18 af
   await expect(composer.getByText("resume-18.pdf")).toBeVisible();
   await composer.getByRole("button", { name: "筛选新简历" }).click();
   await expect(page.getByRole("region", { name: "筛选结果摘要" })).toContainText("共 1 人 · 完成 1");
+  await openSummary.click();
   await expect(total).toContainText("共 18 人 · 已评分 18");
-  await expect(composer.getByText("活跃简历 18 份")).toBeVisible();
   await expect(total).toContainText("推荐 18");
+  await page.keyboard.press("Escape");
+  await expect(composer.getByText("活跃简历 18 份")).toBeVisible();
   await composer.getByRole("textbox", { name: "消息" }).fill("汇总全部 18 人");
   await composer.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("共筛选 18 人，推荐 18 人。")).toBeVisible();
   await page.reload();
+  await openSummary.click();
   await expect(total).toContainText("共 18 人 · 已评分 18");
   await total.getByRole("button", { name: "查看 resume-1 的筛选结果", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "筛选结果" })).toContainText("resume-1");
+  const detail = page.getByRole("dialog", { name: "筛选结果" });
+  await expect(detail).toContainText("resume-1");
+  await expect(total).toHaveCount(0);
+  await detail.getByRole("button", { name: "返回累计结果" }).click();
+  await expect(total).toContainText("共 18 人");
+  await page.keyboard.press("Escape");
+  await expect(openSummary).toBeFocused();
 });
 
 async function login(page: Page) {

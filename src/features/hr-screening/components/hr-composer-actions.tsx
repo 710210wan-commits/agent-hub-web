@@ -12,7 +12,7 @@ type UploadProgress = { requestId: string; draftId?: string; uploaded: number };
 type JobDescription = { text: string; file?: File };
 
 export function HrComposerActions({
-  client, uploadClient, conversationId, state, busy, refresh, onScreen, onAuthRequired, sendButton,
+  client, uploadClient, conversationId, state, busy, refresh, onScreen, onAuthRequired, onOpenSummary, sendButton,
 }: {
   client: HrScreeningClient;
   uploadClient?: AssistantClient;
@@ -23,6 +23,7 @@ export function HrComposerActions({
   refresh(): void;
   onScreen(input: ScreeningAction): Promise<void>;
   onAuthRequired?(): void;
+  onOpenSummary?(): void;
 }) {
   const uploads = useMemo(() => uploadClient ?? createAssistantClient(), [uploadClient]);
   const active = useRef<AbortController | null>(null);
@@ -160,6 +161,8 @@ export function HrComposerActions({
             onClick={() => setShowJd(value => !value)} type="button">更改 JD</button>
           <button className="composer-tool" disabled={disabled || !currentJd || activeResumes === 0 || files.length > 0 || showJd}
             onClick={() => action("rescreen_active")} type="button">用当前 JD 重筛已有简历</button>
+          {onOpenSummary ? <button className="composer-tool" aria-haspopup="dialog" type="button"
+            onClick={onOpenSummary}>查看累计结果</button> : null}
           <small className="hr-composer-counts">
             <span>{state ? `活跃简历 ${activeResumes} 份` : "活跃简历 —"}</span>
             <span title={currentJd ? `JD 版本 ${currentJd.version}` : undefined}>
