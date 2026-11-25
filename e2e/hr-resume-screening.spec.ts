@@ -65,7 +65,7 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await expect(results.getByRole("button")).toHaveCount(20);
   await page.getByRole("button", { name: "取消筛选批次" }).click();
   await page.getByRole("button", { name: "继续未完成筛选" }).click();
-  await page.getByRole("button", { name: "candidate-20" }).click();
+  await results.getByRole("button", { name: "candidate-20 评估失败", exact: true }).click();
   await page.getByRole("button", { name: "重试该候选人" }).click();
   await expect(page.getByText("推荐进入下一轮")).toBeVisible();
   await expect(page.getByText(/共 20 人 · 完成 20 · 失败 0/).first()).toBeVisible();
@@ -107,6 +107,39 @@ test("Plaza → 1 JD/20 resumes → criteria → partial/cancel/Continue/retry �
   await expect(page.getByRole("list", { name: "简历筛选助手会话" })).toHaveCount(0);
   await expect(recents.getByRole("link", { name: /合成岗位筛选/ })).toHaveCount(0);
   await expect(recents.getByRole("link", { name: /Alice 历史会话/ })).toBeVisible();
+});
+
+test("adds only the 18th resume from the composer and keeps the cumulative 18 after reload", async ({ page }) => {
+  await page.goto("/assistants");
+  await login(page);
+  await page.getByRole("link", { name: /简历筛选助手/ }).click();
+  await page.getByLabel("上传岗位描述").setInputFiles({ name: "jd.pdf", mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.7\nSynthetic JD\n") });
+  await page.getByLabel("上传候选人简历").setInputFiles(Array.from({ length: 17 }, (_, index) => ({
+    name: `resume-${index + 1}.pdf`, mimeType: "application/pdf",
+    buffer: Buffer.from(`%PDF-1.7\nSynthetic resume ${index + 1}\n`),
+  })));
+  await expect(page.getByText("已就绪 18/18")).toBeVisible();
+  await page.getByRole("button", { name: "开始筛选", exact: true }).click();
+  await page.getByRole("button", { name: "确认并开始筛选" }).click();
+  const total = page.getByRole("region", { name: "累计筛选结果" });
+  await expect(total).toContainText("共 17 人");
+  const composer = page.locator(".composer");
+  await composer.getByRole("button", { name: "简历筛选操作" }).click();
+  await composer.getByLabel("添加简历").setInputFiles({ name: "resume-18.pdf", mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.7\nSynthetic resume 18\n") });
+  await expect(composer.getByText("resume-18.pdf")).toBeVisible();
+  await composer.getByRole("button", { name: "筛选新简历" }).click();
+  await expect(page.getByRole("region", { name: "筛选结果摘要" })).toContainText("共 1 人 · 完成 1");
+  await expect(total).toContainText("共 18 人 · 已评分 18");
+  await expect(total).toContainText("推荐 18");
+  await composer.getByRole("textbox", { name: "消息" }).fill("汇总全部 18 人");
+  await composer.getByRole("button", { name: "发送" }).click();
+  await expect(page.getByText("共筛选 18 人，推荐 18 人。")).toBeVisible();
+  await page.reload();
+  await expect(total).toContainText("共 18 人 · 已评分 18");
+  await total.getByRole("button", { name: "查看 resume-1 的筛选结果", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "筛选结果" })).toContainText("resume-1");
 });
 
 async function login(page: Page) {

@@ -230,6 +230,32 @@ async function handleHr(input) {
     input.sendJson(response, 200, { state: item.hr });
     return;
   }
+  const workspaceMatch = url.pathname.match(/^\/api\/hr\/conversations\/([^/]+)\/(attachments|screening-summary)$/);
+  if (workspaceMatch) {
+    const item = input.findConversation(decodeURIComponent(workspaceMatch[1]));
+    if (!item?.hr) return input.sendError(response, 404, "HR_CONVERSATION_NOT_FOUND");
+    if (workspaceMatch[2] === "attachments" && request.method === "POST") {
+      const body = await input.readJson(request);
+      const draft = drafts.get(body.draftId);
+      if (!draft || body.clientRequestId !== draft.requestId || !body.deduplicate) {
+        return input.sendError(response, 409, "DRAFT_CONTENT_INVALID");
+      }
+      for (const file of draft.files) {
+        if (item.hr.candidates.some(person => person.candidateId === file.fileId)) continue;
+        item.hr.candidates.push({
+          candidateId: file.fileId, displayName: file.name.replace(/\.(pdf|docx)$/i, ""),
+          status: "active", parseStatus: "parsed", errorCode: null, createdAt: new Date().toISOString(), retiredAt: null,
+        });
+      }
+      input.sendJson(response, 200, { state: item.hr });
+      return;
+    }
+    if (workspaceMatch[2] === "screening-summary" && request.method === "GET") {
+      const scope = url.searchParams.get("scope") ?? "active";
+      input.sendJson(response, 200, summarize(item, scope));
+      return;
+    }
+  }
   const criteriaMatch = url.pathname.match(/^\/api\/hr\/conversations\/([^/]+)\/criteria(?:\/(\d+)(?:\/(confirm))?|\/(generate))?$/);
   if (criteriaMatch) {
     const item = input.findConversation(decodeURIComponent(criteriaMatch[1]));
@@ -261,12 +287,13 @@ async function handleHr(input) {
   }
   const itemMatch = url.pathname.match(/^\/api\/hr\/screening-batches\/([^/]+)(?:\/(cancel|continue|export\.csv|items\/([^/]+)\/retry))?$/);
   if (!itemMatch) return input.sendError(response, 404, "BATCH_NOT_FOUND");
-  const item = input.findConversation(decodeURIComponent(itemMatch[1]));
+  const batchId = decodeURIComponent(itemMatch[1]);
+  const item = [...input.conversations.get(input.userKey).values()]
+    .find(conversation => conversation.batchHistory?.has(batchId));
   if (!item?.hr) return input.sendError(response, 404, "BATCH_NOT_FOUND");
   const action = itemMatch[2];
   if (!action && request.method === "GET") {
-    const batch = item.hr.activeBatch ?? item.hr.latestCompletedBatch;
-    input.sendJson(response, 200, { batch, items: item.batchItems });
+    input.sendJson(response, 200, item.batchHistory.get(batchId));
     return;
   }
   if (action === "export.csv" && request.method === "GET") {
@@ -315,28 +342,33 @@ async function handleHr(input) {
   input.sendError(response, 405, "METHOD_NOT_ALLOWED");
 }
 
-export function startBatch(item) {
+export function startBatch(item, scope) {
   const timestamp = new Date().toISOString();
+  item.batchHistory ??= new Map();
+  const seen = new Set([...item.batchHistory.values()].flatMap(result => result.items.map(row => row.candidateId)));
+  const candidates = item.hr.candidates.filter(candidate => scope !== "incremental" || !seen.has(candidate.candidateId));
+  if (!candidates.length) return;
+  const complete = scope === "incremental" || candidates.length === 17;
   const criteria = item.hr.activeCriteria;
   const batch = {
-    batchId: item.metadata.conversationId,
+    batchId: item.batchHistory.size ? randomUUID() : item.metadata.conversationId,
     conversationId: item.metadata.conversationId,
     assistantVersion: 1,
     jobDescriptionVersionId: item.hr.activeJobDescription.jobDescriptionVersionId,
     criteriaVersionId: criteria.criteriaVersionId,
     assessmentFingerprint: "a".repeat(64),
-    status: "running",
-    totalCount: item.hr.candidates.length,
-    completedCount: Math.max(0, item.hr.candidates.length - 1),
-    failedCount: 1,
+    status: complete ? "completed" : "running",
+    totalCount: candidates.length,
+    completedCount: complete ? candidates.length : Math.max(0, candidates.length - 1),
+    failedCount: complete ? 0 : 1,
     createdAt: timestamp,
     startedAt: timestamp,
-    finishedAt: null,
+    finishedAt: complete ? timestamp : null,
   };
-  item.hr.activeBatch = batch;
-  item.hr.latestCompletedBatch = null;
-  item.batchItems = item.hr.candidates.map((candidate, index) => {
-    const failed = index === item.hr.candidates.length - 1;
+  item.hr.activeBatch = complete ? null : batch;
+  item.hr.latestCompletedBatch = complete ? batch : null;
+  item.batchItems = candidates.map((candidate, index) => {
+    const failed = !complete && index === candidates.length - 1;
     return {
       itemId: candidate.candidateId,
       batchId: batch.batchId,
@@ -350,6 +382,31 @@ export function startBatch(item) {
       finishedAt: timestamp,
     };
   });
+  item.batchHistory.set(batch.batchId, { batch, items: item.batchItems });
+}
+
+export function summarize(item, scope = "all") {
+  const latest = new Map();
+  for (const result of item.batchHistory?.values() ?? []) {
+    for (const row of result.items) latest.set(row.candidateId, row);
+  }
+  const group = latest.size ? { groupId: "a".repeat(64),
+    jobDescriptionVersionId: item.hr.activeJobDescription.jobDescriptionVersionId,
+    jobDescriptionVersion: item.hr.activeJobDescription.version,
+    criteriaVersionId: item.hr.activeCriteria.criteriaVersionId, criteriaVersion: item.hr.activeCriteria.version } : null;
+  const rows = item.hr.candidates.flatMap(person => {
+    const row = latest.get(person.candidateId);
+    if ((scope === "active" && person.status !== "active") || (scope === "all" && !row)) return [];
+    return [{ candidateId: person.candidateId, displayName: person.displayName, candidateStatus: person.status,
+      batchId: row?.batchId ?? null, advisoryTier: row?.advisoryTier ?? null,
+      status: row?.advisoryTier ? "scored" : row?.status === "failed" ? "failed" : "pending",
+      score: row?.advisoryTier ? 100 : null }];
+  });
+  const recommended = rows.filter(row => row.advisoryTier === "recommended").length;
+  const failed = rows.filter(row => row.status === "failed").length;
+  return { scope, group, groups: group ? [group] : [], rows, nextOffset: null,
+    counts: { total: rows.length, scored: recommended, recommended, manualReview: 0, notMatched: 0, failed,
+      pending: rows.length - recommended - failed, retired: rows.filter(row => row.candidateStatus === "retired").length } };
 }
 
 export function continueBatch(item) {
